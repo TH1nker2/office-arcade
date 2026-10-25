@@ -56,6 +56,27 @@ CREATE INDEX IF NOT EXISTS idx_mp_user ON match_players(user_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_mp_match ON match_players(match_id);
 `;
 
+const SCHEMA_VERSION = 2;
+
+/* 每一步只加不改：v1 是初始结构（SCHEMA 里的 CREATE IF NOT EXISTS 已覆盖） */
+const MIGRATIONS = [
+  {
+    v: 1,
+    note: '初始结构',
+    up: () => { /* 由 SCHEMA 的 CREATE TABLE IF NOT EXISTS 建立 */ }
+  },
+  {
+    v: 2,
+    note: 'users 表补充 banned（封禁）字段',
+    up: (db) => {
+      const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+      if (cols.indexOf('banned') < 0) {
+        db.exec('ALTER TABLE users ADD COLUMN banned INTEGER NOT NULL DEFAULT 0');
+      }
+    }
+  }
+];
+
 function open(file) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const db = new Database(file);
@@ -63,16 +84,30 @@ function open(file) {
   db.exec('PRAGMA synchronous = NORMAL');
   db.exec(SCHEMA);
 
-  /* 老库补列（banned 是后加的） */
-  try {
-    const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
-    if (cols.indexOf('banned') < 0) {
-      db.exec('ALTER TABLE users ADD COLUMN banned INTEGER NOT NULL DEFAULT 0');
-      console.log('[store] users 表已补充 banned 字段');
-    }
-  } catch (e) {
-    console.warn('[store] 检查 banned 字段失败：' + e.message);
+  /* ---------- 结构版本与迁移 ----------
+   * PRAGMA user_version 记录结构版本；升级版本时只加迁移、不改已有的迁移。
+   * 打开比本程序更新的库会直接报错，避免把数据写坏。
+   */
+  const fromVersion = Number(db.prepare('PRAGMA user_version').get().user_version) || 0;
+  if (fromVersion > SCHEMA_VERSION) {
+    const err = new Error('数据库结构版本 ' + fromVersion + ' 比程序支持的 ' + SCHEMA_VERSION +
+      ' 更新，请升级程序后再打开（数据未改动）');
+    err.fatal = true;   /* 不能回退到 JSON，否则会另起一份空库 */
+    throw err;
   }
+  if (fromVersion < SCHEMA_VERSION) {
+    for (const m of MIGRATIONS) {
+      if (m.v <= fromVersion) continue;
+      try {
+        m.up(db);
+        console.log('[store] 迁移到结构 v' + m.v + '：' + m.note);
+      } catch (e) {
+        console.warn('[store] 迁移 v' + m.v + ' 失败（' + e.message + '），跳过');
+      }
+    }
+    db.exec('PRAGMA user_version = ' + SCHEMA_VERSION);
+  }
+  console.log('[store] 数据库结构 v' + SCHEMA_VERSION + '（' + file + '）');
 
   function mapUser(r) {
     if (!r) return null;
@@ -260,4 +295,4 @@ function open(file) {
   return api;
 }
 
-module.exports = { open };
+module.exports = { open, SCHEMA_VERSION };

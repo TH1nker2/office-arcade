@@ -96,8 +96,33 @@ const VERSION_TAG = 'v' + VERSION.version;
 const WORDS_FILE = path.join(ROOT, 'shared', 'words.json');
 
 function loadWords() {
+  const empty = { easy: [], normal: [], hard: [] };
   try {
     const raw = JSON.parse(fs.readFileSync(WORDS_FILE, 'utf8'));
+
+    /* 新格式：{ levels: { easy: { words: [{w,h}] }, ... } } */
+    if (raw && raw.levels) {
+      const out = { easy: [], normal: [], hard: [] };
+      ['easy', 'normal', 'hard'].forEach(function (lv) {
+        const sec = raw.levels[lv];
+        if (!sec || !Array.isArray(sec.words)) return;
+        sec.words.forEach(function (it) {
+          if (typeof it === 'string' && it.trim()) {
+            out[lv].push({ w: it.trim(), h: [] });
+          } else if (it && it.w) {
+            out[lv].push({
+              w: String(it.w).trim(),
+              h: Array.isArray(it.h) ? it.h.slice(0, 3).map(String) : []
+            });
+          }
+        });
+        console.log('[words] ' + lv + ': ' + out[lv].length + ' 个');
+      });
+      if (!out.easy.length && !out.normal.length && !out.hard.length) return empty;
+      return out;
+    }
+
+    /* 老格式：{ words: [...] } 或纯数组 -> 全部算中等 */
     const list = Array.isArray(raw) ? raw : (raw && raw.words) || [];
     const out = [];
     const seen = new Set();
@@ -108,16 +133,38 @@ function loadWords() {
       out.push(t);
     });
     return out;
+    return { easy: out.slice(), normal: out.slice(), hard: out.slice() };
   } catch (e) {
     console.warn('[words] 读取 shared/words.json 失败（' + e.message + '），改用内置词库');
-    return [];
+    return empty;
   }
 }
 
 const WORDS = loadWords();
 
 /* ---------- 数据层 ---------- */
-const DATA_DIR = process.env.ARCADE_DATA || path.join(ROOT, 'data');
+/* 数据目录：
+ *   ARCADE_DATA 环境变量（测试/自定义） > --portable/ARCADE_PORTABLE（软件目录 data/）
+ *   > 标准版（用户目录）
+ */
+function resolveDataDir() {
+  if (process.env.ARCADE_DATA) return process.env.ARCADE_DATA;
+  const portable = process.argv.indexOf('--portable') >= 0 || process.env.ARCADE_PORTABLE === '1';
+  if (portable) return path.join(ROOT, 'data');
+
+  const home = os.homedir();
+  if (process.platform === 'win32') {
+    return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'office-arcade');
+  }
+  if (process.platform === 'darwin') {
+    return path.join(home, 'Library', 'Application Support', 'office-arcade');
+  }
+  return path.join(process.env.XDG_DATA_HOME || path.join(home, '.local', 'share'), 'office-arcade');
+}
+
+const DATA_DIR = resolveDataDir();
+const DATA_MODE = (process.argv.indexOf('--portable') >= 0 || process.env.ARCADE_PORTABLE === '1')
+  ? '便携版' : '标准版';
 const store = require('./shared/store').open(path.join(DATA_DIR, 'arcade'));
 
 const MIME = {
@@ -517,6 +564,7 @@ function roomJson(room) {
     max: AR.getInfo(room.gameId).max,
     min: AR.getInfo(room.gameId).min,
     bots: room.botCount || 0,
+    level: room.level || 'normal',
     players: players
   };
 }
@@ -602,6 +650,7 @@ function createRoom(conn, gameId) {
     phase: 'lobby',
     round: 0,
     game: null,
+    level: 'normal',
     chat: [],
     startedAt: 0,
     acc: 0,
@@ -702,9 +751,12 @@ function startRound(room) {
   room.acc = 0;
   room.netAcc = 0;
   room.startedAt = Date.now();
+  const level = room.level || 'normal';
+  const pool = (WORDS[level] && WORDS[level].length) ? WORDS[level] : WORDS.normal;
   room.game = g.create(players, {
     seed: (Date.now() ^ (room.round * 2654435761)) >>> 0,
-    words: WORDS
+    level: level,
+    words: pool
   });
 
   const meta = (g.meta && g.meta(room.game)) || null;
@@ -915,6 +967,21 @@ function handle(conn, msg) {
       if (room.hostId !== u.id) { conn.send({ t: 'error', msg: '只有房主能开始' }); return; }
       if (room.phase === 'playing') return;
       startRound(room);
+      break;
+    }
+
+    case 'setting': {
+      /* 房主在房间里改游戏设置（目前只有你画我猜的难度） */
+      const room = conn.room;
+      if (!room) return;
+      if (room.phase !== 'lobby') { conn.send({ t: 'error', msg: '开局后不能改设置' }); return; }
+      if (room.hostId !== conn.user.id) { conn.send({ t: 'error', msg: '只有房主能改设置' }); return; }
+      if (msg.key === 'level' && room.gameId === 'draw') {
+        const lv = String(msg.value || '');
+        if (['easy', 'normal', 'hard'].indexOf(lv) < 0) return;
+        room.level = lv;
+        broadcastRoom(room);
+      }
       break;
     }
 
@@ -1407,6 +1474,7 @@ server.listen(PORT, HOST, () => {
   console.log('  监听地址： ' + HOST + ':' + PORT);
   console.log('  版本： ' + VERSION_TAG + (VERSION.released ? '（' + VERSION.released + '）' : '') +
     ' · ' + VERSION.notes.length + ' 条更新说明');
+  console.log('  数据位置： ' + DATA_MODE + ' · ' + DATA_DIR);
   console.log('  运行环境： Node ' + process.version + ' · 存储 ' +
     (store.kind === 'sqlite' ? 'SQLite' : 'JSON') +
     '（' + stat.users + ' 位玩家，' + stat.matches + ' 局记录）');
@@ -1415,8 +1483,13 @@ server.listen(PORT, HOST, () => {
   } else {
     console.log('  管理员： 未配置 —— 把 admins.example.json 复制成 admins.json 再重启');
   }
-  if (WORDS.length) console.log('  画猜词库： ' + WORDS.length + ' 个（shared/words.json）');
-  else console.log('  画猜词库： 内置默认（shared/words.json 未读到）');
+  const wordTotal = (WORDS.easy || []).length + (WORDS.normal || []).length + (WORDS.hard || []).length;
+  if (wordTotal) {
+    console.log('  画猜词库： 简单 ' + WORDS.easy.length + ' / 中等 ' + WORDS.normal.length +
+      ' / 困难 ' + WORDS.hard.length + '（shared/words.json）');
+  } else {
+    console.log('  画猜词库： 内置默认（shared/words.json 未读到）');
+  }
   console.log('  本机浏览器： http://localhost:' + PORT);
   if (HOST === '0.0.0.0') {
     ips.forEach((ip) => console.log('  局域网访问： http://' + ip + ':' + PORT));

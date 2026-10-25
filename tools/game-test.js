@@ -203,7 +203,7 @@ for (const [id, n, secs, cap] of cases) {
   const dg = AR.games.draw;
   const ds = dg.create(players(2), { seed: 33 });
   ok('画猜选词倒计时是 10 秒', Math.round(ds.timeLeft) === 10, 'tl=' + ds.timeLeft);
-  const choicesSnapshot = ds.choices.slice();
+  const choicesSnapshot = ds.choices.map(function (c) { return (c && c.w) || c; });
   for (let i = 0; i < 620; i++) dg.tick(ds, 1 / 60);     /* 10.3 秒 */
   ok('超时自动开始作画', ds.phase === 'draw', 'phase=' + ds.phase);
   ok('自动选的是候选词之一', choicesSnapshot.indexOf(ds.word) >= 0, ds.word);

@@ -21,6 +21,12 @@
       <div class="hud-spacer"></div>
       <button class="hud-btn" id="hud-back">退出游戏 (Esc)</button>
     </header>
+    <div class="draw-hints hidden" id="draw-hints">
+      <span class="dh-label">提示</span>
+      <span class="dh-list" id="dh-list"></span>
+      <span class="dh-next" id="dh-next"></span>
+    </div>
+
     <aside class="hud-board" id="hud-board"></aside>
     <div class="hud-hint" id="hud-hint"></div>
     <div class="hud-center" id="hud-center"></div>
@@ -166,6 +172,14 @@
 
         <footer class="room-foot">
           <button class="btn" id="btn-invite">邀请玩家</button>
+          <div class="level-box hidden" id="level-box">
+            <span class="level-label">关键词难度</span>
+            <div class="seg" id="level-seg">
+              <button class="seg-btn" data-level="easy">简单</button>
+              <button class="seg-btn" data-level="normal">中等</button>
+              <button class="seg-btn" data-level="hard">困难</button>
+            </div>
+          </div>
           <div class="bot-box" id="bot-box">
             <select id="bot-level" title="人机难度">
               <option value="easy">简单</option>

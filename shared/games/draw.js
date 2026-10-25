@@ -27,12 +27,24 @@
   var DRAW_TIME = 60;
   var REVEAL_TIME = 6;
   var ALL_GUESSED_TIME = 3;   /* 全员猜中：只留 3 秒揭晓就直接进入下一轮 */
+  var HINT_EVERY = 10;        /* 每 10 秒放出一条提示，最多 3 条 */
 
   function norm(s) {
     return String(s || '')
       .toLowerCase()
       .replace(/[\s，。！？、,.!?~～·\-_]/g, '')
       .trim();
+  }
+
+  /* 词条统一成 { w, h }，兼容老的字符串数组 */
+  function normalizePool(list) {
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var it = list[i];
+      if (typeof it === 'string') out.push({ w: it, h: [] });
+      else if (it && it.w) out.push({ w: String(it.w), h: Array.isArray(it.h) ? it.h.slice(0, 3) : [] });
+    }
+    return out;
   }
 
   function startTurn(state) {
@@ -55,6 +67,21 @@
     var pool = (state.pool && state.pool.length ? state.pool : WORDS).slice();
     AR.shuffle(pool);
     state.choices = pool.slice(0, 3);
+    state.hints = [];
+    state.hintShown = 0;
+    state.hintTimer = HINT_EVERY;
+  }
+
+  function beginDrawing(state, entry) {
+    var e = entry || { w: '', h: [] };
+    state.word = e.w || '';
+    state.hints = (e.h || []).slice(0, 3);
+    state.hintShown = 0;
+    state.hintTimer = HINT_EVERY;
+    state.phase = 'draw';
+    state.timeLeft = DRAW_TIME;
+    state.guessed = {};
+    state.strokes = [];
   }
 
   AR.games.draw = {
@@ -64,7 +91,8 @@
     create: function (players, opt) {
       var order = players.map(function (p) { return p.id; });
       AR.shuffle(order);
-      var pool = (opt && opt.words && opt.words.length) ? opt.words.slice() : WORDS.slice();
+      var pool = normalizePool((opt && opt.words && opt.words.length) ? opt.words : WORDS);
+      var level = (opt && opt.level) || 'normal';
       var state = {
         time: 0,
         duration: 0,
@@ -81,6 +109,10 @@
         guessed: {},
         strokes: [],
         pool: pool,
+        level: level,
+        hints: [],
+        hintShown: 0,
+        hintTimer: HINT_EVERY,
         ended: false,
         turnStart: 0
       };
@@ -110,11 +142,7 @@
       if (state.phase === 'choose') {
         if (id !== state.drawerId) return null;
         var idx = AR.clamp(parseInt(msg.n, 10) || 0, 0, 2);
-        state.word = state.choices[idx] || state.choices[0];
-        state.phase = 'draw';
-        state.timeLeft = DRAW_TIME;
-        state.guessed = {};
-        state.strokes = [];
+        beginDrawing(state, state.choices[idx] || state.choices[0]);
         return null;
       }
       if (state.phase !== 'draw') return null;
@@ -188,11 +216,17 @@
       if (state.phase === 'choose' && state.timeLeft <= 0) {
         /* 没选就随机替他选一个 */
         var pick = Math.floor((state.rnd ? state.rnd() : Math.random()) * state.choices.length);
-        state.word = state.choices[pick] || state.choices[0];
-        state.phase = 'draw';
-        state.timeLeft = DRAW_TIME;
-        state.guessed = {};
+        beginDrawing(state, state.choices[pick] || state.choices[0]);
         return;
+      }
+
+      /* 作画阶段：每 HINT_EVERY 秒放一条提示 */
+      if (state.phase === 'draw' && state.hintShown < state.hints.length) {
+        state.hintTimer -= dt;
+        if (state.hintTimer <= 0) {
+          state.hintShown++;
+          state.hintTimer = HINT_EVERY;
+        }
       }
 
       if (state.phase === 'draw' && state.timeLeft <= 0) {
@@ -231,7 +265,7 @@
         return { t: 'choices', list: state.choices, drawerId: state.drawerId };
       }
       if (state.phase === 'draw' && id === state.drawerId) {
-        return { t: 'word', word: state.word, drawerId: state.drawerId };
+        return { t: 'word', word: state.word, hints: state.hints.slice(), drawerId: state.drawerId };
       }
       return null;
     },
@@ -249,6 +283,12 @@
         sc: sc,
         gd: got,
         wd: state.phase === 'reveal' || state.phase === 'over' ? state.word : null,
+        hs: state.phase === 'draw' || state.phase === 'reveal' || state.phase === 'over'
+          ? (state.hints || []).slice(0, state.hintShown || 0) : [],
+        ht: state.phase === 'draw' && (state.hintShown || 0) < (state.hints || []).length
+          ? Math.max(0, Math.ceil(state.hintTimer)) : 0,
+        hn: (state.hints || []).length,
+        lv: state.level || 'normal',
         n: state.order.length
       };
     }

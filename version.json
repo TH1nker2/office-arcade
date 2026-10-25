@@ -1,13 +1,25 @@
 {
-  "version": "2.7.1",
+  "version": "2.8.0",
   "released": "2026-10-25",
   "notes": [
-    "移除 nginx / Docker / systemd 部署文件，仓库只保留应用源码与打包脚本",
-    "删除 deploy/ 目录（nginx.conf、nginx.docker.conf、Dockerfile、service、部署指南）、docker-compose.yml、.env.example",
-    "README 去掉「部署形态」章节与相关链接，目录结构同步更新",
-    "服务端 HOST 提示语改为中性描述，不再提及 nginx"
+    "你画我猜支持关键词难度：房间里可选「简单 / 中等 / 困难」，房主开局前切换，其他人实时看到",
+    "词库重写为按难度分组：shared/words.json 现在有 3 个难度 × 100 个词，每个词带 3 条递进提示",
+    "作画过程中每 10 秒放出一条提示（10s / 20s / 30s），画布下方有提示条和倒计时，一轮 60 秒",
+    "发行包分成标准版和便携版：标准版数据存 %APPDATA%\\\\office-arcade，便携版存软件目录下的 data\\\\，整个文件夹可整体拷走",
+    "数据库结构引入版本号（PRAGMA user_version）与迁移机制，老库自动升级、遇到更高版本的库会拒绝启动而不是覆盖",
+    "数据目录在启动横幅里打印，方便确认当前用的是哪个版本"
   ],
   "history": [
+    {
+      "version": "2.7.1",
+      "released": "2026-10-25",
+      "notes": [
+        "移除 nginx / Docker / systemd 部署文件，仓库只保留应用源码与打包脚本",
+        "删除 deploy/ 目录（nginx.conf、nginx.docker.conf、Dockerfile、service、部署指南）、docker-compose.yml、.env.example",
+        "README 去掉「部署形态」章节与相关链接，目录结构同步更新",
+        "服务端 HOST 提示语改为中性描述，不再提及 nginx"
+      ]
+    },
     {
       "version": "2.7.0",
       "released": "2026-10-25",

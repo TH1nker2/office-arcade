@@ -19,6 +19,13 @@ function open(baseFile) {
     console.log('[store] 使用 SQLite：' + path.basename(baseFile) + '.sqlite');
     return store;
   } catch (e) {
+    if (e && e.fatal) {
+      console.error('');
+      console.error('  [致命] ' + e.message);
+      console.error('  程序已退出，没有任何数据被改动。');
+      console.error('');
+      process.exit(1);
+    }
     sqliteErr = e;
   }
 

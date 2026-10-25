@@ -154,6 +154,12 @@
       Net.send({ t: 'start' });
     });
     $('btn-invite').addEventListener('click', openInvitePicker);
+    $('level-seg').addEventListener('click', function (e) {
+      var btn = e.target.closest('.seg-btn');
+      if (!btn || btn.disabled) return;
+      Net.send({ t: 'setting', key: 'level', value: btn.getAttribute('data-level') });
+    });
+
     $('btn-add-bot').addEventListener('click', function () {
       Net.send({ t: 'botAdd', level: $('bot-level').value });
     });
@@ -630,6 +636,20 @@
       ? '本局进行中…'
       : (room.phase === 'over' ? '本局结束，稍后回到房间' : (isHost ? '你是房主，可以开始了' : '等待房主开始…'));
     $('btn-invite').disabled = room.players.length >= room.max;
+
+    /* 你画我猜：难度选择（房里只有房主能点） */
+    var levelBox = $('level-box');
+    var showLevel = room.gameId === 'draw';
+    levelBox.classList.toggle('hidden', !showLevel);
+    if (showLevel) {
+      var cur = room.level || 'normal';
+      var btns = $('level-seg').querySelectorAll('.seg-btn');
+      for (var li = 0; li < btns.length; li++) {
+        var b = btns[li];
+        b.classList.toggle('on', b.getAttribute('data-level') === cur);
+        b.disabled = !(isHost && room.phase === 'lobby');
+      }
+    }
 
     var botBox = $('bot-box');
     botBox.classList.toggle('hidden', !(isHost && supportsBot && room.phase === 'lobby'));
@@ -1166,6 +1186,32 @@
     });
   }
 
+  /* 你画我猜：游戏内提示条 */
+  var lastHintKey = '';
+  function updateHintBar(s) {
+    var box = $('draw-hints');
+    if (!s || APP.screen !== 'play' || !APP.game || APP.game.id !== 'draw' || s.ph !== 'draw') {
+      box.classList.add('hidden');
+      return;
+    }
+    var hs = s.hs || [];
+    var key = hs.join('|') + '#' + (s.ht || 0);
+    if (key === lastHintKey) { box.classList.remove('hidden'); return; }
+    lastHintKey = key;
+
+    var list = '';
+    for (var i = 0; i < hs.length; i++) {
+      list += '<span class="dh-item"><i>' + (i + 1) + '</i>' + esc(hs[i]) + '</span>';
+    }
+    if (!hs.length) list = '<span class="dh-empty">暂无提示</span>';
+    $('dh-list').innerHTML = list;
+
+    var next = '';
+    if (hs.length < (s.hn || 3)) next = (s.ht || 0) + ' 秒后提示 ' + (hs.length + 1);
+    $('dh-next').textContent = next;
+    box.classList.remove('hidden');
+  }
+
   /* 你画我猜的面板：选词倒计时（作者）/ 等待蒙版（其他人） */
   var lastMask = '';
   function updateDrawMasks() {
@@ -1216,6 +1262,7 @@
     if (APP.screen !== 'play' || !APP.snap) return;
 
     updateDrawMasks();
+    updateHintBar(APP.snap);
 
     var s = APP.snap;
     var left = (APP.game && APP.game.id === 'draw') ? s.tl : ((s.d || 0) - (s.t || 0));
