@@ -1310,7 +1310,7 @@
     for (var i = 0; i < (s.pl || []).length; i++) {
       var row = s.pl[i];
       if (row[0] !== s.c) continue;
-      for (var k = 0; k < 2; k++) {
+      for (var k = 0; k < row.length - 1; k++) {
         var pos = row[k + 1];
         if (s.mv && s.mv.indexOf(k) < 0) continue;
         var xy = R.ludoPlaneXY(s.n, i, pos, k);
