@@ -1597,10 +1597,9 @@
       ['✚', '#4ade80', '修护', '回 2 点耐久']
     ],
     bomber: [
-      ['💣', '#f97316', '炸弹数', '同时能放更多炸弹'],
-      ['🔥', '#ff2e63', '爆炸范围', '火焰喷得更远'],
-      ['👟', '#38bdf8', '移动速度', '跑得更快'],
-      ['🛡', '#4ade80', '无敌', '短时间免疫爆炸']
+      ['B', '#ff2e63', '炸弹数', '能同时放更多炸弹'],
+      ['R', '#fbbf24', '爆炸范围', '火焰喷得更远'],
+      ['S', '#22d3ee', '移动速度', '跑得更快']
     ]
   };
 
@@ -1625,13 +1624,28 @@
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
       var ry = y + 34 + i * rowH + 10;
-      ctx.font = '15px system-ui, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = row[1];
-      ctx.fillText(row[0], x + 14, ry);
-      label(ctx, row[2], x + 40, ry, row[1], 12.5, 'left');
-      label(ctx, row[3], x + 86, ry, 'rgba(190,210,235,0.72)', 11, 'left');
+      if (kind === 'bomber') {
+        /* 和场上道具一样：深色圆底 + 彩色描边 + 字母 */
+        var ix = x + 24;
+        ctx.fillStyle = '#0b111c';
+        ctx.beginPath();
+        ctx.arc(ix, ry, 11, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = row[1];
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+        label(ctx, row[0], ix, ry + 1, row[1], 12);
+        label(ctx, row[2], x + 44, ry, row[1], 12.5, 'left');
+        label(ctx, row[3], x + 96, ry, 'rgba(190,210,235,0.72)', 11, 'left');
+      } else {
+        ctx.font = '15px system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = row[1];
+        ctx.fillText(row[0], x + 16, ry);
+        label(ctx, row[2], x + 42, ry, row[1], 12.5, 'left');
+        label(ctx, row[3], x + 90, ry, 'rgba(190,210,235,0.72)', 11, 'left');
+      }
     }
     ctx.restore();
   }
