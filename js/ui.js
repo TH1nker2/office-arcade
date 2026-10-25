@@ -490,7 +490,7 @@
       card.className = 'game-card';
       card.setAttribute('data-game', g.id);
       card.innerHTML =
-        '<span class="badge">' + g.min + '-' + g.max + '人</span>' +
+        '<span class="badge">' + (g.min === g.max ? g.max + '人' : g.min + '-' + g.max + '人') + '</span>' +
         '<div class="gc-icon">' + (g.icon || '🎮') + '</div>' +
         '<b>' + g.name + '</b><em>' + g.sub + '</em><p>' + g.desc + '</p>' +
         '<div class="gc-meta"><span>在玩 <span class="live" data-live="' + g.id + '">0</span></span>' +
@@ -1362,7 +1362,11 @@
       var sc = 0;
       var rank = 0;
       if (APP.game.id === 'draw' && s.sc) sc = s.sc[p.id] || 0;
-      else if (APP.game.id === 'shmup') sc = s.sc || 0;
+      else if (APP.game.id === 'shmup') {
+        /* 每人独立分数，取自己那一项 */
+        sc = 0;
+        for (var sp = 0; sp < (s.p || []).length; sp++) if (s.p[sp].i === p.id) sc = s.p[sp].s;
+      }
       else if (APP.game.id === 'racing') {
         for (var r = 0; r < s.c.length; r++) {
           if (s.c[r][0] === p.id) {
