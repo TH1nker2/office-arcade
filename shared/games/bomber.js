@@ -160,6 +160,10 @@
     p.deathAt = state.time;
     state.events.push({ t: 'die', cx: p.cx, cy: p.cy, c: p.color });
     if (killer && killer.id !== p.id) {
+      state.events.push({
+        t: 'kill', by: killer.id, name: killer.name, color: killer.color,
+        victim: p.id, vname: p.name, vcolor: p.color
+      });
       killer.kills++;
       killer.score += 3;
     }

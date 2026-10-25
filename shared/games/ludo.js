@@ -62,6 +62,7 @@
   function doRoll(state) {
     var me = state.players[currentId(state)];
     state.dice = 1 + Math.floor(state.rnd() * 6);
+    state.events.push({ t: 'roll', id: me.id, name: me.name, color: me.color, dice: state.dice });
     state.moves = movablePlanes(state, me);
     state.phase = 'show';
     state.wait = SHOW_TIME;
@@ -88,14 +89,20 @@
             if (op < 0 || op >= N) continue;
             if (absCell(state, other.index, op) === cell) {
               other.planes[j] = -1;
-              state.events.push({ t: 'hit', by: me.id, who: oid, cell: cell });
+              state.events.push({
+                t: 'hit', by: me.id, who: oid, cell: cell,
+                byName: me.name, whoName: other.name, byColor: me.color, whoColor: other.color
+              });
             }
           }
         });
       }
     }
 
-    state.events.push({ t: 'move', id: me.id, plane: idx, to: target });
+    state.events.push({
+      t: 'move', id: me.id, name: me.name, color: me.color,
+      plane: idx, to: target, from: from
+    });
 
     /* 全部到家 → 结束 */
     var allHome = me.planes.every(function (p) { return p === MAXP; });

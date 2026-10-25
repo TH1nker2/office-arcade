@@ -1628,3 +1628,46 @@ kbd {
   background: rgba(255, 93, 125, 0.14);
   color: #ffd0da;
 }
+
+/* 自己的名字统一绿色，方便一眼分辨 */
+.hud-row.me .nm { color: #7dffb0; font-weight: 700; }
+.res-row.me span:nth-child(2) { color: #7dffb0; font-weight: 700; }
+.room-player.me .rp-name { color: #7dffb0; }
+
+/* 结算里的击杀 / 到家小标签 */
+.res-row .det {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: rgba(163, 230, 53, 0.14);
+  border: 1px solid rgba(163, 230, 53, 0.32);
+  color: #bfe98a;
+  font-size: 10.5px;
+  font-style: normal;
+}
+
+/* 击杀播报 */
+.kill-feed {
+  position: absolute;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  z-index: 40;
+  pointer-events: none;
+}
+.kf-line {
+  padding: 5px 14px;
+  border-radius: 99px;
+  background: rgba(8, 13, 22, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12.5px;
+  color: var(--txt);
+  white-space: nowrap;
+  transition: opacity .3s;
+}
+.kf-line .kf-x { margin: 0 7px; color: var(--dim); font-size: 11px; }
+.kf-line.out { opacity: 0; }

@@ -97,6 +97,7 @@
       t: 0,
       fireTimer: 1.2,
       phase: 0,
+      inv: true,          /* 登场后、开火前无敌 */
       score: 300
     };
   }
@@ -173,7 +174,8 @@
         }
         p.inv = Math.max(0, p.inv - dt);
         p.cool -= dt;
-        if (inp.f && p.cool <= 0) {
+        /* 默认自动开火，不再需要按键 */
+        if (p.cool <= 0) {
           p.cool = 0.115;
           state.pbullets.push({ x: p.x - 9, y: p.y - 22, vx: 0, vy: -980, owner: id, color: p.color });
           state.pbullets.push({ x: p.x + 9, y: p.y - 22, vx: 0, vy: -980, owner: id, color: p.color });
@@ -219,6 +221,7 @@
         else boss.x = W / 2 + Math.sin(boss.t * 0.55) * (W / 2 - 120);
         boss.fireTimer -= dt;
         if (boss.fireTimer <= 0 && boss.y >= 180) {
+          boss.inv = false;            /* 开始攻击 = 可以被打了 */
           boss.fireTimer = Math.max(0.45, 1.1 - boss.phase * 0.2);
           var mode = Math.floor(boss.t / 6) % 3;
           if (mode === 0) {
@@ -253,13 +256,15 @@
         if (pb.y < -20) { state.pbullets.splice(i, 1); continue; }
         var hit = false;
 
-        if (boss && boss.y > 0 && AR.dist2(pb.x, pb.y, boss.x, boss.y) < boss.r * boss.r) {
+        if (boss && boss.y > 0 && !boss.inv && AR.dist2(pb.x, pb.y, boss.x, boss.y) < boss.r * boss.r) {
           boss.hp -= 1;
           boss.flash = 0.08;
-          state.score += 1;
+          if (state.players[pb.owner]) state.players[pb.owner].score += 1;
+          else state.score += 1;
           hit = true;
           if (boss.hp <= 0) {
-            state.score += boss.score;
+            if (state.players[pb.owner]) state.players[pb.owner].score += boss.score;
+            else state.score += boss.score;
             state.events.push({ t: 'bossdie', x: boss.x, y: boss.y });
             state.boss = null;
             state.ended = true;
@@ -274,8 +279,14 @@
               en.hp -= 1;
               if (en.hp <= 0) {
                 state.score += en.score;
+                var shooter = state.players[pb.owner];
+                if (shooter) {
+                  shooter.score += en.score;
+                  shooter.kills++;
+                  state.events.push({ t: 'kill', by: shooter.id, name: shooter.name, color: shooter.color,
+                    kind: en.type, x: en.x, y: en.y });
+                }
                 state.events.push({ t: 'explode', x: en.x, y: en.y, r: en.r });
-                if (state.players[pb.owner]) state.players[pb.owner].kills++;
                 state.enemies.splice(j, 1);
               }
               hit = true;
@@ -457,6 +468,7 @@
         b: state.boss ? {
           x: state.boss.x | 0, y: state.boss.y | 0,
           hp: state.boss.hp, mx: state.boss.maxHp,
+          iv: state.boss.inv ? 1 : 0,
           f: state.boss.flash > 0 ? 1 : 0
         } : null,
         ev: ev

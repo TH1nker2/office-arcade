@@ -18,6 +18,13 @@
   var FIRE_CD = 0.40;
   var MAX_BULLETS = 5;
   var RESPAWN = 2.4;
+  var SPAWN_INV = 1.0;          /* 复活后 1 秒无敌 */
+  var BUFF_EVERY = 11;          /* 平均每 11 秒刷一个补给 */
+  var BUFF_MAX = 3;             /* 场上最多同时 3 个 */
+  var RAPID_MULT = 0.55;        /* 连发期间的射击间隔倍率 */
+  var SPEED_MULT = 1.35;        /* 加速期间的移动速度倍率 */
+  var BUFF_TYPES = ['speed', 'rapid', 'shield', 'heal'];
+  var BUFF_LIFE = 22;           /* 补给在地上放多久 */
   var DURATION = 150;
 
   /* 人机水平：0-1 */
@@ -124,6 +131,7 @@
       body: Math.atan2(H / 2 - y, W / 2 - x),
       aim: Math.atan2(H / 2 - y, W / 2 - x),
       hp: 3, alive: true, respawn: 0, cool: 0,
+      inv: SPAWN_INV, spdT: 0, rapT: 0, shield: 0,
       score: 0, kills: 0, deaths: 0,
       input: {}
     };
@@ -149,6 +157,10 @@
     t.alive = true;
     t.respawn = 0;
     t.cool = 0.6;
+    t.inv = SPAWN_INV;
+    t.spdT = 0;
+    t.rapT = 0;
+    t.shield = 0;
     t.aim = Math.atan2(H / 2 - t.y, W / 2 - t.x);
   }
 
@@ -162,6 +174,10 @@
     if (killer && killer.id !== t.id) {
       killer.kills++;
       killer.score += 3;
+      state.events.push({
+        t: 'kill', by: killer.id, name: killer.name, color: killer.color,
+        victim: t.id, vname: t.name, vcolor: t.color
+      });
     }
   }
 
@@ -181,8 +197,33 @@
       color: t.color,
       life: 1.8
     });
-    t.cool = FIRE_CD;
+    t.cool = FIRE_CD * (t.rapT > 0 ? RAPID_MULT : 1);
     state.events.push({ t: 'shot', x: Math.round(bx), y: Math.round(by), c: t.color });
+  }
+
+  /* 随机找一个能站人的空地，别刷在墙上 */
+  function findBuffSpot(state) {
+    for (var k = 0; k < 60; k++) {
+      var tx = 1 + Math.floor(state.rnd() * (TW - 2));
+      var ty = 1 + Math.floor(state.rnd() * (TH - 2));
+      if (tileAt(state, tx, ty) !== 0) continue;
+      var x = tx * TILE + TILE / 2;
+      var y = ty * TILE + TILE / 2;
+      var ok = true;
+      for (var id in state.tanks) {
+        var t = state.tanks[id];
+        if (t.alive && AR.dist2(t.x, t.y, x, y) < 90 * 90) { ok = false; break; }
+      }
+      if (ok) return { x: x, y: y };
+    }
+    return null;
+  }
+
+  function applyBuff(t, kind) {
+    if (kind === 'speed') t.spdT = Math.max(t.spdT, 8);
+    else if (kind === 'rapid') t.rapT = Math.max(t.rapT, 8);
+    else if (kind === 'shield') t.shield = Math.min(2, t.shield + 1);
+    else if (kind === 'heal') t.hp = Math.min(3, t.hp + 2);
   }
 
   AR.games.tank = {
@@ -198,6 +239,8 @@
         map: makeMap(rnd),
         tanks: {},
         bullets: [],
+        buffs: [],
+        buffTimer: 6,
         events: [],
         mapDirty: true,
         order: []
@@ -241,6 +284,9 @@
           if (t.respawn <= 0) respawnTank(state, t);
           continue;
         }
+        if (t.inv > 0) t.inv = Math.max(0, t.inv - dt);
+        if (t.spdT > 0) t.spdT = Math.max(0, t.spdT - dt);
+        if (t.rapT > 0) t.rapT = Math.max(0, t.rapT - dt);
         var inp = t.input || {};
         if (typeof inp.ax === 'number' && isFinite(inp.ax)) {
           t.aim = Math.atan2(inp.ay - t.y, inp.ax - t.x);
@@ -250,8 +296,9 @@
         var len = Math.hypot(dx, dy);
         if (len > 0.01) {
           dx /= len; dy /= len;
-          var nx = t.x + dx * SPEED * dt;
-          var ny = t.y + dy * SPEED * dt;
+          var sp = SPEED * (t.spdT > 0 ? SPEED_MULT : 1);
+          var nx = t.x + dx * sp * dt;
+          var ny = t.y + dy * sp * dt;
           if (!hitsMap(state, nx, t.y, R)) t.x = nx;
           if (!hitsMap(state, t.x, ny, R)) t.y = ny;
           t.body = AR.turnToward(t.body, Math.atan2(dy, dx), 10 * dt);
@@ -295,6 +342,13 @@
             var o = state.tanks[oid];
             if (!o.alive || o.id === b.owner) continue;
             if (AR.dist2(b.x, b.y, o.x, o.y) < (R + 4) * (R + 4)) {
+              if (o.inv > 0) continue;
+              if (o.shield > 0) {
+                o.shield--;
+                state.events.push({ t: 'shield', x: Math.round(o.x), y: Math.round(o.y), c: o.color });
+                dead = true;
+                break;
+              }
               o.hp--;
               state.events.push({ t: 'hit', x: Math.round(b.x), y: Math.round(b.y) });
               if (o.hp <= 0) killTank(state, o, state.tanks[b.owner]);
@@ -306,6 +360,34 @@
         if (dead) state.bullets.splice(i, 1);
       }
 
+      /* ---------- 地图补给 ---------- */
+      for (i = state.buffs.length - 1; i >= 0; i--) {
+        var bf = state.buffs[i];
+        bf.life -= dt;
+        if (bf.life <= 0) { state.buffs.splice(i, 1); continue; }
+        for (id in state.tanks) {
+          t = state.tanks[id];
+          if (!t.alive) continue;
+          if (AR.dist2(t.x, t.y, bf.x, bf.y) > (R + 12) * (R + 12)) continue;
+          applyBuff(t, bf.kind);
+          state.events.push({ t: 'buffget', kind: bf.kind, x: Math.round(t.x), y: Math.round(t.y), c: t.color });
+          state.buffs.splice(i, 1);
+          break;
+        }
+      }
+
+      state.buffTimer -= dt;
+      if (state.buffTimer <= 0 && state.buffs.length < BUFF_MAX) {
+        state.buffTimer = BUFF_EVERY * (0.7 + state.rnd() * 0.6);
+        var spot = findBuffSpot(state);
+        if (spot) {
+          state.buffs.push({
+            x: spot.x, y: spot.y,
+            kind: BUFF_TYPES[Math.floor(state.rnd() * BUFF_TYPES.length)],
+            life: BUFF_LIFE
+          });
+        }
+      }
     },
 
     isOver: function (state) {
@@ -440,7 +522,11 @@
           a: Math.round(t.aim * 100) / 100,
           h: t.hp,
           al: t.alive ? 1 : 0,
-          s: t.score
+          s: t.score,
+          iv: t.inv > 0 ? 1 : 0,
+          sh: t.shield,
+          sp: t.spdT > 0 ? 1 : 0,
+          rp: t.rapT > 0 ? 1 : 0
         });
       }
       var b = [];
@@ -455,12 +541,18 @@
         mapStr = state.map.join('');
         state.mapDirty = false;
       }
+      var bf = [];
+      for (var q = 0; q < state.buffs.length; q++) {
+        var one = state.buffs[q];
+        bf.push([Math.round(one.x), Math.round(one.y), one.kind]);
+      }
       return {
         w: W, h: H,
         t: Math.round(state.time * 10) / 10,
         d: state.duration,
         p: p,
         b: b,
+        f: bf,
         e: ev,
         m: mapStr
       };

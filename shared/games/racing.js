@@ -326,28 +326,50 @@
       var track = state.track;
       var speed = Math.hypot(c.vx, c.vy);
 
-      /* 纯追踪：朝前方一段距离的中心线点开 */
-      var lookDist = 70 + speed * 0.5;
-      if (c.offTrack) lookDist = 90;
+      /* 纯追踪 + 横向纠偏：先把车拉回中心线，再朝前方打方向 */
+      var speedK = AR.clamp(speed / MAX_SPEED, 0, 1);
+      var lookDist = 60 + speed * (0.42 + 0.22 * skill);
+      if (c.offTrack) lookDist = 80;
       var ti = pointAhead(track, c.lastIdx, lookDist);
-      var tx = track.xs[ti];
-      var ty = track.ys[ti];
+
+      /* 车到中心线的横向偏差，反向补偿一半，避免切内线切出赛道 */
+      var nx = track.xs[c.lastIdx];
+      var ny = track.ys[c.lastIdx];
+      var offx = c.x - nx;
+      var offy = c.y - ny;
+      var offMag = Math.hypot(offx, offy);
+      var bias = AR.clamp(offMag * 0.7, 0, 34) * (0.5 + 0.35 * skill);
+
+      var tx = track.xs[ti] - (offx / (offMag || 1)) * bias;
+      var ty = track.ys[ti] - (offy / (offMag || 1)) * bias;
+
       var want = Math.atan2(ty - c.y, tx - c.x);
       var diff = AR.wrap(want - c.a);
-      var steer = AR.clamp(diff * 2.2, -1, 1);
 
-      /* 前方弯道有多急：看更远的两个切线夹角 */
-      var fi = pointAhead(track, ti, lookDist * 2.2);
+      /* 转向做速率限制：太快会左右来回摆，反而拖慢 */
+      var steerRaw = AR.clamp(diff * (2.1 + skill * 1.5), -1, 1);
+      c.aiSteer = (c.aiSteer === undefined)
+        ? steerRaw
+        : c.aiSteer + AR.clamp(steerRaw - c.aiSteer, -7 * dt, 7 * dt);
+      var steer = AR.clamp(c.aiSteer, -1, 1);
+
+      /* 前方弯道有多急：近处 + 远处各看一次，取更急的 */
+      var fi = pointAhead(track, ti, lookDist * 2.4);
       var farA = Math.atan2(track.ys[fi] - track.ys[ti], track.xs[fi] - track.xs[ti]);
       var curve = Math.abs(AR.wrap(farA - want));
 
-      var throttle = 1;
-      if (curve > 0.9) throttle = 0.3;
-      else if (curve > 0.55) throttle = 0.5;
-      else if (curve > 0.3) throttle = 0.75;
+      /* 刹车：按「弯有多急 + 现在多快 + 转向误差」综合判断 */
+      var need = curve * (0.7 + speedK * 0.9) + Math.abs(diff) * 0.8;
+      var throttle;
+      if (need > 1.45) throttle = 0.25;
+      else if (need > 1.15) throttle = 0.5;
+      else if (need > 0.88) throttle = 0.72;
+      else if (need > 0.62) throttle = 0.88;
+      else throttle = 1;
 
-      if (speed > MAX_SPEED * 0.9 && curve > 0.3) throttle = Math.min(throttle, 0.35);
-      if (c.offTrack) throttle = Math.min(throttle, 0.55);
+      /* 已经明显偏离中心线就先减速救回来 */
+      if (offMag > 70) throttle = Math.min(throttle, 0.45);
+      if (c.offTrack) throttle = Math.min(throttle, 0.5);
 
       /* 难度：菜鸟会手抖、会提前松油、极速也更低 */
       if (level === 'easy') {

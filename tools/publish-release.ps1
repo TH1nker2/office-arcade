@@ -26,6 +26,24 @@ $ver = (Read-Utf8 (Join-Path $root 'version.json') | ConvertFrom-Json).version
 $tag = "v$ver"
 $dist = Join-Path $root 'dist'
 
+# ---------- 只保留最近 2 个版本（Gitee 附件配额 1 GB，每个版本约 230 MB） ----------
+try {
+    $all = $client.GetAsync("$api/releases?page=1&per_page=50&access_token=$Token").Result
+    if ([int]$all.StatusCode -eq 200) {
+        $rels = Read-Json $all
+        $sorted = $rels | Sort-Object { $_.created_at } -Descending
+        $drop = @($sorted | Select-Object -Skip 2)
+        foreach ($old in $drop) {
+            $d = $client.DeleteAsync("$api/releases/$($old.id)?access_token=$Token").Result
+            if ([int]$d.StatusCode -in 200, 204) {
+                Write-Host ("       清理旧版本 " + $old.tag_name) -ForegroundColor DarkGray
+            }
+        }
+    }
+} catch {
+    Write-Host "       清理旧版本失败（不影响本次发布）：$($_.Exception.Message)" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "== 发版 $tag ==" -ForegroundColor Cyan
 

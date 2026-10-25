@@ -13,6 +13,8 @@
   var W = 1600, H = 1200;
   var SPEED = 168;
   var TURN = 8.0;          /* 转向角速度：越大越跟手 */
+  var BOOST_MULT = 1.65;   /* 按住左键加速的速度倍率 */
+  var BOOST_COST = 5;      /* 加速时每秒掉多少分（最低 0） */
   var STEP = 5;
   var ORB_N = 110;
   var ORB_R = 24;
@@ -58,6 +60,8 @@
       respawn: 0,
       score: 0,
       kills: 0,
+      boost: false,
+      aiHead: a,
       trail: trail,
       input: { a: a }
     };
@@ -96,6 +100,10 @@
     scatterOrbs(state, s);
     state.events.push({ t: 'die', x: Math.round(s.x), y: Math.round(s.y), c: s.color });
     if (killer && killer !== s) {
+      state.events.push({
+        t: 'kill', by: killer.id, name: killer.name, color: killer.color,
+        victim: s.id, vname: s.name, vcolor: s.color
+      });
       killer.kills++;
       killer.score += 5;
     }
@@ -136,6 +144,9 @@
     input: function (state, id, inp) {
       var s = state.snakes[id];
       if (!s || !s.alive) return;
+      /* 按住左键加速：分数为 0 时加速不生效 */
+      if (typeof inp.boost === 'boolean') s.boost = inp.boost;
+      else if (typeof inp.boost === 'number') s.boost = inp.boost > 0;
       /* 客户端发的是鼠标的世界坐标（ax/ay），换算成朝向角 */
       if (typeof inp.ax === 'number' && typeof inp.ay === 'number' &&
         isFinite(inp.ax) && isFinite(inp.ay)) {
@@ -159,9 +170,19 @@
           if (s.respawn <= 0) respawnSnake(state, s);
           continue;
         }
+        /* 加速：速度翻倍但持续掉分，掉到 0 自动断 */
+        var boosting = s.boost && s.score > 0;
+        if (s.boost && s.score <= 0) s.boost = false;
+        if (boosting) {
+          s.score = Math.max(0, s.score - BOOST_COST * dt);
+          if (s.score <= 0) { s.score = 0; s.boost = false; boosting = false; }
+        }
+        s.boosting = boosting;
+        var sp = SPEED * (boosting ? BOOST_MULT : 1);
+
         s.a = AR.turnToward(s.a, s.input.a, TURN * dt);
-        s.x += Math.cos(s.a) * SPEED * dt;
-        s.y += Math.sin(s.a) * SPEED * dt;
+        s.x += Math.cos(s.a) * sp * dt;
+        s.y += Math.sin(s.a) * sp * dt;
 
         /* 边界：贴着墙滑行，不致死 */
         var m = 14;
@@ -238,73 +259,89 @@
       return list;
     },
 
-    /* 人机：朝最近光点走，同时对蛇身和墙做避让 */
+    /* 人机：前方锥形优先选光点 + 朝向平滑，避免原地打转 */
     bot: function (state, id, dt, level) {
       var s = state.snakes[id];
       if (!s) return null;
       if (!s.alive) return { ax: s.x, ay: s.y };
 
       var skill = BOT_SKILL[level] || 0.7;
-      var tx = s.x + Math.cos(s.a) * 160;
-      var ty = s.y + Math.sin(s.a) * 160;
+      var fx = Math.cos(s.a);
+      var fy = Math.sin(s.a);
 
-      var bd = Infinity;
+      /* 选目标：越靠前的光点得分越高，避免为了身后的光点急掉头 */
+      var best = null;
+      var bestScore = -Infinity;
       for (var i = 0; i < state.orbs.length; i++) {
         var o = state.orbs[i];
-        var od = AR.dist2(s.x, s.y, o.x, o.y);
-        if (od < bd) { bd = od; tx = o.x; ty = o.y; }
+        var ox = o.x - s.x;
+        var oy = o.y - s.y;
+        var od = Math.sqrt(ox * ox + oy * oy) || 1;
+        var dot = (ox * fx + oy * fy) / od;          /* 1 = 正前方，-1 = 正后方 */
+        var sc = dot * 2.2 - od / 700;
+        if (sc > bestScore) { bestScore = sc; best = o; }
       }
 
-      var dx = tx - s.x;
-      var dy = ty - s.y;
-      var len = Math.sqrt(dx * dx + dy * dy) || 1;
-      dx /= len;
-      dy /= len;
+      var dx = 0;
+      var dy = 0;
+      if (best) {
+        dx = best.x - s.x;
+        dy = best.y - s.y;
+        var len = Math.sqrt(dx * dx + dy * dy) || 1;
+        dx /= len;
+        dy /= len;
+      } else {
+        dx = fx;
+        dy = fy;
+      }
 
-      /* 蛇身斥力：越近越强 */
-      var look = 55 + skill * 95;
+      /* 蛇身斥力：越近越强（自己不再算，因为撞自己不死） */
+      var look = 70 + skill * 90;
       var look2 = look * look;
       for (var oid in state.snakes) {
+        if (oid === id) continue;
         var other = state.snakes[oid];
         if (!other.alive) continue;
         var lim = Math.min(other.trail.length, other.len);
-        var startAt = (oid === id) ? 10 : 4;
-        var stride = (oid === id) ? 5 : 3;
-        for (var k = startAt; k < lim; k += stride) {
+        for (var k = 4; k < lim; k += 3) {
           var pt = other.trail[k];
           var rx = s.x - pt.x;
           var ry = s.y - pt.y;
           var dd = rx * rx + ry * ry;
           if (dd > look2 || dd < 1) continue;
-          if (oid === id) continue;
-          var w = (1 - Math.sqrt(dd) / look) * 1.2;
+          var w = (1 - Math.sqrt(dd) / look) * 1.3;
           dx += (rx / Math.sqrt(dd)) * w;
           dy += (ry / Math.sqrt(dd)) * w;
         }
       }
 
-      /* 斥力限幅：否则身体一长就把自己困在原地 */
+      /* 贴墙回拉：只在一个身位内生效，避免被墙推得原地转圈 */
+      var m = 110;
+      if (s.x < m) dx += (1 - s.x / m) * 2.2;
+      if (s.x > W - m) dx -= (1 - (W - s.x) / m) * 2.2;
+      if (s.y < m) dy += (1 - s.y / m) * 2.2;
+      if (s.y > H - m) dy -= (1 - (H - s.y) / m) * 2.2;
+
+      /* 斥力限幅：别让避让完全盖掉目标方向 */
       var rl = Math.sqrt(dx * dx + dy * dy);
-      if (rl > 1.4) {
-        dx = dx / rl * 1.4;
-        dy = dy / rl * 1.4;
+      if (rl > 1.5) {
+        dx = dx / rl * 1.5;
+        dy = dy / rl * 1.5;
       }
 
-      /* 贴墙回拉 */
-      var m = 170;
-      if (s.x < m) dx += (1 - s.x / m) * 2.4;
-      if (s.x > W - m) dx -= (1 - (W - s.x) / m) * 2.4;
-      if (s.y < m) dy += (1 - s.y / m) * 2.4;
-      if (s.y > H - m) dy -= (1 - (H - s.y) / m) * 2.4;
-
-      /* 低难度：方向抖动 */
-      var noise = (1 - skill) * 0.95 * Math.sin(state.time * 2.1 + id.length * 3.7);
+      /* 低难度：加一点方向噪声（每个蛇相位不同） */
+      var noise = (1 - skill) * 0.7 * Math.sin(state.time * 1.6 + s.aiHead * 3.1 + s.x * 0.01);
       var ca = Math.cos(noise);
       var sa = Math.sin(noise);
       var ax = dx * ca - dy * sa;
       var ay = dx * sa + dy * ca;
 
-      return { ax: s.x + ax * 240, ay: s.y + ay * 240 };
+      /* 关键：期望朝向自己也做速率限制，避免每帧 180 度来回翻 */
+      var want = Math.atan2(ay, ax);
+      var turnRate = 2.6 + skill * 3.0;
+      s.aiHead = AR.turnToward(s.aiHead === undefined ? s.a : s.aiHead, want, turnRate * dt);
+
+      return { ax: s.x + Math.cos(s.aiHead) * 220, ay: s.y + Math.sin(s.aiHead) * 220 };
     },
 
     snapshot: function (state) {
@@ -318,7 +355,8 @@
           a: Math.round(s.a * 100) / 100,
           l: s.len,
           al: s.alive ? 1 : 0,
-          s: s.score
+          b: s.boosting ? 1 : 0,
+          s: Math.round(s.score * 10) / 10
         });
       }
       var orbs = [];

@@ -10,7 +10,7 @@
       id: 'snake', name: '蛇球大作战', sub: 'SNAKE ARENA', tag: '动作', icon: '🐍',
       time: 90, min: 1, max: 8,
       desc: '吃光点变长，撞到别人身体就爆开，2.5 秒后复活。',
-      keys: ['鼠标：控制方向', '别撞别人，也别撞自己']
+      keys: ['鼠标：控制方向', '按住左键：加速（每秒扣 5 分）']
     },
     {
       id: 'tank', name: '坦克竞技场', sub: 'TANK ARENA', tag: '射击', icon: '🎯',
@@ -34,7 +34,7 @@
       id: 'shmup', name: '合作弹幕', sub: 'CO-OP SHMUP', tag: '合作', icon: '🚀',
       time: 120, min: 1, max: 4,
       desc: '全房一起打飞机，分数共享，全员阵亡即结束。',
-      keys: ['WASD：移动', '空格：射击（可长按）']
+      keys: ['WASD：移动', '自动开火，不用按键']
     },
     {
       id: 'draw', name: '你画我猜', sub: 'DRAW & GUESS', tag: '社交', icon: '🎨',

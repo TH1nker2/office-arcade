@@ -348,6 +348,25 @@
       $('choose-overlay').classList.add('hidden');
     });
     Net.on('paint', function (msg) { AR.Render.paint(msg); });
+
+    /* 击杀播报：从快照事件里取 kill */
+    Net.on('state', function (msg) {
+      var ev = (msg.s && msg.s.e) || [];
+      for (var i = 0; i < ev.length; i++) {
+        var e = ev[i];
+        if (!e) continue;
+        if (e.t === 'kill') pushFeed(e);
+        else if (e.t === 'roll') {
+          pushFeed({ verb: '掷出', color: e.color, name: e.name, vcolor: '#fbbf24', vname: e.dice + ' 点' });
+        } else if (e.t === 'hit') {
+          pushFeed({ verb: '撞回', color: e.byColor, name: e.byName, vcolor: e.whoColor, vname: e.whoName });
+        } else if (e.t === 'move' && e.from === -1) {
+          pushFeed({ verb: '', color: e.color, name: e.name, vcolor: '#a3e635', vname: '起飞' });
+        } else if (e.t === 'move' && e.to === 44) {
+          pushFeed({ verb: '', color: e.color, name: e.name, vcolor: '#a3e635', vname: '到家' });
+        }
+      }
+    });
     Net.on('paintClear', function () { AR.Render.clearBoard(); });
     Net.on('over', onOver);
     Net.on('invite', function (msg) {
@@ -780,7 +799,7 @@
     list.forEach(function (r) {
       html += '<div class="res-row' + (r.id === APP.me.id ? ' me' : '') + '">' +
         '<span class="p">' + r.place + '</span>' +
-        '<span>' + esc(r.name) + (r.detail ? ' ×' + r.detail : '') + '</span>' +
+        '<span>' + esc(r.name) + (r.detail && r.detailLabel ? ' <em class="det">' + r.detailLabel + ' ' + r.detail + '</em>' : '') + '</span>' +
         '<span class="v">' + r.score + '</span>' +
         '<span class="d">' + (r.delta ? '+' + r.delta : '—') + '</span>' +
         '<span class="s">' + r.total + '</span>' +
@@ -1128,6 +1147,24 @@
       box.appendChild(b);
     });
     if (box.children.length) $('choose-overlay').classList.remove('hidden');
+  }
+
+  /* 击杀播报的浮层 */
+  var feedTimer = 0;
+  function pushFeed(e) {
+    var box = $('kill-feed');
+    if (!box) return;
+    var el = document.createElement('div');
+    el.className = 'kf-line';
+    el.innerHTML = '<b style="color:' + (e.color || '#8ea3c0') + '">' + esc(e.name) + '</b>' +
+      '<span class="kf-x">' + (e.verb || '击毁') + '</span>' +
+      '<b style="color:' + (e.vcolor || '#8ea3c0') + '">' + esc(e.vname) + '</b>';
+    box.appendChild(el);
+    while (box.children.length > 4) box.removeChild(box.firstChild);
+    setTimeout(function () {
+      el.classList.add('out');
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+    }, 3200);
   }
 
   function askExit() {

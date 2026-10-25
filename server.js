@@ -539,6 +539,15 @@ function makeCode() {
   return code;
 }
 
+/* 结算里 detail 这一列在各游戏里的叫法 */
+const DETAIL_LABEL = {
+  snake: '击杀',
+  tank: '击杀',
+  bomber: '击杀',
+  shmup: '击杀',
+  ludo: '到家'
+};
+
 function roomJson(room) {
   const players = [];
   room.players.forEach((p) => {
@@ -587,7 +596,7 @@ function addBot(room, level) {
   room.players.set(id, {
     id: id,
     name: '电脑·' + BOT_NAMES[idx % BOT_NAMES.length],
-    color: AR.PLAYER_COLORS[(idx + 3) % AR.PLAYER_COLORS.length],
+    color: freeColor(room),
     avatar: '🤖',
     score: 0,
     streak: 0,
@@ -662,6 +671,16 @@ function createRoom(conn, gameId) {
   return room;
 }
 
+/* 给房间里的新玩家挑一个还没被占用的颜色 */
+function freeColor(room) {
+  const used = new Set();
+  room.players.forEach((p) => used.add(String(p.color || '').toLowerCase()));
+  for (let i = 0; i < AR.PLAYER_COLORS.length; i++) {
+    if (!used.has(AR.PLAYER_COLORS[i].toLowerCase())) return AR.PLAYER_COLORS[i];
+  }
+  return AR.PLAYER_COLORS[room.players.size % AR.PLAYER_COLORS.length];
+}
+
 function joinRoom(conn, room) {
   if (room.players.has(conn.user.id)) return;
   const u = conn.user;
@@ -669,7 +688,7 @@ function joinRoom(conn, room) {
   room.players.set(u.id, {
     id: u.id,
     name: u.nickname,
-    color: u.color,
+    color: freeColor(room),
     avatar: u.avatar,
     score: dbUser ? dbUser.points : 0,
     streak: dbUser ? dbUser.streak : 0,
@@ -801,6 +820,7 @@ function finishRound(room) {
       name: r.name,
       score: r.score,
       detail: r.kills || 0,
+      detailLabel: DETAIL_LABEL[room.gameId] || '',
       place: place,
       delta: delta,
       total: 0,

@@ -267,6 +267,7 @@
   var TANK_COLORS = { 1: '#2b3448', 2: '#8a4b32', 3: '#5f3a2a' };
 
   R.tank = function (ctx, w, h, s, dt, G) {
+    V.time = (V.time || 0) + (dt || 0);
     bg(ctx, w, h, '#060a12');
     var tf = fit(w, h, s.w, s.h);
     V.tf = tf;
@@ -319,6 +320,33 @@
       }
     }
 
+    /* 地图补给 */
+    var BUFF_ICON = { speed: '⚡', rapid: '🔥', shield: '🛡', heal: '✚' };
+    var BUFF_COLOR = { speed: '#fbbf24', rapid: '#f97316', shield: '#38bdf8', heal: '#4ade80' };
+    if (s.f) {
+      for (var q = 0; q < s.f.length; q++) {
+        var bf = s.f[q];
+        var bc = BUFF_COLOR[bf[2]] || '#fbbf24';
+        var pulse = 0.6 + 0.4 * Math.sin((V.time || 0) * 4 + q);
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = 'rgba(8,13,22,0.9)';
+        ctx.strokeStyle = bc;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(bf[0], bf[1], 16, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.globalAlpha = 0.55 + 0.45 * pulse;
+        ctx.fillStyle = bc;
+        ctx.font = '16px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(BUFF_ICON[bf[2]] || '?', bf[0], bf[1] + 1);
+        ctx.restore();
+      }
+    }
+
     /* 坦克 */
     var byId = {};
     for (var k = 0; k < G.players.length; k++) byId[G.players[k].id] = G.players[k];
@@ -329,6 +357,11 @@
       var info = byId[t.i] || { color: '#22d3ee', name: '' };
       ctx.save();
       ctx.translate(t.x, t.y);
+      /* 无敌（复活保护）：整体闪烁 */
+      if (t.iv) {
+        var blink = Math.sin((V.time || 0) * 22) > 0;
+        ctx.globalAlpha = blink ? 0.35 : 1;
+      }
 
       ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.beginPath();
