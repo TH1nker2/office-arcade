@@ -37,7 +37,20 @@ function open(baseFile) {
 
   console.warn('[store] SQLite 不可用（' + (sqliteErr && sqliteErr.message) + '），回退到 JSON 存储');
   const json = require('./store-json');
-  return json.open(baseFile + '.json');
+  try {
+    return json.open(baseFile + '.json');
+  } catch (e) {
+    const dir = path.dirname(baseFile);
+    console.error('');
+    console.error('  [致命] 无法创建数据目录：' + dir);
+    console.error('  原因：' + e.message);
+    console.error('');
+    console.error('  可以这样解决：');
+    console.error('    1) 改用便携版（数据放程序目录下的 data\）');
+    console.error('    2) 或者手动指定一个可写目录：设置环境变量 ARCADE_DATA');
+    console.error('');
+    process.exit(1);
+  }
 }
 
 module.exports = { open };

@@ -96,6 +96,23 @@ foreach ($t in $Target) {
             if ($keep -notcontains $_.Name) { Remove-Item $_.FullName -Force }
         }
 
+        # ---- 批处理必须是 CRLF，否则 cmd 会把整行拆错（开发机上的文件可能是 LF） ----
+        Get-ChildItem $stage -Recurse -File -Include *.bat, *.cmd -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                $txt = [IO.File]::ReadAllText($_.FullName, [Text.Encoding]::UTF8)
+                $txt = $txt -replace "`r`n", "`n" -replace "`n", "`r`n"
+                [IO.File]::WriteAllText($_.FullName, $txt, (New-Object Text.UTF8Encoding($false)))
+            }
+        Get-ChildItem $stage -Recurse -File -Include *.bat -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                $bytes = [IO.File]::ReadAllBytes($_.FullName)
+                $lf = 0; $crlf = 0
+                for ($i = 0; $i -lt $bytes.Length; $i++) {
+                    if ($bytes[$i] -eq 10) { $lf++; if ($i -gt 0 -and $bytes[$i - 1] -eq 13) { $crlf++ } }
+                }
+                if ($lf -ne $crlf) { throw ("批处理换行符不对：" + $_.Name + "（LF=" + $lf + " CRLF=" + $crlf + "）") }
+            }
+
         # ---- 运行时 ----
         $rt = Join-Path $stage 'runtime'
         New-Item -ItemType Directory -Force -Path $rt | Out-Null
