@@ -55,6 +55,24 @@ if ($DryRun) {
 }
 if (-not $Token) { throw "缺少令牌：先设置 `$env:GITEE_TOKEN = '你的私人令牌'" }
 
+# ---------- 发布前检查：远程 main 必须已经包含当前提交 ----------
+# 否则 Gitee 会在「旧的 main」上打 tag，发行版指向的源码就和版本号对不上了
+try {
+    $dirty = git status --porcelain
+    if ($dirty) {
+        Write-Host "      提示：工作区有未提交改动，发行版里的源码会是最后一次提交的样子" -ForegroundColor Yellow
+    }
+    git fetch -q origin 2>$null
+    $localHead = (git rev-parse HEAD).Trim()
+    $remoteHead = (git rev-parse origin/main 2>$null).Trim()
+    if ($remoteHead -and $localHead -ne $remoteHead) {
+        throw "本地 main 和 origin/main 不一致，先 git push 再发版（否则 tag 会指到旧提交）"
+    }
+} catch [System.Management.Automation.RuntimeException] {
+    if ($_.Exception.Message -like '*先 git push*') { throw }
+    Write-Host "      提示：无法检查远程分支同步状态，已跳过" -ForegroundColor Yellow
+}
+
 $client = New-Object System.Net.Http.HttpClient
 $client.Timeout = [TimeSpan]::FromMinutes(30)
 $api = "https://gitee.com/api/v5/repos/$Repo"

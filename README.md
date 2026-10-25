@@ -51,20 +51,40 @@ node server.js                        # 有系统 Node 时也行（≥ 22.5 才�
 
 ### C. 发版
 
+发版是**六步**，顺序不能乱（尤其第 4 步要在第 5 步之前，否则 tag 会指到旧提交）：
+
 ```bash
-# 打版本号（会把旧版本归档进 version.json 的 history）
-runtime\node.exe tools\bump-version.js 2.7.0 "这次改了什么" "还改了什么"
+# 1) 跑测试
+node tools/game-test.js && node tools/bot-test.js
+node tools/auth-test.js && node tools/admin-test.js
 
-# 构建三平台包 -> dist\office-arcade-v2.7.0-{win-x64,linux-x64,darwin-arm64}
-powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
+# 2) 打版本号：旧版本自动归档进 version.json 的 history
+runtime\node.exe tools\bump-version.js 2.8.0 "这次改了什么" "还改了什么"
 
-# 建 Gitee 发行版并上传全部包
+# 3) 提交
+git add -A
+git commit -m "feat: ..."
+
+# 4) 先推送（远程 main 必须包含这个提交）
+git push
+
+# 5) 构建 + 发布（脚本会自动建发行版、上传三个包）
 $env:GITEE_TOKEN="你的私人令牌"
 powershell -ExecutionPolicy Bypass -File tools\publish-release.ps1
+
+# 6) 把发行版自动创建的 tag 同步到本地
+git fetch --tags
 ```
 
-`build-release.ps1` 首次运行前需要 `tools/fetch-runtime.ps1` 把三个平台运行时下载到 `vendor/`（约 300 MB，缓存后可复用）。
-Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时退回 `tar.exe`，解压后需要 `chmod +x runtime/node start.sh`（`start.sh` 也会自愈）。
+`publish-release.ps1` 内置保护：如果 `HEAD` 和 `origin/main` 不一致会直接报错，避免发行版的 tag 打在旧提交上。
+
+首次发版前需要一次性准备（约 230 MB 下载）：
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools\fetch-runtime.ps1 -Target win-x64,linux-x64,darwin-arm64
+```
+
+Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时退回 `tar.exe`（解压后需 `chmod +x`，`start.sh` 也会自愈）。
 
 ## 一、快速开始
 
