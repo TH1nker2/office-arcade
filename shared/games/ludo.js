@@ -178,10 +178,6 @@
           planes: planes
         };
       });
-      /* 开局每人一架已经停在起点 */
-      state.order.forEach(function (id) {
-        state.players[id].planes[0] = 0;
-      });
       state.rnd = AR.rng(((opt && opt.seed) || Date.now()) >>> 0);
       return state;
     },
@@ -341,7 +337,7 @@
     snapshot: function (state) {
       var pl = state.order.map(function (id) {
         var p = state.players[id];
-        return [id, p.planes[0], p.planes[1]];
+        return [id].concat(p.planes);
       });
       var ev = state.events;
       state.events = [];

@@ -1389,8 +1389,8 @@
         for (var lr = 0; lr < s.pl.length; lr++) {
           if (s.pl[lr][0] !== p.id) continue;
           var home = 0;
-          for (var lz = 1; lz <= 2; lz++) if (s.pl[lr][lz] === 44) home++;
-          sc = home + '/2';
+          for (var lz = 1; lz < s.pl[lr].length; lz++) if (s.pl[lr][lz] === 44) home++;
+          sc = home + '/' + (s.pl[lr].length - 1);
         }
       } else if (APP.game.id === 'gomoku') {
         sc = s.mv + ' 手';

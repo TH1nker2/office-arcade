@@ -1397,7 +1397,8 @@
       if (!row) continue;
       var pcol = (G.players[pj] || {}).color || '#22d3ee';
       var mine = row[0] === G.me;
-      for (var q = 0; q < 2; q++) {
+      var planeN = row.length - 1;
+      for (var q = 0; q < planeN; q++) {
         var ppx = row[q + 1];
         var xy = R.ludoPlaneXY(n, pj, ppx, q);
         if (!xy) continue;
