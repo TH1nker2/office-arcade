@@ -19,6 +19,46 @@
           "Noto Sans SC", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
+/* ---------------- 滚动条 ----------------
+   默认的系统滚动条在深色背景上又宽又亮，很突兀。
+   这里统一成：窄、半透明、悬停才变亮，轨道完全透明。 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 160, 210, 0.22) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 160, 210, 0.22);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 99px;
+  transition: background .2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.55);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(34, 211, 238, 0.8);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+
 * { box-sizing: border-box; }
 
 html, body {
