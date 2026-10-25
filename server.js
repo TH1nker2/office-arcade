@@ -144,28 +144,15 @@ function loadWords() {
 const WORDS = loadWords();
 
 /* ---------- 数据层 ---------- */
-/* 数据目录：
- *   ARCADE_DATA 环境变量（测试/自定义） > --portable/ARCADE_PORTABLE（软件目录 data/）
- *   > 标准版（用户目录）
- */
+/* 数据目录：始终放在程序目录的 data\ 下（便携版）。
+ * 需要临时换位置时用 ARCADE_DATA 环境变量（测试用）。 */
 function resolveDataDir() {
   if (process.env.ARCADE_DATA) return process.env.ARCADE_DATA;
-  const portable = process.argv.indexOf('--portable') >= 0 || process.env.ARCADE_PORTABLE === '1';
-  if (portable) return path.join(ROOT, 'data');
-
-  const home = os.homedir();
-  if (process.platform === 'win32') {
-    return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'office-arcade');
-  }
-  if (process.platform === 'darwin') {
-    return path.join(home, 'Library', 'Application Support', 'office-arcade');
-  }
-  return path.join(process.env.XDG_DATA_HOME || path.join(home, '.local', 'share'), 'office-arcade');
+  return path.join(ROOT, 'data');
 }
 
 const DATA_DIR = resolveDataDir();
-const DATA_MODE = (process.argv.indexOf('--portable') >= 0 || process.env.ARCADE_PORTABLE === '1')
-  ? '便携版' : '标准版';
+
 const store = require('./shared/store').open(path.join(DATA_DIR, 'arcade'));
 
 const MIME = {
@@ -1510,7 +1497,7 @@ server.listen(PORT, HOST, () => {
   console.log('  监听地址： ' + HOST + ':' + PORT);
   console.log('  版本： ' + VERSION_TAG + (VERSION.released ? '（' + VERSION.released + '）' : '') +
     ' · ' + VERSION.notes.length + ' 条更新说明');
-  console.log('  数据位置： ' + DATA_MODE + ' · ' + DATA_DIR);
+  console.log('  数据位置： ' + DATA_DIR);
   console.log('  运行环境： Node ' + process.version + ' · 存储 ' +
     (store.kind === 'sqlite' ? 'SQLite' : 'JSON') +
     '（' + stat.users + ' 位玩家，' + stat.matches + ' 局记录）');

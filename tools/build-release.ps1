@@ -16,7 +16,7 @@
 # ============================================================
 param(
     [string[]]$Target = @('win-x64', 'linux-x64', 'darwin-arm64'),
-    [string[]]$Edition = @('standard', 'portable'),
+    [string[]]$Edition = @('portable'),
     [switch]$WithShots
 )
 
@@ -75,7 +75,7 @@ foreach ($t in $Target) {
         if ($ed -ne 'standard' -and $ed -ne 'portable') { continue }
         $isPortable = $ed -eq 'portable'
 
-        $name = "office-arcade-v$ver-$t-$ed"
+        $name = "office-arcade-v$ver-$t"
         $stage = Join-Path $stageRoot $name
         New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
@@ -86,9 +86,9 @@ foreach ($t in $Target) {
 
         # ---- 启动器：每个包只留自己那一套 ----
         $keep = if ($isWin) {
-            if ($isPortable) { @('启动游戏厅-便携版.bat') } else { @('启动游戏厅.bat') }
+            @('启动游戏厅.bat')
         } else {
-            if ($isPortable) { @('start-portable.sh', 'start-portable.command') } else { @('start.sh', 'start.command') }
+            @('start.sh', 'start.command')
         }
         Get-ChildItem $stage -File | Where-Object {
             $_.Extension -in @('.bat', '.sh', '.command')

@@ -96,10 +96,10 @@ Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时
 
 | | 数据位置 | 适合 |
 | --- | --- | --- |
-| **标准版** | Windows `%APPDATA%\office-arcade`、macOS `~/Library/Application Support/office-arcade`、Linux `~/.local/share/office-arcade` | 正常安装，数据不随程序目录走 |
+| **便携版** | Windows `%APPDATA%\office-arcade`、macOS `~/Library/Application Support/office-arcade`、Linux `~/.local/share/office-arcade` | 正常安装，数据不随程序目录走 |
 | **便携版** | 软件目录下的 `data\` | 放 U 盘、不想在系统里留痕、整个文件夹拷走就搬家 |
 
-启动横幅会打印实际用的目录：`数据位置： 标准版 · C:\Users\xxx\AppData\Roaming\office-arcade`
+启动横幅会打印实际用的目录：`数据位置： 便携版 · C:\Users\xxx\AppData\Roaming\office-arcade`
 
 1. 双击 **`启动游戏厅.bat`**。
 2. 终端打印：
