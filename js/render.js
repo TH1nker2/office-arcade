@@ -1450,24 +1450,6 @@
 
     ctx.restore();
 
-    /* 顶部信息：各家进度 */
-    for (var ti = 0; ti < n; ti++) {
-      var trow = s.pl[ti];
-      var tpl = G.players[ti] || {};
-      var home = 0;
-      for (var z = 1; z <= 2; z++) if (trow[z] === LUDO.N + LUDO.HOME) home++;
-      var yy = 58 + ti * 26;
-      ctx.fillStyle = tpl.color || '#22d3ee';
-      ctx.beginPath();
-      ctx.arc(36, yy - 4, 6, 0, TAU);
-      ctx.fill();
-      label(ctx, tpl.name + '  到家 ' + home + '/' + (trow.length - 1), 52, yy, trow[0] === G.me ? '#ffffff' : 'rgba(200,220,240,0.75)', 13, 'left');
-      if (trow[0] === s.c) {
-        ctx.strokeStyle = 'rgba(34,211,238,0.7)';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(26, yy - 20, 210, 26);
-      }
-    }
   };
 
   function drawPlane(ctx, x, y, a, color, mine, active, seed) {
