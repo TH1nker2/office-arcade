@@ -254,7 +254,7 @@
         ctx.fill();
       }
 
-      label(ctx, info.name + ' ' + sn.s, cur.x, cur.y - 26, AR.rgba('#ffffff', 0.85), 15);
+      label(ctx, info.name + ' ' + sn.s, cur.x, cur.y - 26, nameColor(info, G), 15);
     }
 
     drawParticles(ctx, parts);
@@ -403,7 +403,7 @@
       ctx.fillStyle = t.h >= 2 ? '#a3e635' : '#ff2e63';
       ctx.fillRect(-hpw / 2, -30, hpw * (t.h / 3), 4);
 
-      label(ctx, info.name, 0, -41, 'rgba(230,245,255,0.8)', 13);
+      label(ctx, info.name, 0, -41, nameColor(info, G), 13);
       ctx.restore();
     }
 
@@ -565,7 +565,7 @@
         ctx.arc(px2 + ex[q], py2 + ey[q], 3, 0, TAU);
         ctx.fill();
       }
-      label(ctx, info.name, px2, py2 - 28, 'rgba(230,245,255,0.75)', 12);
+      label(ctx, info.name, px2, py2 - 28, nameColor(info, G), 12);
     }
 
     drawParticles(ctx, parts);
@@ -897,7 +897,7 @@
       ctx.fill();
       ctx.restore();
 
-      label(ctx, info.name, pl.x, pl.y - 34, 'rgba(230,245,255,0.75)', 12);
+      label(ctx, info.name, pl.x, pl.y - 34, nameColor(info, G), 12);
 
       for (var hp = 0; hp < pl.lv; hp++) {
         ctx.fillStyle = hp < pl.hp ? '#a3e635' : 'rgba(255,255,255,0.15)';
@@ -1197,6 +1197,11 @@
 
     /* 名字不画在车上（缩放后容易糊），统一看右侧记分板，车用颜色区分 */
   };
+
+  /* 角色头顶的名字：自己绿色，别人浅色 */
+  function nameColor(info, G) {
+    return (info && info.id === G.me) ? '#7dffb0' : 'rgba(230,245,255,0.8)';
+  }
 
   /* ============================================================
    * 飞行棋
@@ -1581,10 +1586,61 @@
     }
   };
 
+  /* ============================================================
+   * 道具图例（坦克 / 炸弹人）画在左侧
+   * ============================================================ */
+  var LEGENDS = {
+    tank: [
+      ['⚡', '#fbbf24', '加速', '移速 x1.35，8 秒'],
+      ['🔥', '#f97316', '连发', '射击间隔 x0.55，8 秒'],
+      ['🛡', '#38bdf8', '护盾', '挡 1 次伤害'],
+      ['✚', '#4ade80', '修护', '回 2 点耐久']
+    ],
+    bomber: [
+      ['💣', '#f97316', '炸弹数', '同时能放更多炸弹'],
+      ['🔥', '#ff2e63', '爆炸范围', '火焰喷得更远'],
+      ['👟', '#38bdf8', '移动速度', '跑得更快'],
+      ['🛡', '#4ade80', '无敌', '短时间免疫爆炸']
+    ]
+  };
+
+  function drawItemLegend(ctx, w, h, kind) {
+    var rows = LEGENDS[kind];
+    if (!rows) return;
+    var x = 16;
+    var y = 90;
+    var rowH = 30;
+    var boxH = rows.length * rowH + 34;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(8,13,22,0.72)';
+    ctx.strokeStyle = 'rgba(120,170,230,0.22)';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, x, y, 196, boxH, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    label(ctx, '道具图例', x + 14, y + 20, 'rgba(160,200,240,0.9)', 12, 'left');
+
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var ry = y + 34 + i * rowH + 10;
+      ctx.font = '15px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = row[1];
+      ctx.fillText(row[0], x + 14, ry);
+      label(ctx, row[2], x + 40, ry, row[1], 12.5, 'left');
+      label(ctx, row[3], x + 86, ry, 'rgba(190,210,235,0.72)', 11, 'left');
+    }
+    ctx.restore();
+  }
+
   R.render = function (ctx, w, h, gameId, snap, dt, G) {
     V.t += dt;
     var fn = R[gameId];
     if (fn) fn(ctx, w, h, snap, Math.min(dt, 0.05), G || {});
+    if (gameId === 'tank' || gameId === 'bomber') drawItemLegend(ctx, w, h, gameId);
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);

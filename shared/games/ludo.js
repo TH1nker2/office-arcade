@@ -90,7 +90,7 @@
             if (absCell(state, other.index, op) === cell) {
               other.planes[j] = -1;
               state.events.push({
-                t: 'hit', by: me.id, who: oid, cell: cell,
+                t: 'capture', by: me.id, who: oid, cell: cell,
                 byName: me.name, whoName: other.name, byColor: me.color, whoColor: other.color
               });
             }

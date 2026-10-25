@@ -108,7 +108,8 @@
 
     if (gameId === 'snake') {
       w = I.world();
-      return { ax: Math.round(w.x), ay: Math.round(w.y) };
+      /* 按住左键 = 加速；服务端会校验分数，扣到 0 自动断 */
+      return { ax: Math.round(w.x), ay: Math.round(w.y), boost: !!I.down };
     }
 
     if (gameId === 'ludo') {

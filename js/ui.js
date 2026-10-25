@@ -364,7 +364,7 @@
         if (e.t === 'kill') pushFeed(e);
         else if (e.t === 'roll') {
           pushFeed({ verb: '掷出', color: e.color, name: e.name, vcolor: '#fbbf24', vname: e.dice + ' 点' });
-        } else if (e.t === 'hit') {
+        } else if (e.t === 'capture') {
           pushFeed({ verb: '撞回', color: e.byColor, name: e.byName, vcolor: e.whoColor, vname: e.whoName });
         } else if (e.t === 'move' && e.from === -1) {
           pushFeed({ verb: '', color: e.color, name: e.name, vcolor: '#a3e635', vname: '起飞' });
