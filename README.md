@@ -61,7 +61,7 @@ node tools/game-test.js && node tools/bot-test.js
 node tools/auth-test.js && node tools/admin-test.js
 
 # 2) 打版本号：旧版本自动归档进 version.json 的 history
-runtime\node.exe tools\bump-version.js 2.8.0 "这次改了什么" "还改了什么"
+runtime\node.exe tools\bump-version.js 3.2.0 "这次改了什么" "还改了什么"
 
 # 3) 提交
 git add -A
