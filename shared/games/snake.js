@@ -21,6 +21,7 @@
   var ORB_R = 24;
   var EAT_R = 22;
   var START_POINTS = 24;
+  var GROW_PER_SCORE = 2;   /* 每 1 分对应 2 节长度 */
   var MAX_POINTS = 420;
   var RESPAWN = 2.4;
 
@@ -69,12 +70,18 @@
     };
   }
 
+  /* 长度跟分数正相关：分数涨 -> 变长，加速掉分 -> 变短 */
+  function syncLen(s) {
+    var want = START_POINTS + Math.round(Math.max(0, s.score) * GROW_PER_SCORE);
+    s.len = Math.max(START_POINTS, Math.min(MAX_POINTS, want));
+  }
+
   function respawnSnake(state, s) {
     var pos = spawnPoint(state, state.rnd, 300);
     s.x = pos.x;
     s.y = pos.y;
     s.a = state.rnd() * TAU;
-    s.len = START_POINTS;
+    syncLen(s);
     s.alive = true;
     s.respawn = 0;
     s.trail = [];
@@ -108,6 +115,7 @@
       });
       killer.kills++;
       killer.score += 5;
+      syncLen(killer);
     }
   }
 
@@ -182,11 +190,13 @@
             s.boostAcc -= BOOST_STEP;
             s.score = Math.max(0, Math.round(s.score) - BOOST_POINT);
           }
+          syncLen(s);
           if (s.score <= 0) {
             s.score = 0;
             s.boost = false;
             boosting = false;
             s.boostAcc = 0;
+            syncLen(s);
           }
         } else {
           s.boostAcc = 0;
@@ -222,12 +232,15 @@
           var o = state.snakes[oid];
           if (!o.alive) continue;
           var lim = Math.min(o.trail.length, o.len);
-          for (i = 6; i < lim; i += 2) {
+          /* 颈部（前 30 个点）逐点判，避免从脖子中间穿过去；
+             远处按 3 点一个间隔抽查，够密且不会太吃 CPU */
+          for (i = 2; i < lim;) {
             var p = o.trail[i];
-            if (AR.dist2(s.x, s.y, p.x, p.y) < 9 * 9) {
+            if (AR.dist2(s.x, s.y, p.x, p.y) < 12 * 12) {
               killSnake(state, s, o);
               break;
             }
+            i += (i < 30) ? 1 : 3;
           }
           if (!s.alive) break;
         }
@@ -242,8 +255,8 @@
           var orb = state.orbs[i];
           if (AR.dist2(s.x, s.y, orb.x, orb.y) < EAT_R * EAT_R) {
             state.orbs.splice(i, 1);
-            s.len = Math.min(MAX_POINTS, s.len + 2);
             s.score += 1;
+            syncLen(s);
             if (state.orbs.length < ORB_N && rnd() < 0.5) {
               state.orbs.push({ x: 30 + rnd() * (W - 60), y: 30 + rnd() * (H - 60) });
             }
