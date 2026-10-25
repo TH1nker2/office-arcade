@@ -1,7 +1,7 @@
 # 摸鱼游戏厅 · OFFICE ARCADE v2
 
 内网里的小游戏平台：**注册登录 → 大厅看到谁在线 → 挑个游戏进分区 → 建房/邀请同事 → 开玩**。
-七款小游戏共用一个账号、一套在线状态和一份战绩榜，全部数据落在服务器本地。
+九款小游戏共用一个账号、一套在线状态和一份战绩榜，全部数据落在服务器本地。
 没人的时候可以**加人机**，一个人也能开局。
 
 - 零 npm 依赖：Node 自带 `node:sqlite` + 手写 WebSocket
@@ -154,7 +154,7 @@ office-arcade\
 
 ---
 
-## 四、六款游戏
+## 四、九款游戏
 
 | 游戏 | 人数 | 一局 | 玩法 |
 | --- | --- | --- | --- |
@@ -184,7 +184,7 @@ office-arcade\
 
 房间里点 **+ 人机** 就能补一个电脑玩家，固定为普通难度。
 
-- 除「你画我猜」外，六款游戏都有人机 AI（赛车、蛇球、坦克、炸弹人、俄罗斯方块、弹幕）
+- 除「你画我猜」外，其它八款游戏都有人机 AI（赛车、蛇球、坦克、炸弹人、俄罗斯方块、弹幕、飞行棋、五子棋）
 - 人机是服务端权威模拟，和真人走同一套 `input / tick` 流程，战绩不进排行榜
 - 一个人 + 三个人机就能开局，等人时也不至于干坐着
 
@@ -419,7 +419,7 @@ office-arcade/
 ├── shared/
 │   ├── core.js  registry.js
 │   ├── store.js  store-sqlite.js  store-json.js
-│   └── games/              六款游戏的服务端权威模拟
+│   └── games/              九款游戏的服务端权威模拟
 ├── js/
 │   ├── net.js  audio.js  input.js  render.js  ui.js  main.js
 ├── server.js               HTTP + WebSocket + 账号 + 房间 + 邀请
@@ -440,7 +440,7 @@ office-arcade/
 ## 八、测试
 
 ```bash
-node tools/game-test.js    # 六款游戏逻辑 + 关键机制（含鼠标转向、消行、炸弹连锁）
+node tools/game-test.js    # 九款游戏逻辑 + 关键机制（含鼠标转向、消行、炸弹连锁）
 node tools/bot-test.js     # 人机：每款游戏的无头模拟，确认人机会玩、赛车能跑完
 node tools/auth-test.js    # 账号、会话、大厅状态、房间、邀请、静态资源白名单
 node tools/proxy-test.js   # 反向代理 + WebSocket 升级
