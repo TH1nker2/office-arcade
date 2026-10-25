@@ -16,7 +16,7 @@
 
 这个仓库里**只有开发源码**——没有 Node 运行时，也没有现成的安装包。
 
-### A. 我只想玩 / 只想部署
+### A. 我只想玩
 
 去 [发行版](https://gitee.com/th1nker/office-arcade/releases) 下载对应平台的包，解压、双击启动，全程不碰 git：
 
@@ -92,27 +92,6 @@ Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时
 
 **关于 Node 版本**：自带的是 Node 24.21.0（内置 `node:sqlite`）。想换版本时把别处的 `node.exe`
 覆盖到 `runtime\` 即可；18/20 也能跑，会自动回退 JSON 存储。
-
-### 部署形态
-
-| 形态 | 命令 | 适合 |
-| --- | --- | --- |
-| 直接跑 | `node server.js` | 临时开一局，关窗口即停 |
-| **Docker Compose** | `docker compose up -d`（[docker-compose.yml](docker-compose.yml)） | 有 Docker 的服务器，两个原生镜像 |
-| nginx 反代 | 见 [deploy/nginx.conf](deploy/nginx.conf) | 裸机 + 自装 nginx，统一入口 |
-| systemd | 见 [deploy/office-arcade.service](deploy/office-arcade.service) | Linux 服务器常驻 |
-
-应用本身**不需要为反代改任何代码**：前端全部走相对路径，WebSocket 由 `location.host` 推导。
-完整步骤与 5 个必读的坑见 **[部署指南](deploy/README.md)**。
-
-放 nginx 后面时建议让 Node 只监听本机：
-
-```bash
-HOST=127.0.0.1 node server.js      # Linux / macOS
-set HOST=127.0.0.1 && node server.js   # Windows
-```
-
----
 
 ## 二、账号与资料
 
@@ -375,12 +354,13 @@ office-arcade/
 │   ├── net.js  audio.js  input.js  render.js  ui.js  main.js
 ├── server.js               HTTP + WebSocket + 账号 + 房间 + 邀请
 ├── tools/                  测试脚本 + 构建/发版脚本 + runtime-manifest.json
-├── runtime/node.exe        自带的 Node 运行时（不进 PATH）
+├── start.sh / start.command  Linux / macOS 启动器
+├── runtime/node.exe        本机 Node 运行时（不入库，获取运行环境.bat 下载）
 ├── version.json            版本号 + 更新说明
-├── admins.json             管理员账号（明文）
+├── admins.json             管理员账号（明文，不入库）
 ├── admin.html              管理后台页面
-├── data/                   数据库（自动生成）
-├── 启动游戏厅.bat           用 runtime\node.exe 启动
+├── data/                   数据库（不入库，自动生成）
+├── 启动游戏厅.bat           Windows 启动器
 └── 获取运行环境.bat         开发者用：联网下载本机 runtime\node.exe
 ```
 

@@ -1,15 +1,25 @@
 {
-  "version": "2.7.0",
+  "version": "2.7.1",
   "released": "2026-10-25",
   "notes": [
-    "源码与发行包彻底分离：仓库不再包含 Node 运行时和安装包，clone 从 43 MB 降到约 7 MB",
-    "发行版按平台提供安装包：Windows x64（zip）、Linux x64、macOS Apple Silicon（tar.gz），每个包自带对应平台的 Node 运行时",
-    "新增 tools/runtime-manifest.json 钉住 Node 版本与三个平台的 SHA256，下载后自动校验",
-    "新增 tools/build-release.ps1：一条命令产出三平台包并生成 SHA256SUMS.txt",
-    "新增 start.sh / start.command 启动器，Unix 包内保留可执行位（Windows 打的 tar 会丢权限，改由 python 打包）",
-    "从 git 克隆源码的开发者改用「获取运行环境.bat」下载本机运行时，不再依赖仓库里的 exe"
+    "移除 nginx / Docker / systemd 部署文件，仓库只保留应用源码与打包脚本",
+    "删除 deploy/ 目录（nginx.conf、nginx.docker.conf、Dockerfile、service、部署指南）、docker-compose.yml、.env.example",
+    "README 去掉「部署形态」章节与相关链接，目录结构同步更新",
+    "服务端 HOST 提示语改为中性描述，不再提及 nginx"
   ],
   "history": [
+    {
+      "version": "2.7.0",
+      "released": "2026-10-25",
+      "notes": [
+        "源码与发行包彻底分离：仓库不再包含 Node 运行时和安装包，clone 从 43 MB 降到约 7 MB",
+        "发行版按平台提供安装包：Windows x64（zip）、Linux x64、macOS Apple Silicon（tar.gz），每个包自带对应平台的 Node 运行时",
+        "新增 tools/runtime-manifest.json 钉住 Node 版本与三个平台的 SHA256，下载后自动校验",
+        "新增 tools/build-release.ps1：一条命令产出三平台包并生成 SHA256SUMS.txt",
+        "新增 start.sh / start.command 启动器，Unix 包内保留可执行位（Windows 打的 tar 会丢权限，改由 python 打包）",
+        "从 git 克隆源码的开发者改用「获取运行环境.bat」下载本机运行时，不再依赖仓库里的 exe"
+      ]
+    },
     {
       "version": "2.6.0",
       "released": "2026-10-25",

@@ -1421,7 +1421,7 @@ server.listen(PORT, HOST, () => {
   if (HOST === '0.0.0.0') {
     ips.forEach((ip) => console.log('  局域网访问： http://' + ip + ':' + PORT));
   } else {
-    console.log('  仅监听 ' + HOST + '（适合放在 nginx 后面）');
+    console.log('  仅监听 ' + HOST + '（只允许本机访问）');
   }
   console.log('\n  把「局域网访问」地址发给同事，注册后即可开玩。');
   console.log('  按 Ctrl+C 停止服务器');

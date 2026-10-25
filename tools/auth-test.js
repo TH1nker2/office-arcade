@@ -277,8 +277,8 @@ async function main() {
   ok('共享模块可访问', shared.status === 200, 'status=' + shared.status);
   const src = await request('GET', '/server.js');
   ok('服务端源码不可下载', src.status === 404, 'status=' + src.status);
-  const deployFile = await request('GET', '/deploy/nginx.conf');
-  ok('部署文件不可下载', deployFile.status === 404, 'status=' + deployFile.status);
+  const cfg = await request('GET', '/tools/runtime-manifest.json');
+  ok('配置文件不可下载', cfg.status === 404, 'status=' + cfg.status);
   const readme = await request('GET', '/README.md');
   ok('README 不可下载', readme.status === 404, 'status=' + readme.status);
   const db = await request('GET', '/data/arcade.sqlite');
