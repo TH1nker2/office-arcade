@@ -8,9 +8,9 @@
   AR.GAME_INFO = [
     {
       id: 'snake', name: '蛇球大作战', sub: 'SNAKE ARENA', tag: '动作', icon: '🐍',
-      time: 90, min: 1, max: 8,
+      time: 90, min: 2, max: 8,
       desc: '吃光点变长，撞到别人身体就爆开，2.5 秒后复活。',
-      keys: ['鼠标：控制方向', '按住左键：加速（每秒扣 5 分）']
+      keys: ['鼠标：控制方向', '按住左键：加速（每 0.2 秒扣 1 分）']
     },
     {
       id: 'tank', name: '坦克竞技场', sub: 'TANK ARENA', tag: '射击', icon: '🎯',
