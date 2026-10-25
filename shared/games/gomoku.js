@@ -9,6 +9,7 @@
 
   var N = 15;                    /* 棋盘 15x15 */
   var BOT_LEVEL = { easy: 0, normal: 1, hard: 2, insane: 3 };
+  var WIN_DELAY = 1.0;          /* 连五后先在棋盘上亮 1 秒再结算 */
 
   function idx(x, y) { return y * N + x; }
 
@@ -143,6 +144,7 @@
         moves: 0,
         winnerId: null,
         winLine: null,
+        winPending: 0,
         ended: false,
         events: [],
         last: null
@@ -166,7 +168,7 @@
     },
 
     input: function (state, id, inp) {
-      if (state.ended || !inp) return;
+      if (state.ended || state.winPending > 0 || !inp) return;
       if (state.order[state.turn % state.order.length] !== id) return;
       var x = inp.x | 0;
       var y = inp.y | 0;
@@ -181,9 +183,9 @@
 
       var win = lineAt(state.board, x, y, v);
       if (win) {
-        state.ended = true;
         state.winnerId = id;
         state.winLine = win;
+        state.winPending = WIN_DELAY;      /* 先亮 1 秒，tick 里再真正结束 */
         state.events.push({ t: 'win', id: id, name: state.players[id].name, color: state.players[id].color });
         return;
       }
@@ -196,6 +198,13 @@
 
     tick: function (state, dt) {
       state.time += dt;
+      if (state.winPending > 0 && !state.ended) {
+        state.winPending -= dt;
+        if (state.winPending <= 0) {
+          state.winPending = 0;
+          state.ended = true;
+        }
+      }
     },
 
     bot: function (state, id, dt, level) {
@@ -246,6 +255,7 @@
         last: state.last ? [state.last.x, state.last.y, state.last.v] : null,
         win: state.winnerId,
         wl: state.winLine || null,
+        wp: Math.max(0, state.winPending || 0),
         e: ev
       };
     }

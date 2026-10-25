@@ -1549,10 +1549,15 @@
       ctx.stroke();
     }
 
-    /* 连成五子的高亮 */
+    /* 连成五子的高亮：亮起并闪烁 */
     if (s.wl) {
-      ctx.strokeStyle = 'rgba(255,46,99,0.9)';
-      ctx.lineWidth = 5;
+      var blink = 0.45 + 0.55 * Math.abs(Math.sin((V.time || 0) * 6));
+      ctx.save();
+      ctx.globalAlpha = blink;
+      ctx.shadowColor = '#ff2e63';
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = '#ff2e63';
+      ctx.lineWidth = 6;
       ctx.beginPath();
       for (var k = 0; k < s.wl.length; k++) {
         var wx = g.PAD + s.wl[k][0] * g.CELL;
@@ -1560,6 +1565,14 @@
         if (k === 0) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
       }
       ctx.stroke();
+      /* 五颗棋子本身也套一圈光 */
+      for (var k2 = 0; k2 < s.wl.length; k2++) {
+        ctx.beginPath();
+        ctx.arc(g.PAD + s.wl[k2][0] * g.CELL, g.PAD + s.wl[k2][1] * g.CELL, g.CELL * 0.46, 0, TAU);
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     /* 最后落子的脉冲高亮 */
