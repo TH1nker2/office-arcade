@@ -381,11 +381,18 @@
       ctx.fill();
       ctx.rotate(-t.b);
 
-      /* 炮管 */
+      /* 炮管：连发（火力）时变红 */
       ctx.save();
       ctx.rotate(t.a);
-      ctx.fillStyle = AR.shade(info.color, 0.35);
+      if (t.rp) {
+        ctx.shadowColor = '#ff2e63';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = '#ff2e63';
+      } else {
+        ctx.fillStyle = AR.shade(info.color, 0.35);
+      }
       ctx.fillRect(6, -4, 30, 8);
+      ctx.shadowBlur = 0;
       ctx.fillStyle = '#0b0f16';
       ctx.beginPath();
       ctx.arc(0, 0, 12, 0, TAU);
@@ -395,6 +402,44 @@
       ctx.arc(0, 0, 9, 0, TAU);
       ctx.fill();
       ctx.restore();
+
+      /* 加速：车身后面拖一条蓝色尾迹 */
+      if (t.sp) {
+        ctx.save();
+        ctx.rotate(t.b);
+        var grd = ctx.createLinearGradient(-18, 0, -70, 0);
+        grd.addColorStop(0, 'rgba(56,189,248,0.55)');
+        grd.addColorStop(1, 'rgba(56,189,248,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.moveTo(-16, -13);
+        ctx.lineTo(-70, -3);
+        ctx.lineTo(-70, 3);
+        ctx.lineTo(-16, 13);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      /* 护盾：一圈蓝色光环保在外层 */
+      if (t.sh > 0) {
+        var pulse = 0.55 + 0.45 * Math.sin((V.time || 0) * 6);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56,189,248,' + (0.55 + 0.35 * pulse) + ')';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(0, 0, 27, 0, TAU);
+        ctx.stroke();
+        if (t.sh > 1) {
+          /* 叠了两层护盾时再套一圈 */
+          ctx.beginPath();
+          ctx.arc(0, 0, 32, 0, TAU);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       /* 血条 */
       var hpw = 38;
