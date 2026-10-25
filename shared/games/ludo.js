@@ -37,8 +37,25 @@
     return state.order[state.turn % state.order.length];
   }
 
+  /* 这个人的飞机是不是全部到家了（到家后就不用再掷骰子） */
+  function allHome(state, id) {
+    var p = state.players[id];
+    if (!p) return false;
+    for (var i = 0; i < p.planes.length; i++) {
+      if (p.planes[i] !== MAXP) return false;
+    }
+    return true;
+  }
+
   function nextTurn(state) {
-    state.turn = (state.turn + 1) % state.order.length;
+    var n = state.order.length;
+    for (var step = 1; step <= n; step++) {
+      var idx = (state.turn + step) % n;
+      /* 已经全部到家的人跳过，不再轮到他 */
+      if (allHome(state, state.order[idx])) continue;
+      state.turn = idx;
+      break;
+    }
     state.phase = 'gap';
     state.wait = GAP_TIME;
     state.dice = 0;
@@ -216,6 +233,13 @@
     tick: function (state, dt) {
       state.time += dt;
       if (state.ended) return;
+
+      /* 当前玩家如果已经全部到家（还有别人没打完），直接跳到下一位 */
+      if (allHome(state, currentId(state))) {
+        for (var ai = 0; ai < state.order.length; ai++) {
+          if (!allHome(state, state.order[ai])) { nextTurn(state); break; }
+        }
+      }
 
       state.wait -= dt;
       if (state.wait > 0) return;
