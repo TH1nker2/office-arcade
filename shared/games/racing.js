@@ -122,7 +122,7 @@
 
   AR.games.racing = {
     id: 'racing',
-    rate: 30,
+    rate: 60,
 
     create: function (players, opt) {
       var seed = (opt && opt.seed) || Date.now();

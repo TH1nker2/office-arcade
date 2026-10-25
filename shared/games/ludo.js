@@ -142,7 +142,7 @@
 
   AR.games.ludo = {
     id: 'ludo',
-    rate: 12,
+    rate: 20,
 
     create: function (players, opt) {
       var n = players.length;

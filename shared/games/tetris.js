@@ -228,7 +228,7 @@
 
   AR.games.tetris = {
     id: 'tetris',
-    rate: 15,
+    rate: 30,
 
     create: function (players, opt) {
       var rnd = AR.rng((opt && opt.seed) || Date.now());

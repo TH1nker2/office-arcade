@@ -1154,9 +1154,12 @@ setInterval(() => {
     }
 
     room.netAcc += dt;
-    const rate = g.rate || 30;
+    const rate = g.rate || 60;
     if (room.netAcc >= 1 / rate) {
-      room.netAcc = 0;
+      /* 用累减而不是清零：40Hz 以上的频率靠 8ms 定时器触发，
+         清零会把每次的余数丢掉，实际频率会低于设定值 */
+      room.netAcc -= 1 / rate;
+      if (room.netAcc > 1) room.netAcc = 0;
       broadcast(room, { t: 'state', s: g.snapshot(room.game) });
       if (g.privateFor) {
         room.players.forEach((p) => {
@@ -1177,7 +1180,7 @@ setInterval(() => {
   invites.forEach((inv, id) => {
     if (t - inv.at > 60000) invites.delete(id);
   });
-}, 16);
+}, 8);
 
 /* ============================================================
  * 管理接口装配
