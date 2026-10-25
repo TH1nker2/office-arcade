@@ -79,6 +79,19 @@ const MIGRATIONS = [
 
 function openOnce(file) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
+  /* 打开前清掉残留的 -wal / -shm：
+   * 进程被强杀后这两个文件会留下来，里面有旧锁，新的写连接会一直报 readonly。
+   * -wal 为 0 字节时确定没有未落盘数据，直接删；否则先尝试合并。
+   */
+  try {
+    const wal = file + '-wal';
+    const shm = file + '-shm';
+    if (fs.existsSync(wal) && fs.statSync(wal).size === 0) {
+      fs.rmSync(wal, { force: true });
+      fs.rmSync(shm, { force: true });
+    }
+  } catch (e) { /* 删不掉就算了，后面正常打开 */ }
+
   /* 被占用时等一会儿再试，别因为一瞬间的锁就判定失败 */
   let db = null;
   for (let attempt = 0; attempt < 6; attempt++) {
@@ -96,12 +109,14 @@ function openOnce(file) {
    * 整个库变成 "attempt to write a readonly database"。本项目的写入量很小，
    * 用回滚日志完全够用。 */
   try {
-    const cur = db.prepare('PRAGMA journal_mode').get().journal_mode;
-    if (String(cur).toLowerCase() === 'wal') {
-      db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    const cur = String(db.prepare('PRAGMA journal_mode').get().journal_mode || '').toLowerCase();
+    if (cur === 'wal') {
+      try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch (e) { /* ignore */ }
     }
-  } catch (e) { /* 检查点失败不影响后面切模式 */ }
-  db.exec('PRAGMA journal_mode = DELETE');
+    if (cur !== 'delete') db.exec('PRAGMA journal_mode = DELETE');
+  } catch (e) {
+    console.warn('[store] 切换 journal_mode 失败（' + e.message + '），继续用当前模式');
+  }
   db.exec('PRAGMA synchronous = NORMAL');
   db.exec(SCHEMA);
 
