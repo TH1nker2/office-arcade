@@ -143,6 +143,14 @@ function loadWords() {
 
 const WORDS = loadWords();
 
+/* 判定答案时的归一化：忽略大小写、空格和标点（与 shared/games/draw.js 的 norm 一致） */
+function normAnswer(v) {
+  return String(v || '')
+    .toLowerCase()
+    .replace(/[\s，。！？、,.!?~～·\-_]/g, '')
+    .trim();
+}
+
 /* ---------- 数据层 ---------- */
 /* 数据目录：始终放在程序目录的 data\ 下（便携版）。
  * 需要临时换位置时用 ARCADE_DATA 环境变量（测试用）。 */
@@ -1076,6 +1084,19 @@ function handle(conn, msg) {
         pushChat(lobbyChat, { kind: 'say', from: from, text: text, at: now });
         broadcastAll({ t: 'chat', ch: 'lobby', kind: 'say', from: from, text: text, at: now });
         return;
+      }
+
+      /* 你画我猜：画家不能直接把答案打出来（否则游戏没法玩） */
+      if (room.gameId === 'draw' && room.phase === 'playing' && room.game &&
+        room.game.drawerId === u.id) {
+        const ans = normAnswer(room.game.word);
+        if (ans && normAnswer(text) === ans) {
+          conn.send({
+            t: 'chat', ch: 'room', kind: 'system',
+            text: '你是画手，不能直接把答案说出来'
+          });
+          return;
+        }
       }
 
       /* 你画我猜：先当答案判一次，猜对了不把原话广播出去 */
