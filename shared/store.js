@@ -19,6 +19,15 @@ function open(baseFile) {
     console.log('[store] 使用 SQLite：' + path.basename(baseFile) + '.sqlite');
     return store;
   } catch (e) {
+    const msg = String((e && e.message) || '');
+    /* 数据库被另一个进程占着：绝不能退回 JSON，否则同一套数据会分裂成两份 */
+    if (/locked|busy/i.test(msg)) {
+      console.error('');
+      console.error('  [致命] 数据库正被另一个进程占用（' + msg + '）');
+      console.error('  多半是还有一个游戏厅在跑。请先关掉那个窗口/进程，再重新启动。');
+      console.error('');
+      process.exit(1);
+    }
     if (e && e.fatal) {
       console.error('');
       console.error('  [致命] ' + e.message);

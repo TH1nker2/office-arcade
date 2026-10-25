@@ -79,8 +79,29 @@ const MIGRATIONS = [
 
 function openOnce(file) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const db = new Database(file);
-  db.exec('PRAGMA journal_mode = WAL');
+  /* 被占用时等一会儿再试，别因为一瞬间的锁就判定失败 */
+  let db = null;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      db = new Database(file);
+      break;
+    } catch (e) {
+      if (!/locked|busy/i.test(String(e.message))) throw e;
+      if (attempt === 5) throw e;
+      const until = Date.now() + 200;
+      while (Date.now() < until) { /* 忙等，避免引入异步 */ }
+    }
+  }
+  /* 用 DELETE 日志模式：不产生 -wal/-shm，避免只读连接把索引文件弄坏后
+   * 整个库变成 "attempt to write a readonly database"。本项目的写入量很小，
+   * 用回滚日志完全够用。 */
+  try {
+    const cur = db.prepare('PRAGMA journal_mode').get().journal_mode;
+    if (String(cur).toLowerCase() === 'wal') {
+      db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    }
+  } catch (e) { /* 检查点失败不影响后面切模式 */ }
+  db.exec('PRAGMA journal_mode = DELETE');
   db.exec('PRAGMA synchronous = NORMAL');
   db.exec(SCHEMA);
 
