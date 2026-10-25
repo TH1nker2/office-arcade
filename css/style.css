@@ -1671,3 +1671,8 @@ kbd {
 }
 .kf-line .kf-x { margin: 0 7px; color: var(--dim); font-size: 11px; }
 .kf-line.out { opacity: 0; }
+
+/* 选词弹窗只挡住自己的面板：背景透传点击，
+   这样画家在选词的 10 秒里还能点右下角聊天框说话 */
+#choose-overlay { pointer-events: none; }
+#choose-overlay .panel { pointer-events: auto; }

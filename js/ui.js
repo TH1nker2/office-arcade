@@ -1152,8 +1152,15 @@
     if (!(APP.game && APP.game.id === 'draw')) $('chat-panel').classList.add('hidden');
   }
 
+  /* 选词列表每次快照都会重发（10Hz），内容没变就别重建，
+     否则按钮每秒被重新创建 10 次，鼠标悬浮的高亮会不停闪 */
+  var lastChoicesKey = '';
   function showChoices(list) {
     var box = $('choose-list');
+    var key = (list || []).join('|');
+    var visible = !$('choose-overlay').classList.contains('hidden');
+    if (key === lastChoicesKey && visible && box.children.length) return;
+    lastChoicesKey = key;
     box.innerHTML = '';
     (list || []).forEach(function (w, i) {
       var b = document.createElement('button');
