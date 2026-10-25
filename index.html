@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>摸鱼游戏厅 · OFFICE ARCADE</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <canvas id="stage"></canvas>
+
+  <!-- ================= 游戏 HUD ================= -->
+  <div id="hud" class="hidden">
+    <header class="hud-bar">
+      <div class="hud-game"><b id="hud-name">游戏</b><em id="hud-sub">ARCADE</em></div>
+      <div class="hud-timer" id="hud-timer">--</div>
+      <div class="hud-round" id="hud-round">第 1 局</div>
+      <div class="hud-spacer"></div>
+      <button class="hud-btn" id="hud-back">退出游戏 (Esc)</button>
+    </header>
+    <aside class="hud-board" id="hud-board"></aside>
+    <div class="hud-hint" id="hud-hint"></div>
+    <div class="hud-center" id="hud-center"></div>
+    <div class="chat-peek hidden" id="chat-peek"></div>
+  </div>
+
+  <div id="chat-panel" class="hidden">
+    <div class="chat-log" id="chat-log"></div>
+    <div class="chat-input">
+      <button class="emoji-toggle" id="chat-emoji-btn" title="表情">😊</button>
+      <input id="chat-text" maxlength="120" placeholder="回车发送" autocomplete="off">
+      <button id="chat-send">发送</button>
+    </div>
+    <div class="emoji-pop hidden" id="chat-emoji-pop"></div>
+  </div>
+
+  <!-- ================= 界面 ================= -->
+  <div id="screens">
+
+    <!-- 登录 / 注册 -->
+    <section class="screen active" id="screen-auth">
+      <div class="auth-wrap">
+        <div class="auth-card">
+          <div class="tabs">
+            <button class="tab active" data-auth="login">登录</button>
+            <button class="tab" data-auth="register">注册</button>
+          </div>
+
+          <form id="auth-form" autocomplete="on">
+            <label class="field">
+              <span>用户名</span>
+              <input id="auth-user" maxlength="16" placeholder="3-16 位字母 / 数字 / 下划线" autocomplete="username">
+            </label>
+            <label class="field hidden" id="nick-field">
+              <span>昵称（大厅里显示的名字）</span>
+              <input id="auth-nick" maxlength="10" placeholder="比如：老王" autocomplete="nickname">
+            </label>
+            <label class="field">
+              <span>密码</span>
+              <input id="auth-pass" type="password" maxlength="40" placeholder="至少 6 位" autocomplete="current-password">
+            </label>
+            <button class="btn primary big" id="auth-submit" type="submit">登 录</button>
+          </form>
+        </div>
+
+        <button class="version-chip" id="auth-version">v0.0.0</button>
+      </div>
+    </section>
+
+    <!-- 大厅 -->
+    <section class="screen" id="screen-lobby">
+      <div class="lobby">
+        <header class="lobby-top">
+          <div class="brand-mini">摸鱼游戏厅</div>
+          <div class="lobby-stat" id="lobby-stat">在线 0</div>
+          <div class="spacer"></div>
+          <button class="version-chip small" id="lobby-version" title="查看更新说明">v0.0.0</button>
+          <button class="btn small ghost" id="btn-board">排行榜</button>
+          <button class="profile-chip" id="btn-profile">
+            <span class="pc-avatar" id="pc-avatar">?</span>
+            <span class="pc-name" id="pc-name">…</span>
+            <span class="pc-points" id="pc-points">0</span>
+          </button>
+          <button class="btn small ghost" id="btn-logout">退出</button>
+        </header>
+
+        <div class="lobby-body">
+          <aside class="user-panel">
+            <div class="panel-title">大厅玩家 <small id="user-count"></small></div>
+            <div class="user-list" id="user-list"></div>
+
+            <div class="lobby-chat">
+              <div class="chat-head">
+                <span>大厅聊天</span>
+                <button class="emoji-toggle" id="lobby-emoji-btn" title="表情">😊</button>
+              </div>
+              <div class="chat-log" id="lobby-chat-log"><div class="chat-empty" id="lobby-chat-empty">还没有人说话，打个招呼吧</div></div>
+              <div class="chat-input">
+                <input id="lobby-chat-text" maxlength="120" placeholder="说点什么…" autocomplete="off">
+                <button id="lobby-chat-send">发送</button>
+              </div>
+              <div class="emoji-pop hidden" id="lobby-emoji-pop"></div>
+            </div>
+          </aside>
+
+          <main class="game-panel">
+            <div class="panel-title">选择游戏 <small>点一张卡片进入</small></div>
+            <div class="game-grid big" id="lobby-games"></div>
+          </main>
+        </div>
+      </div>
+    </section>
+
+    <!-- 游戏分区 -->
+    <section class="screen" id="screen-game">
+      <div class="hub">
+        <header class="hub-head">
+          <button class="btn small ghost" id="hub-back">← 大厅</button>
+          <div class="hub-title">
+            <b id="hub-name">游戏</b>
+            <em id="hub-sub">ARCADE</em>
+          </div>
+          <div class="spacer"></div>
+          <span class="hub-desc" id="hub-desc"></span>
+        </header>
+
+        <div class="hub-actions">
+          <button class="btn primary" id="btn-create-room">创建房间</button>
+          <div class="join-row">
+            <input id="join-code" maxlength="4" placeholder="房间码" autocomplete="off" spellcheck="false">
+            <button class="btn" id="btn-join-room">加入</button>
+          </div>
+        </div>
+
+        <div class="hub-rooms">
+          <div class="panel-title">当前房间 <small id="rooms-hint"></small></div>
+          <div class="room-list" id="room-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 房间 -->
+    <section class="screen" id="screen-room">
+      <div class="room-panel">
+        <header class="room-head">
+          <div class="room-code-block">
+            <div class="room-label">房间码</div>
+            <div class="room-code" id="room-code">----</div>
+          </div>
+          <div class="room-head-mid">
+            <div class="room-game" id="room-game">游戏</div>
+            <div class="room-status" id="room-status">等待开局…</div>
+          </div>
+          <div class="room-head-right">
+            <button class="btn small ghost" id="btn-leave-room">离开房间</button>
+          </div>
+        </header>
+
+        <div class="room-body">
+          <div class="col-title">玩家 <small id="room-count"></small></div>
+          <div class="room-players" id="room-players"></div>
+        </div>
+
+        <footer class="room-foot">
+          <button class="btn" id="btn-invite">邀请玩家</button>
+          <div class="bot-box" id="bot-box">
+            <select id="bot-level" title="人机难度">
+              <option value="easy">简单</option>
+              <option value="normal" selected>普通</option>
+              <option value="hard">困难</option>
+              <option value="insane">变态</option>
+            </select>
+            <button class="btn small" id="btn-add-bot">+ 人机</button>
+          </div>
+          <div class="game-desc" id="room-desc"></div>
+          <button class="btn primary" id="btn-start">开始游戏</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- 个人资料 -->
+    <section class="screen" id="screen-profile">
+      <div class="panel profile-panel">
+        <header class="panel-head">
+          <h2>个人资料</h2>
+          <button class="x" id="btn-profile-back">✕</button>
+        </header>
+
+        <div class="panel-body profile-body">
+          <div class="profile-left">
+            <div class="avatar-preview" id="profile-avatar-preview">?</div>
+            <label class="field">
+              <span>昵称</span>
+              <input id="profile-nick" maxlength="10">
+            </label>
+            <label class="field">
+              <span>个性签名</span>
+              <input id="profile-bio" maxlength="60" placeholder="一句话介绍自己">
+            </label>
+            <div class="label-row"><span>头像</span></div>
+            <div class="emoji-grid" id="profile-emojis"></div>
+            <div class="label-row"><span>颜色</span></div>
+            <div class="swatches" id="profile-colors"></div>
+            <button class="btn primary" id="btn-save-profile">保存资料</button>
+          </div>
+
+          <div class="profile-right">
+            <div class="stat-cards" id="profile-stats"></div>
+
+            <div class="label-row"><span>修改密码</span></div>
+            <div class="pass-row">
+              <input id="old-pass" type="password" placeholder="原密码" autocomplete="current-password">
+              <input id="new-pass" type="password" placeholder="新密码（≥6 位）" autocomplete="new-password">
+              <button class="btn small" id="btn-change-pass">修改</button>
+            </div>
+
+            <div class="label-row"><span>最近战绩</span></div>
+            <div class="history" id="profile-history"></div>
+          </div>
+        </div>
+
+        <footer class="panel-foot">
+          <button class="btn small ghost" id="btn-profile-close">关闭</button>
+        </footer>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ================= 收到邀请 ================= -->
+  <div class="overlay hidden" id="invite-overlay">
+    <div class="panel narrow">
+      <h2 class="panel-title">收到邀请</h2>
+      <p class="panel-sub" id="invite-text">有人邀请你加入房间</p>
+      <div class="panel-actions">
+        <button class="btn primary" id="btn-invite-accept">接受并进入</button>
+        <button class="btn ghost" id="btn-invite-decline">婉拒</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 更新说明 ================= -->
+  <div class="overlay hidden" id="version-overlay">
+    <div class="panel">
+      <h2 class="panel-title">更新说明</h2>
+      <p class="panel-sub" id="version-sub">当前版本 —</p>
+      <div class="version-body" id="version-body"></div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="version-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 你画我猜：等待作者选词 ================= -->
+  <div class="overlay hidden" id="draw-wait">
+    <div class="panel narrow wait-panel">
+      <div class="wait-spin"></div>
+      <h2 class="panel-title" id="wait-title">作者正在选词…</h2>
+      <p class="panel-sub">稍等一下，马上开画</p>
+      <div class="wait-num" id="wait-num">10</div>
+    </div>
+  </div>
+
+  <!-- ================= 你画我猜选词 ================= -->
+  <div class="overlay hidden" id="choose-overlay">
+    <div class="panel narrow">
+      <h2 class="panel-title">选一个词</h2>
+      <p class="panel-sub">只有你能看到，把它画出来让大家猜</p>
+      <p class="choose-tip" id="choose-tip">10 秒后自动随机选择</p>
+      <div class="choose-list" id="choose-list"></div>
+    </div>
+  </div>
+
+  <!-- ================= 邀请面板 ================= -->
+  <div class="overlay hidden" id="pick-overlay">
+    <div class="panel">
+      <h2 class="panel-title">邀请谁？</h2>
+      <p class="panel-sub">只有在线且不在房间里的玩家会出现在这里</p>
+      <div class="pick-list" id="pick-list"></div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="btn-pick-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 结算 ================= -->
+  <div class="overlay hidden" id="over-overlay">
+    <div class="panel">
+      <h2 class="panel-title" id="over-title">本局结束</h2>
+      <p class="panel-sub" id="over-sub"></p>
+      <div class="res-table" id="over-table"></div>
+      <div class="panel-actions">
+        <button class="btn primary" id="over-back">回到房间</button>
+        <button class="btn ghost" id="btn-exit-game">退出游戏</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 排行榜 ================= -->
+  <div class="overlay hidden" id="board-overlay">
+    <div class="panel">
+      <h2 class="panel-title">摸鱼排行榜</h2>
+      <p class="panel-sub">按累计积分排序：第 1 名 +5、第 2 名 +3、第 3 名 +1</p>
+      <div class="res-table" id="board-table"></div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="board-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 二次确认 ================= -->
+  <div class="overlay hidden" id="confirm-overlay">
+    <div class="panel narrow">
+      <h2 class="panel-title" id="confirm-title">确认退出？</h2>
+      <p class="panel-sub" id="confirm-text">退出后本局成绩照常结算，房间会留给其他人。</p>
+      <div class="panel-actions">
+        <button class="btn primary" id="confirm-ok">确认退出</button>
+        <button class="btn ghost" id="confirm-cancel">继续玩</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <div class="overlay hidden" id="fatal">
+    <div class="panel">
+      <h2 class="panel-title">游戏出错了</h2>
+      <pre id="fatal-text"></pre>
+      <div class="panel-actions">
+        <button class="btn primary" id="fatal-reload">重新加载</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared/core.js"></script>
+<script src="shared/registry.js"></script>
+<script src="js/net.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

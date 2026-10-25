@@ -1,0 +1,30 @@
+[Unit]
+Description=Office Arcade (摸鱼游戏厅)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=arcade
+Group=arcade
+WorkingDirectory=/opt/office-arcade
+
+# 只监听本机，外面统一走 nginx
+Environment=HOST=127.0.0.1
+Environment=PORT=8090
+Environment=NODE_ENV=production
+
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+
+# 旧版 Node（< 22.5）没有 node:sqlite 时，取消下面一行注释改用 JSON 存储
+# Environment=ARCADE_STORE=json
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/office-arcade/data
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理后台 · 摸鱼游戏厅</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ================= 登录 ================= -->
+  <section class="screen active" id="admin-login">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="admin-title">管理后台</div>
+        <form id="login-form" autocomplete="on">
+          <label class="field">
+            <span>管理员账号</span>
+            <input id="admin-user" maxlength="32" placeholder="admins.json 里的 username" autocomplete="username">
+          </label>
+          <label class="field">
+            <span>密码</span>
+            <input id="admin-pass" type="password" maxlength="64" placeholder="password" autocomplete="current-password">
+          </label>
+          <p class="tip" id="login-tip"></p>
+          <button class="btn primary big" id="login-btn" type="submit">登 录</button>
+        </form>
+      </div>
+      <a class="version-chip" href="/">← 返回游戏厅</a>
+    </div>
+  </section>
+
+  <!-- ================= 后台 ================= -->
+  <section class="screen" id="admin-panel">
+    <div class="admin-wrap">
+      <header class="admin-top">
+        <div class="brand-mini">摸鱼游戏厅 · 管理后台</div>
+        <span class="admin-badge" id="admin-name">—</span>
+        <div class="spacer"></div>
+        <span class="admin-stat" id="admin-stat"></span>
+        <button class="btn small ghost" id="btn-refresh">刷新</button>
+        <a class="btn small ghost" href="/">游戏厅</a>
+        <button class="btn small ghost" id="btn-logout">退出</button>
+      </header>
+
+      <div class="admin-toolbar">
+        <input id="search" placeholder="搜索昵称 / 用户名" autocomplete="off">
+        <label class="admin-check"><input type="checkbox" id="only-online"> 只看在线</label>
+        <div class="spacer"></div>
+        <span class="admin-hint" id="hint"></span>
+      </div>
+
+      <div class="admin-table" id="user-table"></div>
+    </div>
+  </section>
+
+  <!-- ================= 通用弹窗 ================= -->
+  <div class="overlay hidden" id="dialog">
+    <div class="panel narrow">
+      <h2 class="panel-title" id="dlg-title">确认</h2>
+      <p class="panel-sub" id="dlg-text"></p>
+      <div class="field hidden" id="dlg-field">
+        <span id="dlg-label">输入</span>
+        <input id="dlg-input" autocomplete="off">
+      </div>
+      <div class="panel-actions">
+        <button class="btn primary" id="dlg-ok">确定</button>
+        <button class="btn ghost" id="dlg-cancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+</div>
+<script src="js/admin.js"></script>
+</body>
+</html>

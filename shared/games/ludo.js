@@ -1,0 +1,336 @@
+/* ============================================================
+ * 飞行棋 · AERO CHESS（服务端权威）
+ * 快节奏版：40 格环 + 4 格归航道，每人 2 架飞机
+ *   - 开局第 1 架已在起点，第 2 架要掷到 6 才能起飞
+ *   - 掷到 6 可以再掷一次
+ *   - 6 个安全格，踩上去不会被吃
+ *   - 落到对手所在格 → 对手回起点
+ *   - 两架都到家即胜
+ * ============================================================ */
+(function (root) {
+  'use strict';
+
+  var AR = root.AR;
+
+  var N = 40;              /* 环上格数 */
+  var HOME = 4;            /* 归航道格数 */
+  var MAXP = N + HOME;     /* 44 = 到家 */
+  var DURATION = 300;
+  var ROLL_WAIT = 8;       /* 不掷就自动掷 */
+  var MOVE_WAIT = 12;      /* 不选就自动选 */
+  var GAP_TIME = 0.5;      /* 换人停顿 */
+  var SHOW_TIME = 0.75;    /* 骰子展示时间 */
+  var LAUNCH = 5;      /* 掷到 5 或 6 都能让第二架起飞 */
+  var SAFE = [0, 7, 14, 21, 28, 35];
+
+  var BOT_SKILL = { easy: 0.3, normal: 0.6, hard: 0.85, insane: 1.0 };
+
+  function startOf(state, idx) {
+    return Math.floor(idx * N / state.n);
+  }
+
+  function absCell(state, idx, pos) {
+    return (startOf(state, idx) + pos) % N;
+  }
+
+  function currentId(state) {
+    return state.order[state.turn % state.order.length];
+  }
+
+  function nextTurn(state) {
+    state.turn = (state.turn + 1) % state.order.length;
+    state.phase = 'gap';
+    state.wait = GAP_TIME;
+    state.dice = 0;
+    state.moves = [];
+  }
+
+  function movablePlanes(state, me) {
+    var out = [];
+    for (var i = 0; i < me.planes.length; i++) {
+      var pos = me.planes[i];
+      if (pos === MAXP) continue;
+      if (pos === -1) {
+        if (state.dice >= LAUNCH) out.push(i);
+      } else {
+        out.push(i);
+      }
+    }
+    return out;
+  }
+
+  function doRoll(state) {
+    var me = state.players[currentId(state)];
+    state.dice = 1 + Math.floor(state.rnd() * 6);
+    state.moves = movablePlanes(state, me);
+    state.phase = 'show';
+    state.wait = SHOW_TIME;
+    state.rolled = true;
+  }
+
+  function applyMove(state, idx) {
+    var me = state.players[currentId(state)];
+    if (state.phase !== 'move' || state.moves.indexOf(idx) < 0) return;
+
+    var from = me.planes[idx];
+    var target = from === -1 ? 0 : Math.min(MAXP, from + state.dice);
+    me.planes[idx] = target;
+
+    /* 环上踩人 */
+    if (target >= 0 && target < N) {
+      var cell = absCell(state, me.index, target);
+      if (SAFE.indexOf(cell) < 0) {
+        state.order.forEach(function (oid) {
+          if (oid === me.id) return;
+          var other = state.players[oid];
+          for (var j = 0; j < other.planes.length; j++) {
+            var op = other.planes[j];
+            if (op < 0 || op >= N) continue;
+            if (absCell(state, other.index, op) === cell) {
+              other.planes[j] = -1;
+              state.events.push({ t: 'hit', by: me.id, who: oid, cell: cell });
+            }
+          }
+        });
+      }
+    }
+
+    state.events.push({ t: 'move', id: me.id, plane: idx, to: target });
+
+    /* 全部到家 → 结束 */
+    var allHome = me.planes.every(function (p) { return p === MAXP; });
+    if (allHome) {
+      state.ended = true;
+      state.winnerId = me.id;
+      state.phase = 'over';
+      state.wait = 0;
+      return;
+    }
+
+    if (state.dice >= LAUNCH) {
+      state.phase = 'gap';
+      state.wait = GAP_TIME;
+      state.dice = 0;
+      state.moves = [];
+      state.rolled = false;
+    } else {
+      nextTurn(state);
+    }
+  }
+
+  AR.games.ludo = {
+    id: 'ludo',
+    rate: 12,
+
+    create: function (players, opt) {
+      var n = players.length;
+      var state = {
+        time: 0,
+        duration: DURATION,
+        n: n,
+        order: [],
+        players: {},
+        turn: 0,
+        phase: 'roll',
+        dice: 0,
+        wait: ROLL_WAIT,
+        moves: [],
+        winnerId: null,
+        ended: false,
+        events: [],
+        rolled: false
+      };
+      players.forEach(function (p, i) {
+        state.order.push(p.id);
+        state.players[p.id] = {
+          id: p.id,
+          name: p.name,
+          color: p.color,
+          index: i,
+          planes: [-1, -1]
+        };
+      });
+      /* 开局每人一架已经停在起点 */
+      state.order.forEach(function (id) {
+        state.players[id].planes[0] = 0;
+      });
+      state.rnd = AR.rng(((opt && opt.seed) || Date.now()) >>> 0);
+      return state;
+    },
+
+    removePlayer: function (state, id) {
+      var i = state.order.indexOf(id);
+      if (i < 0) return;
+      state.order.splice(i, 1);
+      delete state.players[id];
+      if (!state.order.length) {
+        state.ended = true;
+        return;
+      }
+      if (state.turn >= state.order.length) state.turn = 0;
+      /* 索引要跟着重排，否则起跑格会错位 */
+      state.order.forEach(function (oid, k) {
+        state.players[oid].index = k;
+      });
+      state.n = state.order.length;
+      state.phase = 'roll';
+      state.wait = ROLL_WAIT;
+      state.dice = 0;
+      state.moves = [];
+    },
+
+    input: function (state, id, inp) {
+      if (state.ended || !inp) return;
+      if (currentId(state) !== id) return;
+      if (state.phase === 'roll' && (inp.roll || inp.r)) {
+        doRoll(state);
+      } else if (state.phase === 'move' && typeof inp.plane === 'number') {
+        applyMove(state, inp.plane | 0);
+      }
+    },
+
+    tick: function (state, dt) {
+      state.time += dt;
+      if (state.time >= state.duration && !state.ended) {
+        state.ended = true;
+        state.phase = 'over';
+      }
+      if (state.ended) return;
+
+      state.wait -= dt;
+      if (state.wait > 0) return;
+
+      if (state.phase === 'gap') {
+        state.phase = 'roll';
+        state.wait = ROLL_WAIT;
+        state.dice = 0;
+        state.rolled = false;
+      } else if (state.phase === 'roll') {
+        doRoll(state);
+      } else if (state.phase === 'show') {
+        if (!state.moves.length) {
+          state.phase = 'skip';
+          state.wait = 1.0;
+        } else if (state.moves.length === 1) {
+          /* 只有一架能动，展示完骰子直接走 */
+          state.phase = 'move';
+          applyMove(state, state.moves[0]);
+        } else {
+          state.phase = 'move';
+          state.wait = MOVE_WAIT;
+        }
+      } else if (state.phase === 'skip') {
+        nextTurn(state);
+      } else if (state.phase === 'move') {
+        if (state.moves.length) applyMove(state, state.moves[0]);
+        else nextTurn(state);
+      }
+    },
+
+    /* 人机 */
+    bot: function (state, id, dt, level) {
+      if (state.ended) return null;
+      if (currentId(state) !== id) return null;
+      if (state.phase === 'roll') return { roll: 1 };
+      if (state.phase !== 'move' || !state.moves.length) return null;
+
+      var me = state.players[id];
+      var skill = BOT_SKILL[level] || 0.6;
+      var best = state.moves[0];
+      var bestScore = -Infinity;
+
+      for (var k = 0; k < state.moves.length; k++) {
+        var idx = state.moves[k];
+        var from = me.planes[idx];
+        var to = from === -1 ? 0 : Math.min(MAXP, from + state.dice);
+        var score = to;
+
+        if (to === MAXP) score += 260;                       /* 到家 */
+        if (to >= 0 && to < N) {
+          var cell = absCell(state, me.index, to);
+          /* 能踩人就踩 */
+          state.order.forEach(function (oid) {
+            if (oid === id) return;
+            var other = state.players[oid];
+            for (var j = 0; j < other.planes.length; j++) {
+              var op = other.planes[j];
+              if (op < 0 || op >= N) continue;
+              if (absCell(state, other.index, op) === cell && SAFE.indexOf(cell) < 0) {
+                score += 180;
+              }
+            }
+          });
+          /* 安全格更稳 */
+          if (SAFE.indexOf(cell) >= 0) score += 40;
+          /* 别停在被别人追得上的地方 */
+          if (SAFE.indexOf(cell) < 0 && skill > 0.7) score -= 12;
+        }
+
+        score += (Math.abs(Math.sin(state.time * 3 + id.length + idx)) * (1 - skill) * 60);
+
+        if (score > bestScore) { bestScore = score; best = idx; }
+      }
+
+      /* 低难度：有小概率手滑 */
+      if (skill < 0.5 && state.moves.length > 1) {
+        var slip = Math.abs(Math.sin(state.time * 1.7 + id.length));
+        if (slip > 0.75) best = state.moves[Math.floor(slip * 100) % state.moves.length];
+      }
+      return { plane: best };
+    },
+
+    isOver: function (state) {
+      return !!state.ended;
+    },
+
+    results: function (state) {
+      var list = [];
+      state.order.forEach(function (id) {
+        var p = state.players[id];
+        var done = 0;
+        var prog = 0;
+        p.planes.forEach(function (pos) {
+          if (pos === MAXP) done++;
+          prog += (pos === -1 ? 0 : pos + 1);
+        });
+        list.push({
+          id: id,
+          name: p.name,
+          score: done * 1000 + prog,
+          kills: done,
+          done: done
+        });
+      });
+      list.sort(function (a, b) {
+        if (state.winnerId) {
+          if (a.id === state.winnerId) return -1;
+          if (b.id === state.winnerId) return 1;
+        }
+        return b.score - a.score;
+      });
+      return list;
+    },
+
+    snapshot: function (state) {
+      var pl = state.order.map(function (id) {
+        var p = state.players[id];
+        return [id, p.planes[0], p.planes[1]];
+      });
+      var ev = state.events;
+      state.events = [];
+      return {
+        t: Math.round(state.time * 10) / 10,
+        d: state.duration,
+        ph: state.phase,
+        c: currentId(state),
+        w: Math.max(0, Math.ceil(state.wait)),
+        dice: state.dice,
+        mv: state.moves,
+        n: state.order.length,
+        pl: pl,
+        win: state.winnerId,
+        ev: ev.slice(0, 12)
+      };
+    }
+  };
+})(typeof window !== 'undefined' ? window : globalThis);

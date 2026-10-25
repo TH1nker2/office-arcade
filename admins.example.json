@@ -1,0 +1,10 @@
+{
+  "_readme": "管理员账号示例。复制成 admins.json 后改成你自己的密码，然后重启服务器。admins.json 已被 .gitignore 排除，不会被提交。",
+  "admins": [
+    {
+      "username": "admin",
+      "password": "请改成你自己的密码",
+      "name": "超级管理员"
+    }
+  ]
+}
