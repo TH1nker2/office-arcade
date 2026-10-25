@@ -77,7 +77,7 @@ const MIGRATIONS = [
   }
 ];
 
-function open(file) {
+function openOnce(file) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const db = new Database(file);
   db.exec('PRAGMA journal_mode = WAL');
@@ -293,6 +293,21 @@ function open(file) {
   };
 
   return api;
+}
+
+/* 有些情况下（比如另一个进程用只读方式开过同一个库）会留下 -shm 索引，
+ * 之后写连接会一直报 "attempt to write a readonly database"。
+ * 这里检测到只读错误就删掉 -shm 再重开一次；-wal 不动，避免丢未落盘的数据。 */
+function open(file) {
+  try {
+    return openOnce(file);
+  } catch (e) {
+    const msg = String((e && e.message) || '');
+    if (!/readonly|read-only/i.test(msg)) throw e;
+    console.warn('[store] 数据库处于只读状态（' + msg + '），清理 -shm 后重试');
+    try { fs.rmSync(file + '-shm', { force: true }); } catch (err) { /* ignore */ }
+    return openOnce(file);
+  }
 }
 
 module.exports = { open, SCHEMA_VERSION };

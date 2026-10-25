@@ -1468,7 +1468,12 @@ setInterval(() => {
     c.sendFrame(0x9, Buffer.from('hb'));
     c.send({ t: 'hb', at: now });
   });
-  store.sessionCleanup(now);
+  try {
+    store.sessionCleanup(now);
+  } catch (e) {
+    /* 数据库偶发只读/锁定不该让定时器崩掉，记一次就好 */
+    console.error('[cleanup] 清理过期会话失败：' + e.message);
+  }
 }, 30000);
 
 /* ============================================================
