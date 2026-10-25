@@ -1486,6 +1486,9 @@ setInterval(() => {
     c.sendFrame(0x9, Buffer.from('hb'));
     c.send({ t: 'hb', at: now });
   });
+  /* 管理员会话也要定期清理，否则没再登录过的令牌会一直留在内存里 */
+  adminSessions.forEach((v, k) => { if (v.expires < now) adminSessions.delete(k); });
+
   try {
     store.sessionCleanup(now);
   } catch (e) {
