@@ -174,7 +174,7 @@
     });
 
     $('btn-add-bot').addEventListener('click', function () {
-      Net.send({ t: 'botAdd', level: $('bot-level').value });
+      Net.send({ t: 'botAdd' });
     });
     $('btn-pick-close').addEventListener('click', function () {
       $('pick-overlay').classList.add('hidden');
@@ -645,7 +645,7 @@
     renderRoom();
   }
 
-  var BOT_CN = { easy: '简单', normal: '普通', hard: '困难', insane: '变态' };
+  var BOT_CN = { normal: '人机' };
 
   function renderRoom() {
     var room = APP.room;

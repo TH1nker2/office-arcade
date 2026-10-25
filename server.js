@@ -515,7 +515,7 @@ function broadcastAll(obj) {
 
 /* 人机 */
 const BOT_NAMES = ['阿强', '小美', '老李', '大熊', '阿杰', '小柔', '铁柱', '阿珍'];
-const BOT_LEVELS = { easy: '简单', normal: '普通', hard: '困难', insane: '变态' };
+const BOT_LEVELS = { normal: '普通' };   /* 人机不再分难度，统一普通 */
 
 function makeCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -578,7 +578,7 @@ function addBot(room, level) {
 
   room.botSeq = (room.botSeq || 0) + 1;
 
-  const lv = BOT_LEVELS[level] ? level : 'normal';
+  const lv = 'normal';   /* 固定普通难度，忽略客户端传值 */
   const idx = room.botSeq - 1;
   const id = 'bot' + room.botSeq;
 
