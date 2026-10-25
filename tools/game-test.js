@@ -227,6 +227,21 @@ for (const [id, n, secs, cap] of cases) {
   ok('选词消息只发字符串', !!(cm && cm.list && cm.list.every(function (x) { return typeof x === 'string'; })),
     cm && cm.list ? JSON.stringify(cm.list) : 'null');
 
+  /* 清空画布：只有画手能清，清完 strokes 归零 */
+  const ds4 = dg.create(players(2), { seed: 42 });
+  const dr4 = ds4.drawerId;
+  const other4 = ds4.order.find(function (id) { return id !== dr4; });
+  dg.drawData(ds4, dr4, { n: 0 });
+  dg.drawData(ds4, dr4, { s: { x: 10, y: 10, e: 'b' } });
+  dg.drawData(ds4, dr4, { s: { x: 30, y: 30, e: 'm' } });
+  const before = ds4.strokes.length;
+  const denied = dg.drawData(ds4, other4, { clear: 1 });
+  const afterDenied = ds4.strokes.length;
+  const allowed = dg.drawData(ds4, dr4, { clear: 1 });
+  ok('画了两笔', before === 2, 'strokes=' + before);
+  ok('非画手不能清空', denied === null && afterDenied === 2, 'strokes=' + afterDenied);
+  ok('画手可以清空', allowed && allowed.t === 'paintClear' && ds4.strokes.length === 0);
+
   console.log('');
 })();
 

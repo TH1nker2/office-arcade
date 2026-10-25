@@ -1618,3 +1618,13 @@ kbd {
   color: rgba(251, 191, 36, 0.75);
   font-variant-numeric: tabular-nums;
 }
+
+.hud-btn.warn {
+  border-color: rgba(255, 93, 125, 0.4);
+  color: #ff9fb2;
+}
+.hud-btn.warn:hover {
+  border-color: rgba(255, 93, 125, 0.8);
+  background: rgba(255, 93, 125, 0.14);
+  color: #ffd0da;
+}

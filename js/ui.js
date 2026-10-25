@@ -154,6 +154,13 @@
       Net.send({ t: 'start' });
     });
     $('btn-invite').addEventListener('click', openInvitePicker);
+    $('hud-clear').addEventListener('click', function () {
+      if (!APP.snap || APP.snap.ph !== 'draw' || APP.snap.dr !== APP.me.id) return;
+      AR.Render.clearBoard();
+      Net.send({ t: 'draw', clear: 1 });
+      Sfx.click();
+    });
+
     $('level-seg').addEventListener('click', function (e) {
       var btn = e.target.closest('.seg-btn');
       if (!btn || btn.disabled) return;
@@ -341,6 +348,7 @@
       $('choose-overlay').classList.add('hidden');
     });
     Net.on('paint', function (msg) { AR.Render.paint(msg); });
+    Net.on('paintClear', function () { AR.Render.clearBoard(); });
     Net.on('over', onOver);
     Net.on('invite', function (msg) {
       APP.invite = msg;
@@ -732,6 +740,7 @@
     APP.drawTurn = -1;
     $('choose-overlay').classList.add('hidden');
     $('draw-wait').classList.add('hidden');
+    $('hud-clear').classList.add('hidden');
     AR.View.init(msg.id);
     AR.Input.mode = msg.id;
     AR.Input.reset();
@@ -1186,6 +1195,14 @@
     });
   }
 
+  /* 你画我猜：抽屉才看得到的「清空画布」按钮 */
+  function updateDrawToolbar(s) {
+    var btn = $('hud-clear');
+    var show = !!(s && APP.screen === 'play' && APP.game && APP.game.id === 'draw' &&
+      s.ph === 'draw' && s.dr === APP.me.id);
+    btn.classList.toggle('hidden', !show);
+  }
+
   /* 你画我猜：游戏内提示条 */
   var lastHintKey = '';
   function updateHintBar(s) {
@@ -1262,6 +1279,7 @@
     if (APP.screen !== 'play' || !APP.snap) return;
 
     updateDrawMasks();
+    updateDrawToolbar(APP.snap);
     updateHintBar(APP.snap);
 
     var s = APP.snap;

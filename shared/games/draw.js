@@ -147,6 +147,14 @@
       }
       if (state.phase !== 'draw') return null;
       if (id !== state.drawerId) return null;
+
+      /* 清空画布 */
+      if (msg.clear) {
+        state.strokes = [];
+        state.clears = (state.clears || 0) + 1;
+        return { t: 'paintClear' };
+      }
+
       var s = msg.s;
       if (!s || typeof s.x !== 'number' || typeof s.y !== 'number') return null;
       if (state.strokes.length < 4000) {
