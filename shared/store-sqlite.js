@@ -77,6 +77,10 @@ const MIGRATIONS = [
   }
 ];
 
+let _db = null;
+function probeWritable() { _db.exec('BEGIN IMMEDIATE'); _db.exec('ROLLBACK'); }
+function close() { try { _db.close(); } catch (e) { /* ignore */ } }
+
 function openOnce(file) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   /* 打开前清掉残留的 -wal / -shm：
@@ -118,6 +122,7 @@ function openOnce(file) {
     console.warn('[store] 切换 journal_mode 失败（' + e.message + '），继续用当前模式');
   }
   db.exec('PRAGMA synchronous = NORMAL');
+  _db = db;
   db.exec(SCHEMA);
 
   /* ---------- 结构版本与迁移 ----------
@@ -336,7 +341,22 @@ function openOnce(file) {
  * 这里检测到只读错误就删掉 -shm 再重开一次；-wal 不动，避免丢未落盘的数据。 */
 function open(file) {
   try {
-    return openOnce(file);
+    const store = openOnce(file);
+    /* 启动时做一次写探针：有些坏连接是"能打开、写不了"，
+     * 等到玩家登录才炸就太晚了。这里当场发现、清理后重开。 */
+    try {
+      probeWritable();
+      return store;
+    } catch (e) {
+      if (!/readonly|read-only/i.test(String(e.message || ''))) throw e;
+      console.warn('[store] 写探针发现数据库只读（' + e.message + '），清理 -wal/-shm 后重开');
+      try { close(); } catch (err) { /* ignore */ }
+      try { fs.rmSync(file + '-wal', { force: true }); } catch (err) { /* ignore */ }
+      try { fs.rmSync(file + '-shm', { force: true }); } catch (err) { /* ignore */ }
+      const again = openOnce(file);
+      probeWritable();
+      return again;
+    }
   } catch (e) {
     const msg = String((e && e.message) || '');
     if (!/readonly|read-only/i.test(msg)) throw e;
