@@ -111,6 +111,9 @@ foreach ($t in $Target) {
                     if ($bytes[$i] -eq 10) { $lf++; if ($i -gt 0 -and $bytes[$i - 1] -eq 13) { $crlf++ } }
                 }
                 if ($lf -ne $crlf) { throw ("批处理换行符不对：" + $_.Name + "（LF=" + $lf + " CRLF=" + $crlf + "）") }
+                $nonAscii = 0
+                foreach ($b in $bytes) { if ($b -gt 127) { $nonAscii++ } }
+                if ($nonAscii -gt 0) { throw ("批处理含非 ASCII 字符：" + $_.Name + "（" + $nonAscii + " 字节），请改成纯英文") }
             }
 
         # ---- 运行时 ----

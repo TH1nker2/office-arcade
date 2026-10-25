@@ -105,6 +105,9 @@ node tools/offline-test.js
 
 改动前端后建议跑一次，防止不小心引入了外链。
 
+> 启动脚本（`.bat`）里**只用英文**：中文写在批处理里会因为控制台代码页不同被拆行，
+> 报 `xxx is not recognized as an internal or external command`。中文提示由 Node 在启动横幅里输出。
+
 ## 一、快速开始
 
 发行版自带 Node 运行时（`runtime\node.exe`），**不需要系统里装 Node，也不会去 PATH 里找**。

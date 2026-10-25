@@ -1,34 +1,46 @@
 @echo off
-chcp 65001 >nul
+rem ============================================================
+rem  OFFICE ARCADE - LAN server launcher
+rem
+rem  IMPORTANT: keep this file pure ASCII.
+rem  Chinese text inside a .bat gets mis-parsed by cmd.exe when the
+rem  console code page differs (936 / 65001 / 437): a multi-byte
+rem  sequence is split and the tail runs as a command, showing up
+rem  as "<text> is not recognized as an internal or external command".
+rem  All Chinese messages are printed by Node in the startup banner.
+rem ============================================================
+chcp 65001 >nul 2>nul
 setlocal
-title 摸鱼游戏厅 - 局域网服务器（标准版）
 cd /d "%~dp0"
 
-rem ---- 只用工程自带的运行时，不查系统 PATH ----
 set "NODE_EXE=%~dp0runtime\node.exe"
 if not exist "%NODE_EXE%" goto NONODE
 
 echo.
-echo   摸鱼游戏厅 · OFFICE ARCADE  [便携版]
-echo   ------------------------------------------------
-echo   运行环境： runtime\node.exe
-echo   数据位置： %~dp0data
-echo   正在启动局域网服务器（端口 8090）...
-echo   浏览器会自动打开；把终端里的「局域网访问」地址发给同事。
-echo   关闭此窗口即可停止服务器。
+echo   OFFICE ARCADE  ^|  LAN server
+echo   --------------------------------------------------
+echo   runtime : runtime\node.exe
+echo   data    : %~dp0data
+echo   port    : 8090
 echo.
+echo   Starting... the browser opens automatically.
+echo   Send the LAN address printed below to your colleagues.
+echo   Close this window to stop the server.
+echo.
+
 "%NODE_EXE%" server.js 8090 --open
+
 echo.
-echo   服务器已停止。
+echo   Server stopped.
 pause
 exit /b 0
 
 :NONODE
 echo.
-echo   [提示] 没有找到 runtime\node.exe
+echo   [ERROR] runtime\node.exe not found.
 echo.
-echo   请先双击「获取运行环境.bat」下载（需要联网一次），
-echo   或者手动把 node.exe 放到本目录的 runtime 文件夹里。
+echo   Run the "get runtime" script first (needs internet once),
+echo   or put node.exe into the runtime folder next to this file.
 echo.
 pause
 exit /b 1
