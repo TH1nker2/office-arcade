@@ -92,37 +92,21 @@ Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时
 
 发行版自带 Node 运行时（`runtime\node.exe`），**不需要系统里装 Node，也不会去 PATH 里找**。
 
-发行包分两种，只有数据放哪不一样：
+数据固定放在**程序目录下的 `data\`**，不写系统任何位置：
 
-| | 数据位置 | 适合 |
-| --- | --- | --- |
-| **便携版** | Windows `%APPDATA%\office-arcade`、macOS `~/Library/Application Support/office-arcade`、Linux `~/.local/share/office-arcade` | 正常安装，数据不随程序目录走 |
-| **便携版** | 软件目录下的 `data\` | 放 U 盘、不想在系统里留痕、整个文件夹拷走就搬家 |
+```
+office-arcade\
+├── 启动游戏厅.bat
+├── runtime\node.exe
+└── data\                  ← 账号、战绩、聊天都在这儿
+    └── arcade.sqlite
+```
 
-启动横幅会打印实际用的目录：`数据位置： 便携版 · C:\Users\xxx\AppData\Roaming\office-arcade`
+- **备份** = 复制整个 `data` 目录
+- **换机器** = 把 `data` 拷到新机器的同位置
+- **重新开始** = 删掉 `data` 目录，重启即可
 
-1. 双击 **`启动游戏厅.bat`**。
-2. 终端打印：
-
-   ```
-   本机浏览器： http://localhost:8090
-   局域网访问： http://192.168.1.23:8090
-   ```
-
-3. 同事用浏览器打开 → **注册**（用户名 + 密码 + 昵称）→ 进入大厅。
-4. 在大厅左侧能看到所有人的状态：`在线` / `在玩 蛇球大作战` / `离线`。
-5. 点一张游戏卡片进入分区 → `创建房间` 或输入房间码加入。
-6. 房间里点 **邀请玩家**，选一个在线同事，对方会收到弹窗，接受即进房。
-7. 房主点 **开始游戏**。
-
-![登录](shots/30-auth.png)
-
-> 从源码跑的话：先双击 **`获取运行环境.bat`** 下载一次运行时（约 90 MB），之后完全离线。
-> 手动启动：`runtime\node.exe server.js`（换端口就加参数，例如 `runtime\node.exe server.js 8091`）。
-> 防火墙需放行对应端口（首次运行会弹窗，选「允许」）。
-
-**关于 Node 版本**：自带的是 Node 24.21.0（内置 `node:sqlite`）。想换版本时把别处的 `node.exe`
-覆盖到 `runtime\` 即可；18/20 也能跑，会自动回退 JSON 存储。
+启动横幅会打印实际用的目录：`数据位置： D:\games\office-arcade\data`
 
 ## 二、账号与资料
 
