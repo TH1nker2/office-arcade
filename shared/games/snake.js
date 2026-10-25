@@ -14,7 +14,7 @@
   var SPEED = 168;
   var TURN = 8.0;          /* 转向角速度：越大越跟手 */
   var BOOST_MULT = 1.65;   /* 按住左键加速的速度倍率 */
-  var BOOST_COST = 5;      /* 加速时每秒掉多少分（最低 0） */
+  var BOOST_COST = 2;      /* 加速时每秒掉多少分（按帧连续扣，最低 0） */
   var STEP = 5;
   var ORB_N = 110;
   var ORB_R = 24;

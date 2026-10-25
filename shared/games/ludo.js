@@ -15,7 +15,7 @@
   var N = 40;              /* 环上格数 */
   var HOME = 4;            /* 归航道格数 */
   var MAXP = N + HOME;     /* 44 = 到家 */
-  var DURATION = 300;
+  var DURATION = 0;             /* 不限时：打到只剩一个人没到家 */
   var ROLL_WAIT = 8;       /* 不掷就自动掷 */
   var MOVE_WAIT = 12;      /* 不选就自动选 */
   var GAP_TIME = 0.5;      /* 换人停顿 */
@@ -107,10 +107,25 @@
     /* 全部到家 → 结束 */
     var allHome = me.planes.every(function (p) { return p === MAXP; });
     if (allHome) {
-      state.ended = true;
-      state.winnerId = me.id;
-      state.phase = 'over';
-      state.wait = 0;
+      if (!state.finishTime[me.id]) {
+        state.finishTime[me.id] = Math.round(state.time * 10) / 10;
+        state.finishOrder.push(me.id);
+        state.events.push({ t: 'finish', id: me.id, name: me.name, color: me.color, time: state.finishTime[me.id] });
+      }
+      /* 只剩最后一个人还没到家 -> 结束 */
+      if (state.finishOrder.length >= state.order.length - 1) {
+        state.winnerId = state.finishOrder[0] || null;
+        state.ended = true;
+        state.phase = 'over';
+        state.wait = 0;
+        return;
+      }
+      /* 已到家的玩家跳过回合 */
+      nextTurn(state);
+      while (!state.finishTime[currentId(state)] && state.finishOrder.length < state.order.length) {
+        if (!state.finishTime[currentId(state)]) break;
+        state.turn = (state.turn + 1) % state.order.length;
+      }
       return;
     }
 
@@ -131,9 +146,13 @@
 
     create: function (players, opt) {
       var n = players.length;
+      var planeCount = Math.max(1, Math.min(4, (opt && opt.planes) || 1));
       var state = {
         time: 0,
-        duration: DURATION,
+        duration: 0,
+        planes: planeCount,
+        finishOrder: [],
+        finishTime: {},
         n: n,
         order: [],
         players: {},
@@ -149,12 +168,14 @@
       };
       players.forEach(function (p, i) {
         state.order.push(p.id);
+        var planes = [];
+        for (var q = 0; q < planeCount; q++) planes.push(-1);
         state.players[p.id] = {
           id: p.id,
           name: p.name,
           color: p.color,
           index: i,
-          planes: [-1, -1]
+          planes: planes
         };
       });
       /* 开局每人一架已经停在起点 */
@@ -198,10 +219,6 @@
 
     tick: function (state, dt) {
       state.time += dt;
-      if (state.time >= state.duration && !state.ended) {
-        state.ended = true;
-        state.phase = 'over';
-      }
       if (state.ended) return;
 
       state.wait -= dt;
@@ -300,19 +317,22 @@
           if (pos === MAXP) done++;
           prog += (pos === -1 ? 0 : pos + 1);
         });
+        var fin = state.finishTime[id];
+        /* 到家越快分越高；没到家的按进度给一点分 */
+        var sc = fin ? Math.max(100, 3000 - Math.round(fin * 10)) : Math.min(99, Math.round(prog));
         list.push({
           id: id,
           name: p.name,
-          score: done * 1000 + prog,
+          score: sc,
           kills: done,
-          done: done
+          done: done,
+          fin: fin || null
         });
       });
       list.sort(function (a, b) {
-        if (state.winnerId) {
-          if (a.id === state.winnerId) return -1;
-          if (b.id === state.winnerId) return 1;
-        }
+        if (a.fin && b.fin) return a.fin - b.fin;
+        if (a.fin) return -1;
+        if (b.fin) return 1;
         return b.score - a.score;
       });
       return list;
@@ -334,6 +354,8 @@
         dice: state.dice,
         mv: state.moves,
         n: state.order.length,
+        planes: state.planes || 2,
+        ft: state.finishTime || {},
         pl: pl,
         win: state.winnerId,
         ev: ev.slice(0, 12)

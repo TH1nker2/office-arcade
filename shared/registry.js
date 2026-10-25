@@ -49,6 +49,12 @@
       keys: ['↑ / W：油门', '↓ / S：刹车倒车', '← → / A D：转向']
     },
     {
+      id: 'gomoku', name: '五子棋', sub: 'GOMOKU', tag: '棋类', icon: '⚫',
+      time: 0, min: 2, max: 2,
+      desc: '标准 15x15 五子棋，无时间限制，先连成五子者胜。',
+      keys: ['点击棋盘：落子']
+    },
+    {
       id: 'ludo', name: '飞行棋', sub: 'AERO CHESS', tag: '派对', icon: '✈️',
       time: 300, min: 2, max: 4,
       desc: '掷骰子起飞，踩到对手送他回起点，两架先到家者获胜。',

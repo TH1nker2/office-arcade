@@ -161,6 +161,12 @@
       Sfx.click();
     });
 
+    $('planes-seg').addEventListener('click', function (e) {
+      var btn = e.target.closest('.seg-btn');
+      if (!btn || btn.disabled) return;
+      Net.send({ t: 'setting', key: 'planes', value: btn.getAttribute('data-planes') });
+    });
+
     $('level-seg').addEventListener('click', function (e) {
       var btn = e.target.closest('.seg-btn');
       if (!btn || btn.disabled) return;
@@ -675,6 +681,20 @@
         var b = btns[li];
         b.classList.toggle('on', b.getAttribute('data-level') === cur);
         b.disabled = !(isHost && room.phase === 'lobby');
+      }
+    }
+
+    /* 飞行棋：每人飞机数 */
+    var planesBox = $('planes-box');
+    var showPlanes = room.gameId === 'ludo';
+    planesBox.classList.toggle('hidden', !showPlanes);
+    if (showPlanes) {
+      var pc = room.planes || 1;
+      var pbtns = $('planes-seg').querySelectorAll('.seg-btn');
+      for (var pi = 0; pi < pbtns.length; pi++) {
+        var pb = pbtns[pi];
+        pb.classList.toggle('on', Number(pb.getAttribute('data-planes')) === pc);
+        pb.disabled = !(isHost && room.phase === 'lobby');
       }
     }
 
@@ -1211,6 +1231,18 @@
     });
     root.addEventListener('mouseup', function () { APP.drawing = false; });
 
+    /* 五子棋：点棋盘落子 */
+    canvas.addEventListener('mousedown', function (e) {
+      if (e.button !== 0) return;
+      if (!APP.game || APP.game.id !== 'gomoku' || !APP.snap) return;
+      if (APP.snap.win || APP.snap.cur !== APP.me.id) return;
+      var r = canvas.getBoundingClientRect();
+      var cell = AR.Render.gomokuHit(e.clientX - r.left, e.clientY - r.top, APP.snap);
+      if (!cell) return;
+      Net.send({ t: 'input', i: cell });
+      Sfx.click();
+    });
+
     /* 飞行棋：点棋盘掷骰 / 点飞机选择 */
     canvas.addEventListener('mousedown', function (e) {
       if (e.button !== 0) return;
@@ -1349,6 +1381,8 @@
           for (var lz = 1; lz <= 2; lz++) if (s.pl[lr][lz] === 44) home++;
           sc = home + '/2';
         }
+      } else if (APP.game.id === 'gomoku') {
+        sc = s.mv + ' 手';
       } else if (APP.game.id === 'tank') {
         for (var n = 0; n < s.p.length; n++) if (s.p[n].i === p.id) sc = s.p[n].s;
       }

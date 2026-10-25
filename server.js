@@ -35,6 +35,7 @@ require('./shared/games/shmup.js');
 require('./shared/games/draw.js');
 require('./shared/games/racing.js');
 require('./shared/games/ludo.js');
+require('./shared/games/gomoku.js');
 const AR = globalThis.AR;
 
 /* ---------- 管理员账号（admins.json，明文，改完重启生效） ---------- */
@@ -574,6 +575,7 @@ function roomJson(room) {
     min: AR.getInfo(room.gameId).min,
     bots: room.botCount || 0,
     level: room.level || 'normal',
+    planes: room.planes || 1,
     players: players
   };
 }
@@ -660,6 +662,7 @@ function createRoom(conn, gameId) {
     round: 0,
     game: null,
     level: 'normal',
+    planes: 1,
     chat: [],
     startedAt: 0,
     acc: 0,
@@ -775,6 +778,7 @@ function startRound(room) {
   room.game = g.create(players, {
     seed: (Date.now() ^ (room.round * 2654435761)) >>> 0,
     level: level,
+    planes: room.planes || 1,
     words: pool
   });
 
@@ -996,6 +1000,13 @@ function handle(conn, msg) {
       if (!room) return;
       if (room.phase !== 'lobby') { conn.send({ t: 'error', msg: '开局后不能改设置' }); return; }
       if (room.hostId !== conn.user.id) { conn.send({ t: 'error', msg: '只有房主能改设置' }); return; }
+      if (msg.key === 'planes' && room.gameId === 'ludo') {
+        var pn = parseInt(msg.value, 10);
+        if (!(pn >= 1 && pn <= 4)) return;
+        room.planes = pn;
+        broadcastRoom(room);
+        break;
+      }
       if (msg.key === 'level' && room.gameId === 'draw') {
         const lv = String(msg.value || '');
         if (['easy', 'normal', 'hard'].indexOf(lv) < 0) return;
