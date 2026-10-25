@@ -56,7 +56,7 @@
     },
     {
       id: 'ludo', name: '飞行棋', sub: 'AERO CHESS', tag: '派对', icon: '✈️',
-      time: 300, min: 2, max: 4,
+      time: 0, min: 2, max: 4,
       desc: '掷骰子起飞，踩到对手送他回起点，两架先到家者获胜。',
       keys: ['点击棋盘 / 空格：掷骰子', '点击自己的飞机：选择走哪一架']
     }
