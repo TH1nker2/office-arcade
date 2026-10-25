@@ -14,7 +14,8 @@
   var SPEED = 168;
   var TURN = 8.0;          /* 转向角速度：越大越跟手 */
   var BOOST_MULT = 1.65;   /* 按住左键加速的速度倍率 */
-  var BOOST_COST = 2;      /* 加速时每秒掉多少分（按帧连续扣，最低 0） */
+  var BOOST_STEP = 0.2;    /* 加速时每 0.2 秒扣 1 分，步长恒为 1，不出现小数 */
+  var BOOST_POINT = 1;
   var STEP = 5;
   var ORB_N = 110;
   var ORB_R = 24;
@@ -61,6 +62,7 @@
       score: 0,
       kills: 0,
       boost: false,
+      boostAcc: 0,
       aiHead: a,
       trail: trail,
       input: { a: a }
@@ -174,8 +176,20 @@
         var boosting = s.boost && s.score > 0;
         if (s.boost && s.score <= 0) s.boost = false;
         if (boosting) {
-          s.score = Math.max(0, s.score - BOOST_COST * dt);
-          if (s.score <= 0) { s.score = 0; s.boost = false; boosting = false; }
+          /* 每满 0.2 秒扣 1 分，分数保持整数 */
+          s.boostAcc = (s.boostAcc || 0) + dt;
+          while (s.boostAcc >= BOOST_STEP && s.score > 0) {
+            s.boostAcc -= BOOST_STEP;
+            s.score = Math.max(0, Math.round(s.score) - BOOST_POINT);
+          }
+          if (s.score <= 0) {
+            s.score = 0;
+            s.boost = false;
+            boosting = false;
+            s.boostAcc = 0;
+          }
+        } else {
+          s.boostAcc = 0;
         }
         s.boosting = boosting;
         var sp = SPEED * (boosting ? BOOST_MULT : 1);
@@ -356,7 +370,7 @@
           l: s.len,
           al: s.alive ? 1 : 0,
           b: s.boosting ? 1 : 0,
-          s: Math.round(s.score * 10) / 10
+          s: Math.round(s.score)
         });
       }
       var orbs = [];
