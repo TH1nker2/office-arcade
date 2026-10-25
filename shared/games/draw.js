@@ -262,7 +262,12 @@
     /* 发给抽屉的私有消息 */
     privateFor: function (state, id) {
       if (state.phase === 'choose' && id === state.drawerId) {
-        return { t: 'choices', list: state.choices, drawerId: state.drawerId };
+        /* 只发词面，别把 {w,h} 对象丢给前端 */
+        return {
+          t: 'choices',
+          list: state.choices.map(function (c) { return (c && c.w) || c; }),
+          drawerId: state.drawerId
+        };
       }
       if (state.phase === 'draw' && id === state.drawerId) {
         return { t: 'word', word: state.word, hints: state.hints.slice(), drawerId: state.drawerId };

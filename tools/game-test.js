@@ -221,6 +221,12 @@ for (const [id, n, secs, cap] of cases) {
   ok('全员猜中立刻进入揭晓', ds2.phase === 'reveal', 'phase=' + ds2.phase);
   ok('揭晓只留 3 秒', Math.round(ds2.timeLeft) <= 3, 'tl=' + ds2.timeLeft.toFixed(1));
 
+  /* 选词消息必须是词面字符串，不能把 {w,h} 对象丢给前端（曾导致按钮显示 [object Object]） */
+  const ds3 = dg.create(players(2), { seed: 41 });
+  const cm = dg.privateFor(ds3, ds3.drawerId);
+  ok('选词消息只发字符串', !!(cm && cm.list && cm.list.every(function (x) { return typeof x === 'string'; })),
+    cm && cm.list ? JSON.stringify(cm.list) : 'null');
+
   console.log('');
 })();
 

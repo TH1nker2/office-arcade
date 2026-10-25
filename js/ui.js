@@ -1110,7 +1110,7 @@
     (list || []).forEach(function (w, i) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.textContent = w;
+      b.textContent = (w && typeof w === 'object') ? (w.w || '') : w;
       b.addEventListener('click', function () {
         Net.send({ t: 'draw', n: i });
         $('choose-overlay').classList.add('hidden');
