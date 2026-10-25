@@ -1276,6 +1276,9 @@ async function handleApi(req, res, urlPath, query) {
     if (password.length < 6) return json(res, 400, { error: '密码至少 6 位' });
     if (nickname.length > 10) return json(res, 400, { error: '昵称最多 10 个字' });
     if (store.userByName(username)) return json(res, 409, { error: '这个用户名已经被注册了' });
+    if (store.userByNickname && store.userByNickname(nickname)) {
+      return json(res, 409, { error: '这个昵称已经有人用了，换一个吧' });
+    }
 
     const p = hashPassword(password);
     const user = store.createUser({
@@ -1343,6 +1346,10 @@ async function handleApi(req, res, urlPath, query) {
     if (body.nickname !== undefined) {
       const n = String(body.nickname).trim();
       if (!n || n.length > 10) return json(res, 400, { error: '昵称需 1-10 个字' });
+      const taken = store.userByNickname && store.userByNickname(n);
+      if (taken && taken.id !== me.id) {
+        return json(res, 409, { error: '这个昵称已经有人用了，换一个吧' });
+      }
       patch.nickname = n;
     }
     if (body.color !== undefined) {

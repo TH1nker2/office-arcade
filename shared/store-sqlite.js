@@ -148,6 +148,11 @@ function openOnce(file) {
     }
     db.exec('PRAGMA user_version = ' + SCHEMA_VERSION);
   }
+  try {
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nick ON users(nickname COLLATE NOCASE)');
+  } catch (e) {
+    console.warn('[store] 昵称唯一索引没建成（库里已有重名）：' + e.message);
+  }
   console.log('[store] 数据库结构 v' + SCHEMA_VERSION + '（' + file + '）');
 
   function mapUser(r) {
@@ -198,6 +203,12 @@ function openOnce(file) {
         if (String(e.message).indexOf('UNIQUE') >= 0) return null;
         throw e;
       }
+    },
+
+    userByNickname(nick) {
+      const name = String(nick || '').trim();
+      if (!name) return null;
+      return mapUser(db.prepare('SELECT * FROM users WHERE nickname = ? COLLATE NOCASE LIMIT 1').get(name));
     },
 
     userByName(username) {

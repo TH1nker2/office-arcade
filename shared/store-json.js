@@ -80,6 +80,12 @@ function open(file) {
       return publicUser(user);
     },
 
+    userByNickname(nick) {
+      const key = String(nick || '').trim().toLowerCase();
+      if (!key) return null;
+      return publicUser(data.users.find((x) => String(x.nickname || '').toLowerCase() === key));
+    },
+
     userByName(username) {
       const key = String(username || '').toLowerCase();
       return publicUser(data.users.find((x) => x.username.toLowerCase() === key));
