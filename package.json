@@ -13,7 +13,8 @@
     "test:ui": "node tools/ui-v2-test.js && node tools/ui-v3-test.js && node tools/ui-v4-test.js && node tools/ui-v5-test.js",
     "bump": "node tools/bump-version.js",
     "version:show": "node tools/bump-version.js --show",
-    "test:admin": "node tools/admin-test.js"
+    "test:admin": "node tools/admin-test.js",
+    "test:offline": "node tools/offline-test.js"
   },
   "engines": {
     "node": ">=18"

@@ -88,6 +88,23 @@ powershell -ExecutionPolicy Bypass -File tools\fetch-runtime.ps1 -Target win-x64
 
 Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时退回 `tar.exe`（解压后需 `chmod +x`，`start.sh` 也会自愈）。
 
+## 零之一、完全离线
+
+这个程序是给**没有互联网的内网**用的，运行时不会访问任何外网资源：
+
+- 页面只用本地 `css/` `js/` `shared/`，没有 CDN、没有外链字体、没有远程接口
+- 所有接口都是相对路径（`/api/...`），WebSocket 地址由 `location.host` 推导
+- 除了首次下载发行包，装好之后断网也能完整运行
+
+自带一个审计脚本，会真的用浏览器打开一遍全部页面、打一局游戏，列出每一个网络请求：
+
+```bash
+node tools/offline-test.js
+#   PASS 没有任何外网请求 — 全部本机
+```
+
+改动前端后建议跑一次，防止不小心引入了外链。
+
 ## 一、快速开始
 
 发行版自带 Node 运行时（`runtime\node.exe`），**不需要系统里装 Node，也不会去 PATH 里找**。
