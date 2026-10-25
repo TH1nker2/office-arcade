@@ -358,7 +358,7 @@
         ft: state.finishTime || {},
         pl: pl,
         win: state.winnerId,
-        ev: ev.slice(0, 12)
+        e: ev.slice(0, 12)
       };
     }
   };
