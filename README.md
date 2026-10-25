@@ -53,6 +53,8 @@ node server.js                        # 有系统 Node 时也行（≥ 22.5 才�
 
 发版是**六步**，顺序不能乱（尤其第 4 步要在第 5 步之前，否则 tag 会指到旧提交）：
 
+> 详细版（含改哪里、验证、各种翻车抢救）见 **[docs/发版流程.md](docs/发版流程.md)**。
+
 ```bash
 # 1) 跑测试
 node tools/game-test.js && node tools/bot-test.js
@@ -373,6 +375,7 @@ office-arcade/
 ├── js/
 │   ├── net.js  audio.js  input.js  render.js  ui.js  main.js
 ├── server.js               HTTP + WebSocket + 账号 + 房间 + 邀请
+├── docs/发版流程.md         从拉代码到发版的完整流程
 ├── tools/                  测试脚本 + 构建/发版脚本 + runtime-manifest.json
 ├── start.sh / start.command  Linux / macOS 启动器
 ├── runtime/node.exe        本机 Node 运行时（不入库，获取运行环境.bat 下载）
