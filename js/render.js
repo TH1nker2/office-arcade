@@ -1709,11 +1709,54 @@
     ctx.restore();
   }
 
+  /* 自绘鼠标十字准心（坦克用），坐标是屏幕坐标 */
+  R.cursor = { x: -999, y: -999, on: false };
+
+  function drawCrosshair(ctx, x, y, color) {
+    var gap = 7;      /* 中心留空 */
+    var len = 11;     /* 每根线长度 */
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+
+    /* 四根短线 */
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - gap - len, y); ctx.lineTo(x - gap, y);
+    ctx.moveTo(x + gap, y); ctx.lineTo(x + gap + len, y);
+    ctx.moveTo(x, y - gap - len); ctx.lineTo(x, y - gap);
+    ctx.moveTo(x, y + gap); ctx.lineTo(x, y + gap + len);
+    ctx.stroke();
+
+    /* 中心点 */
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 1.8, 0, TAU);
+    ctx.fill();
+
+    /* 外侧一圈淡淡的准心环 */
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(x, y, 15, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   R.render = function (ctx, w, h, gameId, snap, dt, G) {
     V.t += dt;
     var fn = R[gameId];
     if (fn) fn(ctx, w, h, snap, Math.min(dt, 0.05), G || {});
     if (gameId === 'tank' || gameId === 'bomber') drawItemLegend(ctx, w, h, gameId);
+    if (gameId === 'tank' && R.cursor.on) {
+      var me = null;
+      for (var ci = 0; ci < (G.players || []).length; ci++) {
+        if (G.players[ci].id === G.me) me = G.players[ci];
+      }
+      drawCrosshair(ctx, R.cursor.x, R.cursor.y, (me && me.color) || '#22d3ee');
+    }
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);

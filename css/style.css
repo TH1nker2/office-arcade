@@ -1676,3 +1676,6 @@ kbd {
    这样画家在选词的 10 秒里还能点右下角聊天框说话 */
 #choose-overlay { pointer-events: none; }
 #choose-overlay .panel { pointer-events: auto; }
+
+/* 坦克对局：隐藏系统光标，改由 Canvas 画十字准心 */
+#stage.aiming { cursor: none; }

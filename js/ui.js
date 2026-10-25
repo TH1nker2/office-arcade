@@ -792,6 +792,7 @@
     $('hud-center').textContent = '';
     $('over-overlay').classList.add('hidden');
     $('invite-overlay').classList.add('hidden');
+    $('stage').classList.toggle('aiming', msg.id === 'tank');
     $('chat-panel').classList.toggle('chat-bottom', msg.id !== 'draw');
     $('chat-panel').classList.toggle('hidden', msg.id !== 'draw');
 
@@ -1251,6 +1252,17 @@
     });
 
     /* 飞行棋：点棋盘掷骰 / 点飞机选择 */
+    /* 坦克：记录鼠标位置，供自绘准心用；离开画布就恢复系统箭头 */
+    canvas.addEventListener('mousemove', function (e) {
+      var rect = canvas.getBoundingClientRect();
+      AR.Render.cursor.x = e.clientX - rect.left;
+      AR.Render.cursor.y = e.clientY - rect.top;
+      AR.Render.cursor.on = !!(APP.game && APP.game.id === 'tank');
+    });
+    canvas.addEventListener('mouseleave', function () {
+      AR.Render.cursor.on = false;
+    });
+
     canvas.addEventListener('mousedown', function (e) {
       if (e.button !== 0) return;
       if (!APP.game || APP.game.id !== 'ludo' || !APP.snap) return;
