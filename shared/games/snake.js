@@ -106,7 +106,10 @@
     if (!s.alive) return;
     s.alive = false;
     s.respawn = RESPAWN;
+    /* 先按死亡时的长度散落光点，再把分数清零、长度回到初始 */
     scatterOrbs(state, s);
+    s.score = 0;
+    syncLen(s);
     state.events.push({ t: 'die', x: Math.round(s.x), y: Math.round(s.y), c: s.color });
     if (killer && killer !== s) {
       state.events.push({
