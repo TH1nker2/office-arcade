@@ -1227,16 +1227,24 @@ const server = http.createServer(async (req, res) => {
     }
     if (decoded === '/' || decoded === '') decoded = '/index.html';
 
-    /* 只放行前端资源，避免 /data/arcade.sqlite、/server.js 被直接下载 */
+    /* 含空字节 / 控制字符的路径直接拒绝 */
+    if (/[\0-\x1f]/.test(decoded)) {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end('bad request');
+    }
+
+    /* 先把 .. 归一化，再按归一化后的路径做白名单判断，
+       否则 /js/../server.js 会先通过 /js/ 前缀检查、再被 resolve 成 server.js */
+    const norm = path.posix.normalize(decoded);
     const PUBLIC_PREFIX = ['/css/', '/js/', '/shared/'];
-    const isPublic = decoded === '/index.html' || decoded === '/admin.html' || decoded === '/icon.svg' ||
-      PUBLIC_PREFIX.some((pre) => decoded.indexOf(pre) === 0);
-    if (!isPublic) {
+    const isPublic = norm === '/index.html' || norm === '/admin.html' || norm === '/icon.svg' ||
+      PUBLIC_PREFIX.some((pre) => norm.indexOf(pre) === 0);
+    if (!isPublic || norm.indexOf('..') >= 0) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
       return res.end('404 not found');
     }
 
-    const filePath = path.resolve(ROOT, decoded.replace(/^\/+/, ''));
+    const filePath = path.resolve(ROOT, norm.replace(/^\/+/, ''));
     if (filePath !== ROOT && !filePath.startsWith(ROOT + path.sep)) {
       res.writeHead(403);
       return res.end('forbidden');
