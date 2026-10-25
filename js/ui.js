@@ -1185,7 +1185,7 @@
     var el = document.createElement('div');
     el.className = 'kf-line';
     el.innerHTML = '<b style="color:' + (e.color || '#8ea3c0') + '">' + esc(e.name) + '</b>' +
-      '<span class="kf-x">' + (e.verb || '击毁') + '</span>' +
+      '<span class="kf-x">' + (e.verb === undefined ? '击毁' : e.verb) + '</span>' +
       '<b style="color:' + (e.vcolor || '#8ea3c0') + '">' + esc(e.vname) + '</b>';
     box.appendChild(el);
     while (box.children.length > 4) box.removeChild(box.firstChild);
@@ -1371,7 +1371,15 @@
     updateHintBar(APP.snap);
 
     var s = APP.snap;
-    var left = (APP.game && APP.game.id === 'draw') ? s.tl : ((s.d || 0) - (s.t || 0));
+    var left;
+    if (APP.game && APP.game.id === 'draw') {
+      left = s.tl;
+    } else if (!s.d) {
+      /* 不限时的游戏（飞行棋/五子棋）：显示已经打了多久 */
+      left = s.t || 0;
+    } else {
+      left = Math.max(0, s.d - (s.t || 0));
+    }
     $('hud-timer').textContent = AR.fmtTime(left);
 
     var board = $('hud-board');

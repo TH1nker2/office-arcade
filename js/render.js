@@ -1277,10 +1277,17 @@
 
   function ludoBaseXY(n, idx, slot) {
     var c = ludoBaseCenter(n, idx);
-    var side = slot === 0 ? -1 : 1;
+    /* 最多 4 架，排成 2x2，避免第 3、4 架画在第 1、2 架上面 */
+    var col = slot % 2 ? 1 : -1;
+    var row = slot >= 2 ? 1 : -1;
+    var ox = Math.cos(c.a + Math.PI / 2) * 26 * col;
+    var oy = Math.sin(c.a + Math.PI / 2) * 26 * col;
+    /* 第二排沿半径方向往外挪一点 */
+    var bx = Math.cos(c.a) * 20 * row;
+    var by = Math.sin(c.a) * 20 * row;
     return {
-      x: c.x + Math.cos(c.a + Math.PI / 2) * 30 * side,
-      y: c.y + Math.sin(c.a + Math.PI / 2) * 30 * side,
+      x: c.x + ox + bx,
+      y: c.y + oy + by,
       a: c.a + Math.PI / 2
     };
   }
@@ -1454,7 +1461,7 @@
       ctx.beginPath();
       ctx.arc(36, yy - 4, 6, 0, TAU);
       ctx.fill();
-      label(ctx, tpl.name + '  到家 ' + home + '/2', 52, yy, trow[0] === G.me ? '#ffffff' : 'rgba(200,220,240,0.75)', 13, 'left');
+      label(ctx, tpl.name + '  到家 ' + home + '/' + (trow.length - 1), 52, yy, trow[0] === G.me ? '#ffffff' : 'rgba(200,220,240,0.75)', 13, 'left');
       if (trow[0] === s.c) {
         ctx.strokeStyle = 'rgba(34,211,238,0.7)';
         ctx.lineWidth = 1.5;
