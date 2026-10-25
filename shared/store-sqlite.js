@@ -148,11 +148,25 @@ function openOnce(file) {
     }
     db.exec('PRAGMA user_version = ' + SCHEMA_VERSION);
   }
-  console.log('[store] 数据库结构 v' + SCHEMA_VERSION + '（' + file + '）');
+  try {
+    _diag.mode = String(db.prepare('PRAGMA journal_mode').get().journal_mode || '?');
+    _diag.file = file;
+    _diag.writable = false;
+    db.exec('BEGIN IMMEDIATE');
+    db.exec('ROLLBACK');
+    _diag.writable = true;
+  } catch (e) {
+    _diag.writable = false;
+    _diag.error = e.message;
+  }
+  console.log('[store] 数据库结构 v' + SCHEMA_VERSION + '（' + file + '）· ' +
+    _diag.mode + ' · ' + (_diag.writable ? '可写' : ('只读！' + (_diag.error || ''))));
 
   function mapUser(r) {
     if (!r) return null;
-    return {
+    const WRITE_NAMES = ['createUser', 'updateUser', 'deleteUser', 'addMatch', 'touchSession',
+    'removeSession', 'sessionCleanup', 'setStats'];
+  const api = {
       id: Number(r.id),
       username: r.username,
       passHash: r.pass_hash,
@@ -366,4 +380,15 @@ function open(file) {
   }
 }
 
-module.exports = { open, SCHEMA_VERSION };
+let _diag = { mode: '?', writable: false, file: '' };
+function probeWritableDiag() {
+  try {
+    _db.exec('BEGIN IMMEDIATE');
+    _db.exec('ROLLBACK');
+    _diag.writable = true;
+  } catch (e) {
+    _diag.writable = false;
+    _diag.error = e.message;
+  }
+}
+module.exports = { open, SCHEMA_VERSION, diag: () => _diag };
