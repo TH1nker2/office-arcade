@@ -4,13 +4,10 @@
 (function (root) {
   'use strict';
 
-  function $(id) { return document.getElementById(id); }
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  var AR = root.AR;
+  var $ = AR.Dom.$;
+  var esc = AR.Dom.esc;
+  var api = AR.Http.request;
 
   var App = {
     admin: null,
@@ -24,20 +21,6 @@
     wordQ: '',
     wordCache: {}
   };
-
-  function api(method, url, body) {
-    return fetch(url, {
-      method: method,
-      credentials: 'same-origin',
-      headers: body ? { 'Content-Type': 'application/json' } : {},
-      body: body ? JSON.stringify(body) : undefined
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (data) {
-        if (!r.ok) throw new Error(data.error || ('请求失败 ' + r.status));
-        return data;
-      });
-    });
-  }
 
   var toastTimer = 0;
   function toast(msg, bad) {

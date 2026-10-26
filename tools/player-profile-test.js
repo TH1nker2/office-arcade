@@ -3,10 +3,11 @@
 'use strict';
 
 const { spawn } = require('child_process');
-const http = require('http');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+
+const { makeRequest } = require('./lib/http');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 9010 + Math.floor(Math.random() * 40);
@@ -19,23 +20,8 @@ function ok(name, cond, extra) {
   if (!cond) fails++;
 }
 
-function request(method, p, cookie) {
-  return new Promise((resolve, reject) => {
-    const headers = {};
-    if (cookie) headers.Cookie = cookie;
-    const req = http.request({ host: '127.0.0.1', port: PORT, path: p, method, headers }, (res) => {
-      let b = '';
-      res.on('data', (d) => b += d);
-      res.on('end', () => {
-        let json = {};
-        try { json = JSON.parse(b); } catch (e) { /* ignore */ }
-        resolve({ status: res.statusCode, body: json });
-      });
-    });
-    req.on('error', reject);
-    req.end();
-  });
-}
+const baseRequest = makeRequest(PORT);
+const request = (method, p, cookie) => baseRequest(method, p, null, cookie);
 
 async function main() {
   try { fs.rmSync(DATA, { recursive: true, force: true }); } catch (e) { /* ignore */ }

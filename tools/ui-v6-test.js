@@ -2,89 +2,14 @@
 /* 大厅右键查看玩家资料：真实浏览器端到端 */
 'use strict';
 
-const { spawn } = require('child_process');
-const http = require('http');
 const path = require('path');
 const os = require('os');
-const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '..');
-const EDGE = [
-  process.env.EDGE_PATH,
-  path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-].filter(Boolean).find((p) => fs.existsSync(p));
 const PORT = 9170 + Math.floor(Math.random() * 40);
 const DATA = path.join(os.tmpdir(), 'arcade-player-ui-' + PORT);
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-const getJson = (u) => new Promise((res, rej) => {
-  http.get(u, (r) => {
-    let b = '';
-    r.on('data', (d) => b += d);
-    r.on('end', () => { try { res(JSON.parse(b)); } catch (e) { rej(e); } });
-  }).on('error', rej);
-});
-
-class Browser {
-  constructor(tag, port) { this.tag = tag; this.port = port; this.errors = []; }
-  async launch() {
-    this.child = spawn(EDGE, [
-      '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
-      '--remote-debugging-port=' + this.port,
-      '--user-data-dir=' + path.join(os.tmpdir(), 'arcade-player-' + this.port + '-' + Date.now()),
-      '--window-size=1440,900', 'about:blank'
-    ], { stdio: 'ignore' });
-    let targets = null;
-    for (let i = 0; i < 60; i++) {
-      try {
-        targets = await getJson('http://127.0.0.1:' + this.port + '/json/list');
-        if (targets && targets.length) break;
-      } catch (e) { /* retry */ }
-      await sleep(250);
-    }
-    if (!targets || !targets.length) throw new Error(this.tag + ' 浏览器启动失败');
-    const page = targets.find((t) => t.type === 'page') || targets[0];
-    this.ws = new WebSocket(page.webSocketDebuggerUrl);
-    this.id = 1;
-    this.cbs = new Map();
-    await new Promise((res, rej) => { this.ws.onopen = res; this.ws.onerror = rej; });
-    this.ws.onmessage = (ev) => {
-      const m = JSON.parse(ev.data);
-      if (m.id && this.cbs.has(m.id)) {
-        const c = this.cbs.get(m.id);
-        this.cbs.delete(m.id);
-        m.error ? c.rej(new Error(m.error.message)) : c.res(m.result);
-        return;
-      }
-      if (m.method === 'Runtime.exceptionThrown') {
-        const d = m.params.exceptionDetails;
-        this.errors.push((d.exception && d.exception.description) || d.text);
-      }
-      if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') {
-        this.errors.push((m.params.args || []).map((a) => a.value || a.description).join(' '));
-      }
-    };
-    await this.send('Page.enable');
-    await this.send('Runtime.enable');
-    await this.send('Network.enable');
-    await this.send('Network.setCacheDisabled', { cacheDisabled: true });
-  }
-  send(method, params) {
-    return new Promise((res, rej) => {
-      const i = this.id++;
-      this.cbs.set(i, { res, rej });
-      this.ws.send(JSON.stringify({ id: i, method, params: params || {} }));
-    });
-  }
-  async ev(expr) {
-    const r = await this.send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true });
-    if (r.exceptionDetails) throw new Error('eval: ' + JSON.stringify(r.exceptionDetails).slice(0, 300));
-    return r.result.value;
-  }
-  kill() { try { this.child.kill(); } catch (e) { /* ignore */ } }
-}
+const { Browser, sleep } = require('./lib/browser');
+const { startServer } = require('./lib/fixture');
 
 let fails = 0;
 function check(name, cond, extra) {
@@ -150,21 +75,7 @@ async function closePlayer(B) {
 }
 
 async function main() {
-  try { fs.rmSync(DATA, { recursive: true, force: true }); } catch (e) { /* ignore */ }
-  fs.mkdirSync(DATA, { recursive: true });
-
-  const server = spawn(process.execPath, [path.join(ROOT, 'server.js'), String(PORT)], {
-    cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'],
-    env: Object.assign({}, process.env, { ARCADE_DATA: DATA })
-  });
-  let slog = '';
-  server.stdout.on('data', (d) => slog += d.toString());
-  server.stderr.on('data', (d) => slog += d.toString());
-  await sleep(1300);
-  if (slog.indexOf('localhost:' + PORT) < 0) {
-    console.error('服务器未启动\n' + slog);
-    process.exit(1);
-  }
+  const server = await startServer({ root: ROOT, port: PORT, data: DATA, waitMs: 1400 });
 
   const A = new Browser('A', 9970);
   const B = new Browser('B', 9971);
@@ -273,9 +184,8 @@ async function main() {
 
   A.kill();
   B.kill();
-  server.kill();
+  await server.stop();
   await sleep(400);
-  try { fs.rmSync(DATA, { recursive: true, force: true }); } catch (e) { /* ignore */ }
 
   console.log('');
   console.log(fails === 0 ? '全部通过' : fails + ' 项失败');

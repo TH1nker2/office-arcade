@@ -23,14 +23,9 @@
   var AR = root.AR;
   var Net = root.Net;
   var Sfx = AR.Sfx;
-
-  function $(id) { return document.getElementById(id); }
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  var $ = AR.Dom.$;
+  var esc = AR.Dom.esc;
+  var api = AR.Http.request;
 
   var EMOJIS = ['🐱', '🐶', '🦊', '🐼', '🐸', '🐵', '🦁', '🐯', '🐨', '🐷',
     '🐔', '🐙', '🦄', '🐳', '🐝', '🦉', '🐺', '🐮', '🐹', '🦖'];
@@ -57,21 +52,6 @@
   };
 
   var UI = AR.UI = {};
-
-  /* ---------------- 网络请求 ---------------- */
-  function api(method, url, body) {
-    return fetch(url, {
-      method: method,
-      credentials: 'same-origin',
-      headers: body ? { 'Content-Type': 'application/json' } : {},
-      body: body ? JSON.stringify(body) : undefined
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (data) {
-        if (!r.ok) throw new Error(data.error || ('请求失败 ' + r.status));
-        return data;
-      });
-    });
-  }
 
   /* ---------------- 通用 UI ---------------- */
   var toastTimer = 0;
