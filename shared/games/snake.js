@@ -70,7 +70,9 @@
     };
   }
 
-  /* 长度跟分数正相关：分数涨 -> 变长，加速掉分 -> 变短 */
+  /* 长度跟分数正相关：分数涨 -> 变长，加速掉分 -> 变短。
+     这样一来"长度"不是一个独立的状态，永远是 score 的纯函数，
+     省掉了到处手动维护 len 的 bug（之前被撞碎后长度没跟着清零）。 */
   function syncLen(s) {
     var want = START_POINTS + Math.round(Math.max(0, s.score) * GROW_PER_SCORE);
     s.len = Math.max(START_POINTS, Math.min(MAX_POINTS, want));
@@ -125,6 +127,7 @@
   AR.games.snake = {
     id: 'snake',
 
+    /* 建立对局状态。players 里带 bot 字段的是人机。返回的 state 之后会一直被 tick 修改。 */
     create: function (players, opt) {
       var seed = (opt && opt.seed) || Math.floor(Math.random() * 1e9);
       var rnd = AR.rng(seed);
@@ -150,10 +153,12 @@
       state.snakes[p.id] = newSnake(state, p, state.rnd);
     },
 
+    /* 玩家中途退出，把他从对局里摘掉，避免一直等他操作。 */
     removePlayer: function (state, id) {
       delete state.snakes[id];
     },
 
+    /* 处理一次玩家操作。inp 的结构由 js/input.js 里对应分支决定。 */
     input: function (state, id, inp) {
       var s = state.snakes[id];
       if (!s || !s.alive) return;
@@ -171,6 +176,7 @@
       }
     },
 
+    /* 推进一帧，dt 固定为 1/60 秒。这里只能改 state，不要读时间/文件/网络。 */
     tick: function (state, dt) {
       state.time += dt;
       var rnd = state.rnd;
@@ -235,6 +241,11 @@
           var o = state.snakes[oid];
           if (!o.alive) continue;
           var lim = Math.min(o.trail.length, o.len);
+          /* 这里有两次踩坑记录：
+             1) 起点必须从 2 而不是 6 开始，否则对手的"脖子"整段判不到，
+                两条蛇会互相穿过去；
+             2) 判定半径要覆盖蛇身宽度（12px 左右），9px 太小。
+             前 30 个点逐点判（脖子最容易被穿），更远处每 3 点抽查一次省 CPU。 */
           /* 颈部（前 30 个点）逐点判，避免从脖子中间穿过去；
              远处按 3 点一个间隔抽查，够密且不会太吃 CPU */
           for (i = 2; i < lim;) {
@@ -272,10 +283,12 @@
       }
     },
 
+    /* 服务端每帧问一次。返回 true 时这一局结束，会调 results() 结算。 */
     isOver: function (state) {
       return state.time >= state.duration;
     },
 
+    /* 结算：返回 [{id, name, score, ...}]，服务端按顺序写进战绩。 */
     results: function (state) {
       var list = [];
       for (var id in state.snakes) {
@@ -290,6 +303,7 @@
     },
 
     /* 人机：前方锥形优先选光点 + 朝向平滑，避免原地打转 */
+    /* 人机决策，返回一个 input 对象（或 null 表示这一帧什么都不做）。 */
     bot: function (state, id, dt, level) {
       var s = state.snakes[id];
       if (!s) return null;
@@ -374,6 +388,7 @@
       return { ax: s.x + Math.cos(s.aiHead) * 220, ay: s.y + Math.sin(s.aiHead) * 220 };
     },
 
+    /* 发给所有客户端的状态，必须是纯 JSON（不能有函数/循环引用/NaN）。 */
     snapshot: function (state) {
       var arr = [];
       for (var id in state.snakes) {

@@ -229,6 +229,7 @@
   AR.games.tank = {
     id: 'tank',
 
+    /* 建立对局状态。players 里带 bot 字段的是人机。返回的 state 之后会一直被 tick 修改。 */
     create: function (players, opt) {
       var rnd = AR.rng((opt && opt.seed) || Date.now());
       var state = {
@@ -263,16 +264,19 @@
       state.tanks[p.id] = spawnTank(state, p, Object.keys(state.tanks).length);
     },
 
+    /* 玩家中途退出，把他从对局里摘掉，避免一直等他操作。 */
     removePlayer: function (state, id) {
       delete state.tanks[id];
       state.bullets = state.bullets.filter(function (b) { return b.owner !== id; });
     },
 
+    /* 处理一次玩家操作。inp 的结构由 js/input.js 里对应分支决定。 */
     input: function (state, id, inp) {
       var t = state.tanks[id];
       if (t) t.input = inp || {};
     },
 
+    /* 推进一帧，dt 固定为 1/60 秒。这里只能改 state，不要读时间/文件/网络。 */
     tick: function (state, dt) {
       state.time += dt;
       var id, t, i;
@@ -390,10 +394,12 @@
       }
     },
 
+    /* 服务端每帧问一次。返回 true 时这一局结束，会调 results() 结算。 */
     isOver: function (state) {
       return state.time >= state.duration;
     },
 
+    /* 结算：返回 [{id, name, score, ...}]，服务端按顺序写进战绩。 */
     results: function (state) {
       var list = [];
       for (var id in state.tanks) {
@@ -408,6 +414,7 @@
     },
 
     /* 人机：有视野才对射，砖墙可以打穿，石墙就绕 */
+    /* 人机决策，返回一个 input 对象（或 null 表示这一帧什么都不做）。 */
     bot: function (state, id, dt, level) {
       var t = state.tanks[id];
       if (!t || !t.alive) return { dx: 0, dy: 0, f: false };
@@ -510,6 +517,7 @@
       };
     },
 
+    /* 发给所有客户端的状态，必须是纯 JSON（不能有函数/循环引用/NaN）。 */
     snapshot: function (state) {
       var p = [];
       for (var id in state.tanks) {

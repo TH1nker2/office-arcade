@@ -320,6 +320,7 @@
   AR.games.bomber = {
     id: 'bomber',
 
+    /* 建立对局状态。players 里带 bot 字段的是人机。返回的 state 之后会一直被 tick 修改。 */
     create: function (players, opt) {
       var rnd = AR.rng((opt && opt.seed) || Date.now());
       var state = {
@@ -348,10 +349,12 @@
       };
     },
 
+    /* 玩家中途退出，把他从对局里摘掉，避免一直等他操作。 */
     removePlayer: function (state, id) {
       delete state.players[id];
     },
 
+    /* 处理一次玩家操作。inp 的结构由 js/input.js 里对应分支决定。 */
     input: function (state, id, inp) {
       var p = state.players[id];
       if (!p) return;
@@ -362,6 +365,7 @@
       }
     },
 
+    /* 推进一帧，dt 固定为 1/60 秒。这里只能改 state，不要读时间/文件/网络。 */
     tick: function (state, dt) {
       state.time += dt;
       var id, i, p;
@@ -436,10 +440,12 @@
       if (state.winnerId && state.time - state.overAt > 1.2) state.ended = true;
     },
 
+    /* 服务端每帧问一次。返回 true 时这一局结束，会调 results() 结算。 */
     isOver: function (state) {
       return state.ended || state.time >= state.duration;
     },
 
+    /* 结算：返回 [{id, name, score, ...}]，服务端按顺序写进战绩。 */
     results: function (state) {
       var list = [];
       for (var id in state.players) {
@@ -459,6 +465,7 @@
     },
 
     /* 人机：BFS 找最近的砖块/道具/敌人，会躲爆炸、会放完就跑 */
+    /* 人机决策，返回一个 input 对象（或 null 表示这一帧什么都不做）。 */
     bot: function (state, id, dt, level) {
       var p = state.players[id];
       if (!p || !p.alive) return null;
@@ -524,6 +531,7 @@
       return { dx: d[0], dy: d[1] };
     },
 
+    /* 发给所有客户端的状态，必须是纯 JSON（不能有函数/循环引用/NaN）。 */
     snapshot: function (state) {
       var ps = [];
       for (var id in state.players) {

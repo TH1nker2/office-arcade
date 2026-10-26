@@ -47,6 +47,8 @@
     return true;
   }
 
+  /* 找下一个"还有飞机没到家"的人。全部到家的人不再给回合，
+     否则 3 人局里先走完的人会白白掷骰子拖时间。 */
   function nextTurn(state) {
     var n = state.order.length;
     for (var step = 1; step <= n; step++) {
@@ -161,6 +163,7 @@
     id: 'ludo',
     rate: 20,
 
+    /* 建立对局状态。players 里带 bot 字段的是人机。返回的 state 之后会一直被 tick 修改。 */
     create: function (players, opt) {
       var n = players.length;
       var planeCount = Math.max(1, Math.min(4, (opt && opt.planes) || 1));
@@ -199,6 +202,7 @@
       return state;
     },
 
+    /* 玩家中途退出，把他从对局里摘掉，避免一直等他操作。 */
     removePlayer: function (state, id) {
       var i = state.order.indexOf(id);
       if (i < 0) return;
@@ -220,6 +224,7 @@
       state.moves = [];
     },
 
+    /* 处理一次玩家操作。inp 的结构由 js/input.js 里对应分支决定。 */
     input: function (state, id, inp) {
       if (state.ended || !inp) return;
       if (currentId(state) !== id) return;
@@ -230,6 +235,7 @@
       }
     },
 
+    /* 推进一帧，dt 固定为 1/60 秒。这里只能改 state，不要读时间/文件/网络。 */
     tick: function (state, dt) {
       state.time += dt;
       if (state.ended) return;
@@ -272,6 +278,7 @@
     },
 
     /* 人机 */
+    /* 人机决策，返回一个 input 对象（或 null 表示这一帧什么都不做）。 */
     bot: function (state, id, dt, level) {
       if (state.ended) return null;
       if (currentId(state) !== id) return null;
@@ -323,10 +330,12 @@
       return { plane: best };
     },
 
+    /* 服务端每帧问一次。返回 true 时这一局结束，会调 results() 结算。 */
     isOver: function (state) {
       return !!state.ended;
     },
 
+    /* 结算：返回 [{id, name, score, ...}]，服务端按顺序写进战绩。 */
     results: function (state) {
       var list = [];
       state.order.forEach(function (id) {
@@ -358,6 +367,7 @@
       return list;
     },
 
+    /* 发给所有客户端的状态，必须是纯 JSON（不能有函数/循环引用/NaN）。 */
     snapshot: function (state) {
       var pl = state.order.map(function (id) {
         var p = state.players[id];

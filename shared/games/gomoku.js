@@ -130,6 +130,7 @@
     id: 'gomoku',
     rate: 8,
 
+    /* 建立对局状态。players 里带 bot 字段的是人机。返回的 state 之后会一直被 tick 修改。 */
     create: function (players, opt) {
       var order = players.map(function (p) { return p.id; });
       var state = {
@@ -156,6 +157,7 @@
       return state;
     },
 
+    /* 玩家中途退出，把他从对局里摘掉，避免一直等他操作。 */
     removePlayer: function (state, id) {
       var i = state.order.indexOf(id);
       if (i < 0) return;
@@ -167,6 +169,7 @@
       }
     },
 
+    /* 处理一次玩家操作。inp 的结构由 js/input.js 里对应分支决定。 */
     input: function (state, id, inp) {
       if (state.ended || state.winPending > 0 || !inp) return;
       if (state.order[state.turn % state.order.length] !== id) return;
@@ -196,6 +199,7 @@
       state.turn = (state.turn + 1) % state.order.length;
     },
 
+    /* 推进一帧，dt 固定为 1/60 秒。这里只能改 state，不要读时间/文件/网络。 */
     tick: function (state, dt) {
       state.time += dt;
       if (state.winPending > 0 && !state.ended) {
@@ -207,6 +211,7 @@
       }
     },
 
+    /* 人机决策，返回一个 input 对象（或 null 表示这一帧什么都不做）。 */
     bot: function (state, id, dt, level) {
       if (state.ended) return null;
       if (state.order[state.turn % state.order.length] !== id) return null;
@@ -226,8 +231,10 @@
       return { x: mv % N, y: Math.floor(mv / N) };
     },
 
+    /* 服务端每帧问一次。返回 true 时这一局结束，会调 results() 结算。 */
     isOver: function (state) { return state.ended; },
 
+    /* 结算：返回 [{id, name, score, ...}]，服务端按顺序写进战绩。 */
     results: function (state) {
       var list = [];
       state.order.forEach(function (id) {
@@ -243,6 +250,7 @@
       return list;
     },
 
+    /* 发给所有客户端的状态，必须是纯 JSON（不能有函数/循环引用/NaN）。 */
     snapshot: function (state) {
       var ev = state.events;
       state.events = [];

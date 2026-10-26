@@ -1,9 +1,53 @@
 #!/usr/bin/env node
 /* ============================================================
- * 摸鱼游戏厅 · OFFICE ARCADE — 局域网服务器 v2
- *   账号 / 会话 / 个人资料 / 大厅在线状态 / 房间与邀请 / 六款游戏
- *   HTTP REST + 原生 WebSocket + SQLite(node:sqlite)
- * 运行： node server.js [端口]
+ * 摸鱼游戏厅 · OFFICE ARCADE — 局域网服务器
+ *
+ * 整个后端只有这一个入口：一个 HTTP 服务 + 一个手写的 WebSocket 服务。
+ * 没有第三方依赖，只用 Node 内置模块；Node 22+ 自带的 node:sqlite 负责落盘。
+ *
+ * 运行： node server.js [端口]           默认 8090
+ *      ARCADE_DATA=<目录> 可以临时换数据目录（测试用）
+ *
+ * ---- 文件内分节顺序（搜这些标题可以快速跳转）----
+ *   小工具          json 响应 / Cookie 解析 / 读请求体
+ *   密码与会话      scrypt 哈希、sid Cookie、管理员会话
+ *   在线状态        presence：谁在线、在哪个房间
+ *   WebSocket       帧解析与组包、连接对象、广播
+ *   房间            createRoom / joinRoom / leaveRoom / 人机
+ *   回合            startRound / finishRound（结算写库）
+ *   邀请            60 秒有效的房间邀请
+ *   WS 消息         客户端所有动作的 switch 分发
+ *   游戏循环        60Hz 固定步长驱动模拟与快照
+ *   管理接口        挂载 shared/admin-api.js
+ *   HTTP 静态与 REST 白名单 + /api/*
+ *   WebSocket 升级   握手 + 用 Cookie 会话鉴权
+ *   启动            打印局域网地址、打开浏览器、优雅退出
+ *
+ * ---- WebSocket 协议：客户端 → 服务器 ----
+ *   createRoom  { gameId }              建房
+ *   joinRoom    { code }                按 4 位码加入
+ *   leaveRoom                           离开房间
+ *   invite      { toId }                邀请某人（对方在线且不在房间）
+ *   inviteReply { inviteId, accept }    接受 / 拒绝邀请
+ *   setting     { key, value }          房主改设置（draw 的 level、ludo 的 planes）
+ *   botAdd / botRemove { id }           加 / 删人机（固定普通难度）
+ *   start                               房主开局
+ *   input       { i }                   对局输入，i 的内容由各游戏自己约定
+ *   draw        { ... }                 你画我猜的笔迹 / 清空画布
+ *   chat        { text }                房间或大厅聊天
+ *   kick        { id }                  房主踢人
+ *   lobbySync                           主动拉一次大厅在线列表
+ *
+ * ---- WebSocket 协议：服务器 → 客户端 ----
+ *   hello  lobby  room  leftRoom  game  state  over
+ *   chat  chatHistory  invite  inviteSent  error  version
+ *
+ * ---- 必须守住的不变式 ----
+ *   1. 所有游戏逻辑跑在服务端，客户端只发输入、画快照（防作弊 + 一致）
+ *   2. 每帧最多补 8 步模拟，防止卡顿后一次性补太多把进程拖死
+ *   3. 一个房间只要没有真人就立刻销毁（人机不算真人）
+ *   4. 静态资源必须先归一化路径、再查白名单（防 ../ 穿越）
+ *   5. 数据库只允许本机访问，不做任何对外暴露
  * ============================================================ */
 'use strict';
 
@@ -717,7 +761,8 @@ function leaveRoom(conn) {
     setPresence(userId, { roomCode: null, gameId: null });
   }
 
-  /* 一个真人都没有了：不管在等待还是游戏中，房间直接销毁 */
+  /* 一个真人都没有了：不管在等待还是游戏中，房间直接销毁。
+     注意判断的是"真人"——房间里可能还留着几个电脑，那些不算数。 */
   if (realPlayers(room) === 0) {
     if (room.overTimer) clearTimeout(room.overTimer);
     rooms.delete(room.code);
@@ -1132,12 +1177,18 @@ setInterval(() => {
   if (!isFinite(dt) || dt <= 0) dt = 1 / 60;
   if (dt > 0.25) dt = 0.25;
 
+  /* 每个房间独立推进。dt 是"上次醒来到现在"的真实时间，
+     但模拟永远按 1/60 秒一步来走——这样不同机器、不同帧率下
+     物理结果完全一致（固定步长），网络抖动也不会让游戏变快或变慢。 */
   rooms.forEach((room) => {
     if (room.phase !== 'playing' || !room.game) return;
     const g = AR.games[room.gameId];
     if (!g) return;
 
     room.acc += dt;
+    /* steps < 8 是"追帧上限"：如果进程被卡了 2 秒，理论上要补 120 步，
+       但那样会让这一帧耗时暴涨、越卡越卡。宁可让游戏时间落后一点，
+       也不要雪崩。正常的 8ms / 16ms 定时器下永远用不到这个上限。 */
     let steps = 0;
     while (room.acc >= 1 / 60 && steps < 8) {
       /* 人机：每个物理步都重新决策一次 */
@@ -1153,6 +1204,8 @@ setInterval(() => {
       steps++;
     }
 
+    /* 快照节奏。用累减而不是清零：8ms 定时器 + 60Hz 快照时，
+       清零会把每次的余数丢掉，实际频率会明显低于标称值（曾经 30Hz 只跑出 24.6Hz）。 */
     room.netAcc += dt;
     const rate = g.rate || 60;
     if (room.netAcc >= 1 / rate) {
@@ -1233,8 +1286,10 @@ const server = http.createServer(async (req, res) => {
       return res.end('bad request');
     }
 
-    /* 先把 .. 归一化，再按归一化后的路径做白名单判断，
-       否则 /js/../server.js 会先通过 /js/ 前缀检查、再被 resolve 成 server.js */
+    /* 先把 .. 归一化，再按归一化后的路径做白名单判断。
+       顺序反过来就是漏洞：/js/../server.js 会先通过 "/js/" 前缀检查，
+       再被 path.resolve 还原成根目录的 server.js 直接下载走。
+       归一化之后还要拒掉残留的 ".." 和空字节。 */
     const norm = path.posix.normalize(decoded);
     const PUBLIC_PREFIX = ['/css/', '/js/', '/shared/'];
     const isPublic = norm === '/index.html' || norm === '/admin.html' || norm === '/icon.svg' ||

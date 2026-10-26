@@ -88,6 +88,16 @@ powershell -ExecutionPolicy Bypass -File tools\fetch-runtime.ps1 -Target win-x64
 
 Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时退回 `tar.exe`（解压后需 `chmod +x`，`start.sh` 也会自愈）。
 
+## 零之二、给开发者的入口
+
+**要改代码、加功能、修 bug，请先读 [`docs/开发手册.md`](docs/开发手册.md)**。
+
+手册里写了：项目架构、一次对局的完整数据流、游戏模块契约（加新游戏照抄骨架）、
+存储层与迁移、前端状态机、WebSocket 协议速查、测试矩阵、发版流程，
+以及历史上踩过的坑（路径穿越、批处理编码、只读数据库、快照频率等）。
+
+这份 README 面向使用者，开发手册面向接手的开发者。
+
 ## 零之一、完全离线
 
 这个程序是给**没有互联网的内网**用的，运行时不会访问任何外网资源：
@@ -445,6 +455,7 @@ office-arcade/
 ├── js/
 │   ├── net.js  audio.js  input.js  render.js  ui.js  main.js
 ├── server.js               HTTP + WebSocket + 账号 + 房间 + 邀请
+├── docs/开发手册.md         架构、数据流、游戏契约、踩坑记录（接手先看这个）
 ├── docs/发版流程.md         从拉代码到发版的完整流程
 ├── tools/                  测试脚本 + 构建/发版脚本 + runtime-manifest.json
 ├── start.sh / start.command  Linux / macOS 启动器
