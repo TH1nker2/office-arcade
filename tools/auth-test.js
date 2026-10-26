@@ -174,6 +174,15 @@ async function main() {
   ok('新连接能收到大厅聊天历史', histMsg.list.some((x) => x.text === '大厅消息测试'),
     'history=' + histMsg.list.length);
 
+  /* 连接建立后再改名，聊天必须立刻使用新昵称 */
+  await sleep(450);
+  const prof2 = await request('POST', '/api/profile', { nickname: '老王二代' }, cookieA);
+  ok('WS 连接后修改昵称', prof2.status === 200 && prof2.body.user.nickname === '老王二代');
+  wsA.drain(); wsB.drain();
+  wsA.send({ t: 'chat', text: '改名后的消息' });
+  const lobbyMsg2 = await wsB.next('chat', 4000, (m) => m.ch === 'lobby' && m.text === '改名后的消息');
+  ok('改名后大厅聊天使用新昵称', lobbyMsg2.from.name === '老王二代', lobbyMsg2.from.name);
+
   console.log('\n=== 房间 ===');
   wsA.drain(); wsB.drain(); wsC.drain();
   wsA.send({ t: 'createRoom', gameId: 'snake' });

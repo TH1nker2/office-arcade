@@ -157,7 +157,7 @@ function loadWords() {
           } else if (it && it.w) {
             out[lv].push({
               w: String(it.w).trim(),
-              h: Array.isArray(it.h) ? it.h.slice(0, 3).map(String) : []
+              h: Array.isArray(it.h) ? it.h.slice(0, 4).map(String) : []
             });
           }
         });
@@ -177,7 +177,6 @@ function loadWords() {
       seen.add(t);
       out.push(t);
     });
-    return out;
     return { easy: out.slice(), normal: out.slice(), hard: out.slice() };
   } catch (e) {
     console.warn('[words] 读取 shared/words.json 失败（' + e.message + '），改用内置词库');
@@ -1400,6 +1399,41 @@ async function handleApi(req, res, urlPath, query) {
     return json(res, 200, { user: publicUser(me) });
   }
 
+  /* 查看任意玩家的公开资料：只返回 publicUser + 在线状态 + 最近 10 局 */
+  const playerMatch = urlPath.match(/^\/api\/players\/(\d+)$/);
+  if (playerMatch && method === 'GET') {
+    const target = store.userById(Number(playerMatch[1]));
+    if (!target) return json(res, 404, { error: '找不到这个玩家' });
+
+    const p = presence.get(target.id);
+    const room = p && p.roomCode ? rooms.get(p.roomCode) : null;
+    let status = 'offline';
+    if (p) status = room ? (room.phase === 'lobby' ? 'waiting' : 'playing') : 'online';
+    const info = p && p.gameId ? AR.getInfo(p.gameId) : null;
+
+    const history = store.matchesByUser(target.id, 10).map((m) => ({
+      id: m.id,
+      game: m.game,
+      gameName: AR.getInfo(m.game).name,
+      endedAt: m.endedAt,
+      place: m.place,
+      score: m.score,
+      delta: m.delta
+    }));
+
+    return json(res, 200, {
+      user: publicUser(target),
+      status: status,
+      gameId: p ? p.gameId : null,
+      gameName: info ? info.name : null,
+      roomCode: room ? room.code : null,
+      roomCount: room ? room.players.size : 0,
+      roomMax: room ? AR.getInfo(room.gameId).max : 0,
+      isSelf: target.id === me.id,
+      history: history
+    });
+  }
+
   if (urlPath === '/api/logout' && method === 'POST') {
     const token = parseCookies(req.headers.cookie)[COOKIE];
     if (token) store.sessionDelete(token);
@@ -1426,6 +1460,11 @@ async function handleApi(req, res, urlPath, query) {
     if (body.bio !== undefined) patch.bio = String(body.bio).slice(0, 60);
 
     const updated = store.updateUser(me.id, patch);
+    /* WebSocket 连接里缓存了用户快照；不同步的话聊天/邀请会继续用旧昵称和头像 */
+    if (updated) {
+      const pr = presence.get(me.id);
+      if (pr && pr.conn) pr.conn.user = updated;
+    }
     if (patch.nickname || patch.color || patch.avatar) {
       /* 同步到所在房间 */
       const room = userInRoom(me.id);

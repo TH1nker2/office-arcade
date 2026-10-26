@@ -62,8 +62,6 @@
     }
   ];
 
-  AR.GAME_ORDER = ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw'];
-
   AR.getInfo = function (id) {
     for (var i = 0; i < AR.GAME_INFO.length; i++) {
       if (AR.GAME_INFO[i].id === id) return AR.GAME_INFO[i];

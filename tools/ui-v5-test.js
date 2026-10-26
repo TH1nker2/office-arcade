@@ -135,7 +135,7 @@ async function main() {
     process.exit(1);
   }
   const wordsLine = (slog.match(/画猜词库：[^\n]*/) || [''])[0];
-  check('服务器加载了词库', /画猜词库： \d+ 个/.test(wordsLine), wordsLine || '无输出');
+  check('服务器加载了词库', /画猜词库： 简单 \d+ \/ 中等 \d+ \/ 困难 \d+/.test(wordsLine), wordsLine || '无输出');
 
   const A = new Browser('A', 9970);
   const B = new Browser('B', 9971);

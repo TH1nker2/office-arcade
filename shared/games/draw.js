@@ -27,7 +27,7 @@
   var DRAW_TIME = 60;
   var REVEAL_TIME = 6;
   var ALL_GUESSED_TIME = 3;   /* 全员猜中：只留 3 秒揭晓就直接进入下一轮 */
-  var HINT_EVERY = 10;        /* 每 10 秒放出一条提示，最多 3 条 */
+  var HINT_EVERY = 10;        /* 每 10 秒放出一条提示，最多 4 条 */
 
   function norm(s) {
     return String(s || '')
@@ -42,7 +42,7 @@
     for (var i = 0; i < list.length; i++) {
       var it = list[i];
       if (typeof it === 'string') out.push({ w: it, h: [] });
-      else if (it && it.w) out.push({ w: String(it.w), h: Array.isArray(it.h) ? it.h.slice(0, 3) : [] });
+      else if (it && it.w) out.push({ w: String(it.w), h: Array.isArray(it.h) ? it.h.slice(0, 4) : [] });
     }
     return out;
   }
@@ -75,7 +75,7 @@
   function beginDrawing(state, entry) {
     var e = entry || { w: '', h: [] };
     state.word = e.w || '';
-    state.hints = (e.h || []).slice(0, 3);
+    state.hints = (e.h || []).slice(0, 4);
     state.hintShown = 0;
     state.hintTimer = HINT_EVERY;
     state.phase = 'draw';

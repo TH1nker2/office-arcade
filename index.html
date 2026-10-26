@@ -99,6 +99,7 @@
         <div class="lobby-body">
           <aside class="user-panel">
             <div class="panel-title">大厅玩家 <small id="user-count"></small></div>
+            <div class="lobby-tip">右键玩家可打开操作菜单</div>
             <div class="user-list" id="user-list"></div>
 
             <div class="lobby-chat">
@@ -327,6 +328,38 @@
       <div class="res-table" id="board-table"></div>
       <div class="panel-actions">
         <button class="btn ghost" id="board-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 玩家右键操作菜单 ================= -->
+  <div class="context-menu hidden" id="player-menu" role="menu" aria-label="玩家操作">
+    <div class="ctx-title" id="player-menu-title">玩家</div>
+    <div class="ctx-list" id="player-menu-list" role="none"></div>
+  </div>
+
+  <!-- ================= 玩家资料 ================= -->
+  <div class="overlay hidden" id="player-overlay">
+    <div class="panel player-panel">
+      <header class="player-head">
+        <span class="player-avatar" id="player-avatar">?</span>
+        <div class="player-meta">
+          <h2 class="player-name" id="player-nick">玩家资料</h2>
+          <p class="player-username" id="player-username"></p>
+          <p class="player-bio" id="player-bio"></p>
+        </div>
+        <button class="x" id="player-close" title="关闭">✕</button>
+      </header>
+
+      <div class="player-status" id="player-status">离线</div>
+      <div class="stat-cards" id="player-stats"></div>
+
+      <div class="label-row"><span>最近战绩</span></div>
+      <div class="history player-history" id="player-history"></div>
+
+      <div class="panel-actions">
+        <button class="btn ghost hidden" id="player-edit" type="button">编辑我的资料</button>
+        <button class="btn primary" id="player-done" type="button">关闭</button>
       </div>
     </div>
   </div>

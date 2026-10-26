@@ -17,9 +17,6 @@
   var Net = root.Net = {
     ws: null,
     open: false,
-    id: null,
-    name: '',
-    games: [],
     handlers: {},
     queue: [],
     lastError: '',
@@ -98,14 +95,6 @@
         var msg;
         try { msg = JSON.parse(ev.data); } catch (e) { return; }
         if (!msg || !msg.t) return;
-        if (msg.t === 'welcome') {
-          Net.id = msg.id;
-          Net.games = msg.games || [];
-        }
-        if (msg.t === 'hello') {
-          Net.id = msg.id;
-          Net.name = msg.name;
-        }
         if (msg.t === 'error') Net.lastError = msg.msg || '';
         Net.lastMsgAt = Date.now();
         Net.emit(msg.t, msg);
@@ -136,7 +125,6 @@
     }
     Net.ws = null;
     Net.open = false;
-    Net.id = null;
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);

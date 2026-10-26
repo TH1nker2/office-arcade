@@ -138,6 +138,10 @@ async function main() {
   await A.shot('50-lobby-chat');
 
   console.log('\n[2] 大厅聊天 + 表情');
+  await A.ev('document.activeElement && document.activeElement.blur()');
+  await A.ev('window.dispatchEvent(new KeyboardEvent("keydown",{code:"Enter",bubbles:true,cancelable:true}))');
+  await sleep(120);
+  check('大厅按回车唤起聊天输入框', (await A.ev('document.activeElement.id')) === 'lobby-chat-text');
   await A.ev('document.getElementById("lobby-chat-text").value = "开会摸鱼中，来一局？"');
   await A.ev('document.getElementById("lobby-chat-send").click()');
   await sleep(600);
