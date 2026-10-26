@@ -88,7 +88,7 @@ powershell -ExecutionPolicy Bypass -File tools\fetch-runtime.ps1 -Target win-x64
 
 Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时退回 `tar.exe`（解压后需 `chmod +x`，`start.sh` 也会自愈）。
 
-## 零之二、给开发者的入口
+## 零之一、给开发者的入口
 
 **要改代码、加功能、修 bug，请先读 [`docs/开发手册.md`](docs/开发手册.md)**。
 
@@ -98,7 +98,7 @@ Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时
 
 这份 README 面向使用者，开发手册面向接手的开发者。
 
-## 零之一、完全离线
+## 零之二、完全离线
 
 这个程序是给**没有互联网的内网**用的，运行时不会访问任何外网资源：
 
