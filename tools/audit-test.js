@@ -120,6 +120,7 @@ async function main() {
     global.window = undefined;
     const core = require(path.join(ROOT, 'shared/core.js'));
     require(path.join(ROOT, 'shared/registry.js'));
+    require(path.join(ROOT, 'shared/games/constants.js'));
     for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'racing', 'gomoku', 'ludo']) {
       require(path.join(ROOT, 'shared/games/' + g + '.js'));
     }

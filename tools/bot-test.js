@@ -6,6 +6,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 require(path.join(ROOT, 'shared/core.js'));
 require(path.join(ROOT, 'shared/registry.js'));
+require(path.join(ROOT, 'shared/games/constants.js'));
 ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'racing', 'ludo', 'gomoku'].forEach((id) => {
   require(path.join(ROOT, 'shared/games/' + id + '.js'));
 });

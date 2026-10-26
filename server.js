@@ -54,6 +54,7 @@
 /* ---------- 共享游戏逻辑 ---------- */
 require('./shared/core.js');
 require('./shared/registry.js');
+require('./shared/games/constants.js');
 require('./shared/games/snake.js');
 require('./shared/games/tank.js');
 require('./shared/games/bomber.js');

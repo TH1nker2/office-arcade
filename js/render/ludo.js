@@ -17,7 +17,7 @@
   /* ============================================================
    * 飞行棋
    * ============================================================ */
-  var LUDO = { W: 1200, H: 1200, C: 600, R: 430, N: 40, HOME: 4 };
+  var LUDO = AR.GameConstants.LUDO;
 
   function ludoStart(n, idx) { return Math.floor(idx * LUDO.N / n); }
 

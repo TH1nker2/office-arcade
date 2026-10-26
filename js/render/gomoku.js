@@ -17,7 +17,7 @@
   /* ============================================================
    * 五子棋
    * ============================================================ */
-  R.GOMOKU = { N: 15, PAD: 60, CELL: 44 };
+  R.GOMOKU = AR.GameConstants.GOMOKU;
 
   R.gomokuCellXY = function (x, y, tf) {
     var g = R.GOMOKU;
