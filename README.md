@@ -458,7 +458,7 @@ WebSocket（`/ws`，用同一 Cookie 鉴权）承载：大厅广播、房间、�
    └────WebSocket(大厅/房间/邀请/对局)────┘
 ```
 
-- **服务端权威**：`shared/games/*.js` 同时被 Node 加载执行、被浏览器加载读元信息；客户端只发输入、画快照
+- **服务端权威**：`shared/games/*.js` 由 Node 加载执行；浏览器只加载 `shared/registry.js` 和共享常量，客户端只发输入、画快照
 - **静态资源**：先归一化再按白名单（`css/ js/ shared/` + 3 个页面）判断，`..`、`%2e%2e`、空字节一律拒绝
 - **大厅广播**：任何在线/进入房间/改名都会触发一次合并广播（80ms 合并，避免刷屏）
 - **房间**：4 位码、人数上限按游戏配置、房主离开自动移交；**最后一个真人离开时房间立即销毁**（人机不算）
@@ -471,17 +471,31 @@ WebSocket（`/ws`，用同一 Cookie 鉴权）承载：大厅广播、房间、�
 ```
 office-arcade/
 ├── index.html              登录 / 大厅 / 分区 / 房间 / 资料 / HUD
-├── css/style.css
+├── css/
+│   ├── style.css           样式入口（按原顺序 @import）
+│   └── base/hud/chat/...   按职责拆分的样式文件
 ├── shared/
 │   ├── core.js  registry.js
 │   ├── store.js  store-sqlite.js  store-json.js
-│   └── games/              九款游戏的服务端权威模拟
+│   └── games/              九款游戏的服务端权威模拟 + constants.js
 ├── js/
-│   ├── net.js  audio.js  input.js  render.js  ui.js  main.js
-├── server.js               HTTP + WebSocket + 账号 + 房间 + 邀请
+│   ├── main.js             浏览器启动与主循环
+│   ├── core/               DOM / HTTP 基础工具
+│   ├── state/app-store.js  客户端全局状态
+│   ├── ui/                 聊天、资料、玩家菜单、对局 UI、版本、大厅/房间
+│   ├── render/             公共画布工具 + 每款游戏独立 renderer
+│   ├── net.js  audio.js  input.js  ui.js
+│   └── admin/              管理后台弹窗与词库模块
+├── server/
+│   ├── config.js words.js auth.js state.js presence.js
+│   ├── rooms.js            房间、回合、邀请、人机
+│   ├── ws.js               WebSocket 帧/升级/消息分发
+│   ├── http.js             HTTP 静态资源与 REST API
+│   └── loop.js             60Hz 游戏循环
+├── server.js               组合根：装配模块、挂载 HTTP/WS、启动与关闭
 ├── docs/开发手册.md         架构、数据流、游戏契约、踩坑记录（接手先看这个）
 ├── docs/发版流程.md         从拉代码到发版的完整流程
-├── tools/                  测试脚本 + 构建/发版脚本 + runtime-manifest.json
+├── tools/                  测试脚本 + lib 公共夹具 + 构建/发版脚本
 ├── start.sh / start.command  Linux / macOS 启动器
 ├── runtime/node.exe        本机 Node 运行时（不入库，获取运行环境.bat 下载）
 ├── version.json            版本号 + 更新说明
@@ -489,7 +503,7 @@ office-arcade/
 ├── admin.html              管理后台页面
 ├── data/                   数据库（不入库，自动生成）
 ├── 启动游戏厅.bat           Windows 启动器
-└── 获取运行环境.bat         开发者用：联网下载本机 runtime\node.exe
+└─ 获取运行环境.bat         开发者用：联网下载本机 runtime\node.exe
 ```
 
 ---
