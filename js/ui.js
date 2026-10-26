@@ -1662,6 +1662,7 @@
     for (var i = 0; i < APP.game.players.length; i++) {
       var p = APP.game.players[i];
       var sc = 0;
+      var scCls = '';
       var rank = 0;
       if (APP.game.id === 'draw' && s.sc) sc = s.sc[p.id] || 0;
       else if (APP.game.id === 'shmup') {
@@ -1688,15 +1689,17 @@
           sc = home + '/' + (s.pl[lr].length - 1);
         }
       } else if (APP.game.id === 'gomoku') {
-        sc = s.mv + ' 手';
+        var side = s.sd && s.sd[p.id];
+        sc = side === 1 ? '执黑' : (side === 2 ? '执白' : '');
+        scCls = side === 1 ? ' side-black' : (side === 2 ? ' side-white' : '');
       } else if (APP.game.id === 'tank') {
         for (var n = 0; n < s.p.length; n++) if (s.p[n].i === p.id) sc = s.p[n].s;
       }
-      list.push({ p: p, sc: sc, rank: rank });
+      list.push({ p: p, sc: sc, scCls: scCls, rank: rank });
     }
     if (APP.game.id === 'racing') {
       list.sort(function (a, b) { return a.rank - b.rank; });
-    } else {
+    } else if (APP.game.id !== 'gomoku') {
       list.sort(function (a, b) { return b.sc - a.sc; });
     }
     var html = '';
@@ -1704,7 +1707,7 @@
       html += '<div class="hud-row' + (it.p.id === (APP.me && APP.me.id) ? ' me' : '') + '">' +
         '<span class="dotc" style="background:' + it.p.color + '"></span>' +
         '<span class="nm">' + esc(it.p.name) + '</span>' +
-        '<span class="sc">' + it.sc + '</span></div>';
+        '<span class="sc' + it.scCls + '">' + it.sc + '</span></div>';
     });
     if (html !== lastHudKey) {
       lastHudKey = html;

@@ -16,6 +16,19 @@ const PORT = 8650 + Math.floor(Math.random() * 40);
 const DATA = path.join(os.tmpdir(), 'arcade-ui-' + PORT);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const GAME_DESC = {
+  snake: '吞下光点不断变长，撞上其他蛇身会暂时退场，随后复活。',
+  tank: '俯视角坦克对战，砖墙能被轰开，击败对手次数最多者获胜。',
+  bomber: '放置炸弹炸开砖块、收集道具，坚持到最后的人获胜。',
+  tetris: '消除方块行会给对手送去干扰行，率先被堆满者出局。',
+  shmup: '全队并肩迎战敌机和 BOSS，击落越多得分越高；全员被击落时结束。',
+  draw: '轮流当画手，其余人在聊天框抢答，猜得越快得分越高。',
+  racing: '俯视角漂移竞速，四条赛道各跑两圈，率先冲线者获胜。',
+  gomoku: '15×15 经典棋盘，不限时轮流落子，率先连成五子者获胜。',
+  ludo: '掷骰子起飞，落到对手格就把对方送回起点；率先让全部飞机到家者获胜。'
+};
+const BAD_DESC_WORDS = ['打飞机', '爆开', '活着', '击杀', '垃圾行', '顶死', '阵亡', '撑不住', '送他回起点'];
+
 const getJson = (u) => new Promise((res, rej) => {
   http.get(u, (r) => {
     let b = '';
@@ -165,6 +178,35 @@ async function main() {
     domText.slice(0, 50));
   await A.shot('31b-lobby-3p');
 
+  console.log('\n[1b] 九款游戏简介');
+  const descs = await A.ev('AR.GAME_INFO.map(function (g) { return { id: g.id, desc: g.desc }; })');
+  check('九款游戏都有简介且不超过 40 字',
+    descs.length === 9 && descs.every((g) => g.desc && g.desc.length <= 40),
+    descs.map((g) => g.id + ':' + (g.desc || '').length).join(' '));
+  check('简介文案与预期一致', descs.every((g) => g.desc === GAME_DESC[g.id]),
+    descs.filter((g) => g.desc !== GAME_DESC[g.id]).map((g) => g.id).join(',') || 'all match');
+  const allDesc = descs.map((g) => g.desc).join('');
+  const badWords = BAD_DESC_WORDS.filter((w) => allDesc.indexOf(w) >= 0);
+  check('简介不含生硬用语', badWords.length === 0, badWords.join(',') || 'none');
+
+  const cards = await A.ev(
+    'Array.prototype.map.call(document.querySelectorAll("#lobby-games .game-card"),' +
+    ' function (c) { return { id: c.getAttribute("data-game"), desc: c.querySelector("p").textContent }; })'
+  );
+  check('大厅九张卡片展示简介', cards.length === 9 && cards.every((c) => c.desc === GAME_DESC[c.id]),
+    cards.map((c) => c.id).join(','));
+
+  const hubBad = [];
+  for (const g of descs) {
+    await A.ev('document.querySelector(\'[data-game="' + g.id + '"]\').click()');
+    await sleep(300);
+    const hub = await A.ev('document.getElementById("hub-desc").textContent');
+    if (hub.indexOf(g.desc) !== 0) hubBad.push(g.id);
+    await A.ev('document.getElementById("hub-back").click()');
+    await sleep(200);
+  }
+  check('九个游戏分区展示简介', hubBad.length === 0, hubBad.join(',') || 'all match');
+
   console.log('\n[2] 进入游戏分区');
   await A.ev('document.querySelector(\'[data-game="snake"]\').click()');
   await sleep(700);
@@ -178,6 +220,8 @@ async function main() {
   const rA = JSON.parse(roomA);
   check('房主进入房间', rA.screen === 'room' && rA.code, rA.screen + ' ' + rA.code);
   await A.shot('33-room');
+  const roomDesc = await A.ev('document.getElementById("room-desc").textContent');
+  check('房间页展示蛇球新简介', roomDesc.indexOf(GAME_DESC.snake) >= 0, roomDesc.slice(0, 40));
 
   console.log('\n[4] 邀请小李');
   await A.ev('document.getElementById("btn-invite").click()');

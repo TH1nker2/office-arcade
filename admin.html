@@ -45,14 +45,35 @@
         <button class="btn small ghost" id="btn-logout">退出</button>
       </header>
 
-      <div class="admin-toolbar">
-        <input id="search" placeholder="搜索昵称 / 用户名" autocomplete="off">
-        <label class="admin-check"><input type="checkbox" id="only-online"> 只看在线</label>
-        <div class="spacer"></div>
-        <span class="admin-hint" id="hint"></span>
+      <nav class="admin-tabs" id="admin-tabs">
+        <button class="admin-tab on" data-view="users">玩家管理</button>
+        <button class="admin-tab" data-view="words">你画我猜词库</button>
+      </nav>
+
+      <div class="admin-view" id="view-users">
+        <div class="admin-toolbar">
+          <input id="search" placeholder="搜索昵称 / 用户名" autocomplete="off">
+          <label class="admin-check"><input type="checkbox" id="only-online"> 只看在线</label>
+          <div class="spacer"></div>
+          <span class="admin-hint" id="hint"></span>
+        </div>
+
+        <div class="admin-table" id="user-table"></div>
       </div>
 
-      <div class="admin-table" id="user-table"></div>
+      <div class="admin-view hidden" id="view-words">
+        <div class="admin-toolbar">
+          <div class="seg admin-levels" id="word-levels">
+            <button class="seg-btn on" data-level="easy">简单 <span class="seg-num">—</span></button>
+            <button class="seg-btn" data-level="normal">中等 <span class="seg-num">—</span></button>
+            <button class="seg-btn" data-level="hard">困难 <span class="seg-num">—</span></button>
+          </div>
+          <input id="word-search" placeholder="搜索关键词或提示" autocomplete="off">
+          <div class="spacer"></div>
+          <span class="admin-hint" id="word-hint">词库加载中…</span>
+        </div>
+        <div class="admin-table" id="word-table"></div>
+      </div>
     </div>
   </section>
 

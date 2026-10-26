@@ -242,6 +242,19 @@ console.log('\n=== 飞行棋：人机能打完 ===');
   }
 }
 
+console.log('\n=== 五子棋：快照带执棋颜色 ===');
+{
+  const gg = AR.games.gomoku;
+  const ps = [
+    { id: 'gA', name: '黑方', color: '#111111' },
+    { id: 'gB', name: '白方', color: '#eeeeee' }
+  ];
+  const st = gg.create(ps, { seed: 7 });
+  const snap = gg.snapshot(st);
+  ok('首位玩家执黑', snap.sd.gA === 1, 'sd=' + JSON.stringify(snap.sd));
+  ok('次位玩家执白', snap.sd.gB === 2, 'sd=' + JSON.stringify(snap.sd));
+}
+
 console.log('\n=== 注册与元信息 ===');
 {
   ok('游戏数量为 9', AR.GAME_INFO.length === 9, AR.GAME_INFO.map((g) => g.name).join(' / '));

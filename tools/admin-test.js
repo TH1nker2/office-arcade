@@ -89,6 +89,22 @@ async function main() {
   const search = await request('GET', '/api/admin/users?q=' + encodeURIComponent('倒霉'), null, adminCookie);
   ok('按昵称搜索', (search.body.users || []).length === 1, (search.body.users || []).length + ' 条');
 
+  console.log('\n=== 词库查看 ===');
+  const wordsNoAuth = await request('GET', '/api/admin/words');
+  ok('未登录不能看词库', wordsNoAuth.status === 401);
+  const easyWords = await request('GET', '/api/admin/words?level=easy', null, adminCookie);
+  ok('简单档词库可读', easyWords.status === 200 && easyWords.body.level === 'easy');
+  ok('三档词数各 500', ['easy', 'normal', 'hard'].every((lv) =>
+    easyWords.body.levels && easyWords.body.levels[lv] && easyWords.body.levels[lv].count === 500),
+    JSON.stringify((easyWords.body.levels || {})));
+  ok('简单档返回 500 个词', (easyWords.body.words || []).length === 500);
+  ok('词条带 4 条提示', (easyWords.body.words || []).every((e) =>
+    e.w && Array.isArray(e.h) && e.h.length === 4));
+  const hardWords = await request('GET', '/api/admin/words?level=hard', null, adminCookie);
+  ok('困难档词条可读', hardWords.status === 200 && (hardWords.body.words || []).length === 500);
+  const badLevel = await request('GET', '/api/admin/words?level=nightmare', null, adminCookie);
+  ok('非法难度返回 400', badLevel.status === 400);
+
   console.log('\n=== 封禁 ===');
   const ws1 = new WebSocket('ws://127.0.0.1:' + PORT + '/ws?token=' + userCookie.split('=')[1]);
   let kickedMsg = null;

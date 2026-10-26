@@ -259,6 +259,7 @@
         b: state.board.join(''),
         t: Math.round(state.time * 10) / 10,
         cur: state.order[state.turn % state.order.length],
+        sd: state.side,
         mv: state.moves,
         last: state.last ? [state.last.x, state.last.y, state.last.v] : null,
         win: state.winnerId,

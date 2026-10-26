@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 人机 + 赛车：浏览器端到端 */
+/* 人机 + 赛车 + 五子棋：浏览器端到端 */
 'use strict';
 
 const { spawn } = require('child_process');
@@ -189,14 +189,47 @@ async function main() {
   check('HUD 显示圈数', hud.indexOf('圈') >= 0, hud.slice(0, 40));
   await B.shot('45-racing-running');
 
-  console.log('\n[3] 控制台');
-  console.log('  错误:', B.errors.length ? B.errors.slice(0, 3) : '无');
-  check('无控制台错误', B.errors.length === 0);
+  await B.ev('document.getElementById("hud-back").click()');
+  await sleep(600);
+  await B.ev('document.getElementById("btn-leave-room").click()');
+  await sleep(800);
+  check('退出赛车后回到大厅', (await B.ev('AR.App.screen')) === 'lobby');
+
+  console.log('\n[3] 五子棋执棋颜色');
+  await B.ev('document.querySelector(\'[data-game="gomoku"]\').click()');
+  await sleep(600);
+  await B.ev('document.getElementById("btn-create-room").click()');
+  await sleep(900);
+  await B.ev('document.getElementById("btn-add-bot").click()');
+  await sleep(400);
+  await B.ev('document.getElementById("btn-start").click()');
+  await sleep(1800);
+
+  const gomoku = JSON.parse(await B.ev(
+    'JSON.stringify({' +
+    'screen: AR.App.screen, game: AR.App.game && AR.App.game.id, sd: AR.App.snap && AR.App.snap.sd,' +
+    'rows: document.querySelectorAll("#hud-board .hud-row").length,' +
+    'black: document.querySelectorAll("#hud-board .sc.side-black").length,' +
+    'white: document.querySelectorAll("#hud-board .sc.side-white").length,' +
+    'text: document.getElementById("hud-board").textContent' +
+    '})'
+  ));
+  check('五子棋人机局开局', gomoku.screen === 'play' && gomoku.game === 'gomoku', gomoku.game);
+  check('快照带黑白方信息', !!gomoku.sd && Object.keys(gomoku.sd).length === 2, JSON.stringify(gomoku.sd));
+  check('右侧显示双方执棋颜色', gomoku.rows === 2 && gomoku.black === 1 && gomoku.white === 1,
+    'rows=' + gomoku.rows + ' black=' + gomoku.black + ' white=' + gomoku.white);
+  check('执黑/执白文案正确', gomoku.text.indexOf('执黑') >= 0 && gomoku.text.indexOf('执白') >= 0, gomoku.text);
+  check('右侧不再显示手数', gomoku.text.indexOf('手') < 0, gomoku.text);
+  await B.shot('46-gomoku-sides');
 
   await B.ev('document.getElementById("hud-back").click()');
-  await sleep(500);
+  await sleep(600);
   await B.ev('document.getElementById("btn-leave-room").click()');
-  await sleep(500);
+  await sleep(600);
+
+  console.log('\n[4] 控制台');
+  console.log('  错误:', B.errors.length ? B.errors.slice(0, 3) : '无');
+  check('无控制台错误', B.errors.length === 0);
 
   B.kill();
   server.kill();

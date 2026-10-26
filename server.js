@@ -140,8 +140,25 @@ const VERSION_TAG = 'v' + VERSION.version;
 /* ---------- 你画我猜词库（可直接编辑 shared/words.json） ---------- */
 const WORDS_FILE = path.join(ROOT, 'shared', 'words.json');
 
+function wordMeta(raw) {
+  const fallback = {
+    easy: { name: '简单', desc: '水果、动物、日用品这类看得见摸得着的东西' },
+    normal: { name: '中等', desc: '职业、场所、动作、场景，需要一点联想' },
+    hard: { name: '困难', desc: '画面感强的成语，以及可画的科技、运动、场所与网络热词' }
+  };
+  const out = {};
+  ['easy', 'normal', 'hard'].forEach(function (lv) {
+    const sec = raw && raw.levels && raw.levels[lv];
+    out[lv] = {
+      name: (sec && sec.name) || fallback[lv].name,
+      desc: (sec && sec.desc) || fallback[lv].desc
+    };
+  });
+  return out;
+}
+
 function loadWords() {
-  const empty = { easy: [], normal: [], hard: [] };
+  const empty = { easy: [], normal: [], hard: [], meta: wordMeta(null) };
   try {
     const raw = JSON.parse(fs.readFileSync(WORDS_FILE, 'utf8'));
 
@@ -164,6 +181,7 @@ function loadWords() {
         console.log('[words] ' + lv + ': ' + out[lv].length + ' 个');
       });
       if (!out.easy.length && !out.normal.length && !out.hard.length) return empty;
+      out.meta = wordMeta(raw);
       return out;
     }
 
@@ -177,7 +195,7 @@ function loadWords() {
       seen.add(t);
       out.push(t);
     });
-    return { easy: out.slice(), normal: out.slice(), hard: out.slice() };
+    return { easy: out.slice(), normal: out.slice(), hard: out.slice(), meta: wordMeta(null) };
   } catch (e) {
     console.warn('[words] 读取 shared/words.json 失败（' + e.message + '），改用内置词库');
     return empty;
@@ -1253,7 +1271,8 @@ handleAdmin = require('./shared/admin-api')({
   setPresence: setPresence,
   scheduleLobby: scheduleLobby,
   leaveRoom: leaveRoom,
-  kickUser: kickUser
+  kickUser: kickUser,
+  WORDS: WORDS
 });
 
 /* ============================================================

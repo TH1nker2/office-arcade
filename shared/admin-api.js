@@ -11,7 +11,7 @@ module.exports = function install(ctx) {
     json, readJson, store, presence, rooms, AR,
     ADMINS, adminSessions, ADMIN_TTL, adminFrom,
     hashPassword, newToken, setPresence, scheduleLobby,
-    leaveRoom, kickUser
+    leaveRoom, kickUser, WORDS
   } = ctx;
 
   const COOKIE = 'asid';
@@ -92,6 +92,29 @@ module.exports = function install(ctx) {
     if (urlPath === '/api/admin/users' && method === 'GET') {
       const q = new URL(req.url, 'http://x').searchParams.get('q');
       return json(res, 200, { users: userRows(q), total: store.listUsers().length });
+    }
+
+    /* ---------- 你画我猜词库 ---------- */
+    if (urlPath === '/api/admin/words' && method === 'GET') {
+      const level = new URL(req.url, 'http://x').searchParams.get('level') || 'easy';
+      if (['easy', 'normal', 'hard'].indexOf(level) < 0) {
+        return json(res, 400, { error: '没有这个难度' });
+      }
+      const levels = {};
+      ['easy', 'normal', 'hard'].forEach((lv) => {
+        const meta = (WORDS.meta && WORDS.meta[lv]) || {};
+        levels[lv] = {
+          name: meta.name || lv,
+          desc: meta.desc || '',
+          count: (WORDS[lv] || []).length
+        };
+      });
+      return json(res, 200, {
+        level: level,
+        levels: levels,
+        source: 'shared/words.json',
+        words: WORDS[level] || []
+      }, { 'Cache-Control': 'no-store' });
     }
 
     /* ---------- 以下都是 POST，需要目标用户 ---------- */
