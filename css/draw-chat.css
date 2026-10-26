@@ -1,0 +1,47 @@
+/* ---------------- 你画我猜聊天 ---------------- */
+#chat-panel {
+  position: absolute;
+  right: 14px;
+  bottom: 52px;
+  width: 300px;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.chat-log {
+  max-height: 190px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  padding-right: 2px;
+}
+
+.chat-line {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(6, 11, 20, 0.62);
+  color: var(--dim);
+  line-height: 1.4;
+  word-break: break-all;
+}
+.chat-line b { color: var(--txt); font-weight: 600; }
+.chat-line.correct { background: rgba(163, 230, 53, 0.18); color: #d9ffa0; border: 1px solid rgba(163, 230, 53, 0.35); }
+.chat-line.system { background: rgba(34, 211, 238, 0.12); color: #bdf4ff; }
+
+.chat-input { display: flex; gap: 6px; }
+.chat-input input { padding: 8px 10px; font-size: 13px; min-width: 0; flex: 1 1 auto; }
+.chat-input button {
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12.5px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+

@@ -1,0 +1,128 @@
+/* ---------------- 个人资料 ---------------- */
+.profile-panel { width: min(920px, 100%); }
+
+.profile-body {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 22px;
+}
+
+.profile-left, .profile-right { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+.avatar-preview {
+  width: 84px;
+  height: 84px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 40px;
+  margin: 4px auto 6px;
+  background: #22d3ee;
+  color: #04121a;
+  font-weight: 900;
+  box-shadow: 0 10px 40px rgba(34, 211, 238, 0.25);
+}
+
+.emoji-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.emoji-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+.emoji-btn:hover { border-color: var(--line-2); }
+.emoji-btn.active { border-color: var(--cyan); background: rgba(34, 211, 238, 0.16); }
+
+.stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stat-card {
+  padding: 10px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--line);
+  text-align: center;
+}
+.stat-card b { display: block; font-size: 19px; color: var(--cyan); font-weight: 900; }
+.stat-card span { font-size: 10px; color: var(--dim); }
+
+.pass-row { display: flex; gap: 6px; }
+.pass-row input { flex: 1; padding: 8px 10px; font-size: 12.5px; }
+.pass-row .btn { flex: 0 0 auto; }
+
+.history { display: flex; flex-direction: column; gap: 3px; max-height: 230px; overflow-y: auto; padding-right: 2px; }
+.history-row {
+  display: grid;
+  grid-template-columns: 1fr 54px 52px 84px;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11.5px;
+  color: var(--dim);
+  align-items: center;
+}
+.history-row b { color: var(--txt); font-weight: 600; }
+.history-row .h-place { color: var(--cyan); font-weight: 800; }
+.history-row .h-delta { color: var(--lime); text-align: right; }
+
+/* ---------------- 查看玩家资料 ---------------- */
+.lobby-tip {
+  font-size: 10px;
+  color: var(--dim);
+  opacity: .6;
+  margin: -4px 0 2px;
+  padding-left: 2px;
+}
+
+.player-panel { width: min(620px, 100%); }
+
+.player-head { display: flex; align-items: flex-start; gap: 14px; }
+
+.player-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  font-weight: 800;
+  color: #04121a;
+  flex: 0 0 auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+}
+
+.player-meta { flex: 1; min-width: 0; }
+.player-name { margin: 0; font-size: 22px; font-weight: 900; color: var(--txt); line-height: 1.15; }
+.player-username { margin: 3px 0 0; font-size: 11.5px; color: var(--dim); }
+.player-bio {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: rgba(220, 235, 255, .78);
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.player-status {
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .03);
+  font-size: 12px;
+  color: var(--dim);
+}
+.player-status.online { color: #a3e635; border-color: rgba(163, 230, 53, .35); }
+.player-status.waiting { color: var(--amber); border-color: rgba(251, 191, 36, .35); }
+.player-status.playing { color: var(--cyan); border-color: rgba(34, 211, 238, .35); }
+.player-status.offline { opacity: .7; }
+
+.player-history { max-height: 260px; }
+
+@media (max-width: 620px) {
+  .player-head { flex-wrap: wrap; }
+  .player-meta { flex-basis: calc(100% - 100px); }
+  .player-panel .stat-cards { grid-template-columns: repeat(2, 1fr); }
+}
+

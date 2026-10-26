@@ -1,0 +1,19 @@
+/* ---------------- 你画我猜：选词 ---------------- */
+.choose-list { display: flex; flex-direction: column; gap: 8px; }
+
+.choose-list button {
+  padding: 13px 10px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.choose-list button:hover {
+  background: rgba(34, 211, 238, 0.16);
+  border-color: rgba(34, 211, 238, 0.5);
+}
+.choose-list button:active { transform: scale(0.98); }
+

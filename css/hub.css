@@ -1,0 +1,65 @@
+/* ---------------- 游戏分区 ---------------- */
+.hub {
+  width: min(980px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  animation: rise .3s ease both;
+}
+
+.hub-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.hub-title b { font-size: 17px; font-weight: 900; }
+.hub-title em {
+  font-style: normal;
+  font-size: 9.5px;
+  letter-spacing: .2em;
+  color: var(--dim);
+  margin-left: 8px;
+}
+.hub-desc { font-size: 11.5px; color: var(--dim); max-width: 420px; text-align: right; line-height: 1.5; }
+
+.hub-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 18px;
+}
+
+.hub-rooms { padding: 0 18px 18px; overflow-y: auto; }
+
+.room-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+
+.room-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+}
+.room-item .ri-code { font-weight: 800; letter-spacing: .18em; color: var(--cyan); }
+.room-item .ri-host { color: var(--dim); font-size: 12px; }
+.room-item .ri-count { margin-left: auto; font-size: 11.5px; color: var(--dim); }
+
+.empty-hint {
+  padding: 18px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--dim);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
+

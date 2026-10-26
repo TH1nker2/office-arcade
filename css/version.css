@@ -1,0 +1,52 @@
+/* ---------------- 版本号与更新说明 ---------------- */
+.version-chip {
+  align-self: center;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.version-chip:hover { border-color: rgba(34, 211, 238, 0.5); color: var(--cyan); }
+.version-chip.small { padding: 3px 9px; font-size: 10.5px; }
+
+.version-body {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--dim);
+}
+
+.v-sec {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.v-sec:first-child { margin-top: 0; }
+
+.v-notes { margin: 0; padding-left: 18px; }
+.v-notes li { margin: 3px 0; color: var(--txt); }
+
+.v-hist {
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+.v-hist > b { color: var(--txt); font-size: 12.5px; }
+.v-hist > span { margin-left: 8px; font-size: 11px; color: var(--dim); }
+.v-hist .v-notes { margin-top: 6px; }
+.v-hist .v-notes li { font-size: 12px; color: rgba(200, 218, 240, 0.8); }
+
+#version-overlay .panel { width: min(620px, 100%); }
+#version-overlay .panel-actions { justify-content: flex-end; }
+#version-overlay .panel-actions .btn { flex: 0 0 auto; min-width: 96px; }
+
