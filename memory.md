@@ -4,8 +4,8 @@
 > **最后同步**：2026-10-28
 > **仓库**：https://gitee.com/th1nker/office-arcade.git
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
-> **基线**：`main` 分支，提交 `18c87e4`（版本 3.4.1）
-> **当前状态（最后同步时）**：有一轮“全面版”优化未提交/未推送；本文件也未跟踪。
+> **基线**：`main` 分支，`18c87e4`（版本 3.4.1）→ `0e9c86a`（2026-10-28 优化）
+> **当前状态（最后同步时）**：优化已提交并推送到 `origin/main`；工作区干净，本文件已入库。
 
 ---
 
@@ -32,13 +32,13 @@
 4. 验证命令见 README 的“测试”章节；本机基线为 `tools/check.js`、`tools/test-all.js --with-ui`、`tools/perf-test.js` 通过。
 5. 检查 `git log -1` 与本文基线是否一致。
 
-> **重要**：若换机前没有 `git push`，本轮优化代码和本文件都不会随 clone 恢复；本文件只能恢复决策记忆，代码需提交/patch 或按第 4 节重做。
+> **重要**：本轮优化和本文件已经推送（`0e9c86a`）。以后如有新改动，换机前仍需 `git push`，否则只会在本机保留。
 
 ---
 
 ## 3. 当前工作区状态（会话记忆）
 
-- 基线 `18c87e4`（v3.4.1）之上有一轮未提交优化，涉及服务端、前端、测试、文档和发版脚本。
+- 基线 `18c87e4`（v3.4.1）之上是一轮已推送优化 `0e9c86a`，涉及服务端、前端、测试、文档和发版脚本。
 - 本地额外文件：`runtime/`（Node 运行时）、`admins.json`（测试管理员）、`vendor/_cache`（运行时下载缓存），均被 `.gitignore` 排除。
 - UI 测试会改写 `shots/*.png`；跑完应 `git checkout -- shots/` 还原，除非明确要更新截图。
 - 本轮验证：`tools/test-all.js --with-ui` 19 个脚本全部通过（约 180s）；`bot-test` 连跑 10 次通过；首屏 gzip 后约 103 KB，snake/tank/shmup headless RAF p95 16.7ms。
@@ -46,7 +46,7 @@
 
 ---
 
-## 4. 2026-10-28 优化记录（文档之外的新增信息）
+## 4. 2026-10-28 优化记录（提交 `0e9c86a`，文档之外的新增信息）
 
 ### P0 正确性
 - 炸弹人连锁爆炸后倒序循环越界崩溃：`shared/games/bomber.js` 加判空；`game-test` 增加双炸弹连锁回归。
