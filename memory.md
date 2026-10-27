@@ -87,6 +87,7 @@
 **PROJECT**（`C:\Users\Administrator\.qoder-cn\projects\C--Users-Administrator-Desktop-workspace\memory\`）
 - `project-office-arcade.md`
 - `reference-office-arcade.md`
+- `feedback-full-test-before-push.md`
 - `MEMORY.md`
 
 换机后若 Qoder 记忆目录为空：先读本文件，再按第 5 节重建记忆条目，项目细节按第 1 节读文档。
@@ -95,6 +96,8 @@
 
 ## 6. 协作偏好
 
+- **推送前硬性门禁（最高优先级）**：任何代码改动在 `git push` 前必须完成全量测试（`tools/check.js` + `tools/test-all.js --with-ui`，涉及渲染/性能再加 `tools/perf-test.js`），并同步 README / `docs/*.md` / `memory.md` 与对应记忆条目；UI 测试后还原 `shots/`。未完成测试和文档同步不得推送。
+- 仅文档/记忆改动可以跳过全量测试，但仍需同步 `memory.md`，并说明“本次无代码改动”。
 - 中文交流；非平凡改动先给分阶段方案，由用户选择范围后再执行。
 - 严格保持现有功能：允许修 bug、性能/交付/可访问性/安全加固；不改玩法、数值、时长、计分、交互、视觉风格，不破坏零依赖/零构建/离线。
 - 重视实际测试与量化结果；未获明确要求不要 commit/push，不擅自改共享配置或删用户文件。
