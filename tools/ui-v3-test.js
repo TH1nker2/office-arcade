@@ -135,7 +135,32 @@ async function main() {
   await B.ev('document.getElementById("btn-leave-room").click()');
   await sleep(600);
 
-  console.log('\n[4] 控制台');
+  console.log('\n[4] 飞行棋启动格快照');
+  await B.ev('document.querySelector(\'[data-game="ludo"]\').click()');
+  await sleep(600);
+  await B.ev('document.getElementById("btn-create-room").click()');
+  await sleep(900);
+  await B.ev('document.getElementById("btn-add-bot").click()');
+  await sleep(400);
+  await B.ev('document.getElementById("btn-start").click()');
+  await sleep(1800);
+  const ludo = JSON.parse(await B.ev('JSON.stringify({' +
+    'screen: AR.App.screen, game: AR.App.game && AR.App.game.id,' +
+    'st: AR.App.snap && AR.App.snap.st,' +
+    'planes: AR.App.snap && AR.App.snap.planes,' +
+    'hud: document.getElementById("hud-board").textContent' +
+    '})'));
+  check('飞行棋人机局开局', ludo.screen === 'play' && ludo.game === 'ludo', ludo.game);
+  check('快照带两名玩家的启动格', Array.isArray(ludo.st) && ludo.st.length === 2 && ludo.st[0] === 0 && ludo.st[1] === 20,
+    JSON.stringify(ludo.st));
+  check('HUD 显示回家进度', ludo.hud.indexOf('/1') >= 0, ludo.hud.slice(0, 40));
+
+  await B.ev('document.getElementById("hud-back").click()');
+  await sleep(600);
+  await B.ev('document.getElementById("btn-leave-room").click()');
+  await sleep(600);
+
+  console.log('\n[5] 控制台');
   console.log('  错误:', B.errors.length ? B.errors.slice(0, 3) : '无');
   check('无控制台错误', B.errors.length === 0);
 

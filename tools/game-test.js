@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-/* 无浏览器逻辑测试：六个游戏各跑一遍完整/半程模拟，验证稳定性、快照大小与结果 */
+/* 无浏览器逻辑测试：动作/回合游戏模拟，验证稳定性、快照大小、结果与关键机制 */
 'use strict';
 
 const path = require('path');
 for (const f of ['core', 'registry', 'games/constants']) require(path.join(__dirname, '..', 'shared', f + '.js'));
-for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw']) {
+for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'ludo']) {
   require(path.join(__dirname, '..', 'shared', 'games', g + '.js'));
 }
 const AR = globalThis.AR;
@@ -269,6 +269,48 @@ for (const [id, n, secs, cap] of cases) {
   ok('bomber 放弹', bs.bombs.length === 1, 'bombs=' + bs.bombs.length);
   for (let i = 0; i < 170; i++) bg.tick(bs, 1 / 60);
   ok('bomber 爆炸击杀', b1.alive === false, 'p1.alive=' + b1.alive);
+
+  /* 同帧连锁爆炸：explode 会一次删掉多颗炸弹，倒序循环不能读越界 */
+  const bc = bg.create(players(2), { seed: 55 });
+  bc.map.fill(0);
+  bc.flames = [];
+  bc.powerups = [];
+  bc.players.p0.cx = 1; bc.players.p0.cy = 1;
+  bc.players.p1.cx = 10; bc.players.p1.cy = 10;
+  bc.bombs = [
+    { cx: 1, cy: 1, timer: 0.001, range: 2, owner: 'p0', color: '#ff2e63' },
+    { cx: 2, cy: 1, timer: 0.001, range: 2, owner: 'p0', color: '#ff2e63' }
+  ];
+  let chainErr = null;
+  try { bg.tick(bc, 1 / 60); } catch (e) { chainErr = e; }
+  ok('bomber 同帧连锁爆炸不崩溃', !chainErr && bc.bombs.length === 0 && bc.flames.length > 0,
+    chainErr ? chainErr.message : ('bombs=' + bc.bombs.length + ' flames=' + bc.flames.length));
+
+  /* 飞行棋：玩家中途退出后，剩余玩家的绝对格不能跟着重排 */
+  const lg = AR.games.ludo;
+  const lplayers = players(4);
+  const ls = lg.create(lplayers, { seed: 77, planes: 2 });
+  lplayers.forEach((p, i) => { ls.players[p.id].planes[0] = 5 + i * 2; });
+  ls.turn = 2;                       /* p2 当前回合，退出的是 p1（下标更小） */
+  const absPos = (snap, id) => {
+    for (let i = 0; i < snap.pl.length; i++) {
+      if (snap.pl[i][0] !== id) continue;
+      return snap.pl[i][1] < 0 ? null : (snap.st[i] + snap.pl[i][1]) % 40;
+    }
+    return null;
+  };
+  const lsBefore = lg.snapshot(ls);
+  const ludoBefore = {};
+  lplayers.forEach((p) => { ludoBefore[p.id] = absPos(lsBefore, p.id); });
+  lg.removePlayer(ls, 'p1');
+  const lsAfter = lg.snapshot(ls);
+  ['p0', 'p2', 'p3'].forEach((id) => {
+    ok('飞行棋退场后 ' + id + ' 位置不漂移',
+      absPos(lsAfter, id) === ludoBefore[id], ludoBefore[id] + ' -> ' + absPos(lsAfter, id));
+  });
+  ok('飞行棋退场后仍轮到原当前玩家', lsAfter.c === 'p2', 'current=' + lsAfter.c);
+  ok('飞行棋快照带冻结起跑格', Array.isArray(lsAfter.st) && lsAfter.st.length === 3,
+    JSON.stringify(lsAfter.st));
 
   const kg = AR.games.tank;
   const ks = kg.create(players(2), { seed: 4 });

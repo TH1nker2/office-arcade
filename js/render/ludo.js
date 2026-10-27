@@ -30,19 +30,19 @@
     return { x: LUDO.C + Math.cos(a) * LUDO.R, y: LUDO.C + Math.sin(a) * LUDO.R, a: a };
   }
 
-  function ludoHomeXY(n, idx, k) {
-    var a = ludoAngle(ludoStart(n, idx));
+  function ludoHomeXY(start, k) {
+    var a = ludoAngle(start);
     var r = 360 - 50 * k;                 /* 360 / 310 / 260 / 210，给中央骰子留出空间 */
     return { x: LUDO.C + Math.cos(a) * r, y: LUDO.C + Math.sin(a) * r, a: a };
   }
 
-  function ludoBaseCenter(n, idx) {
-    var a = ludoAngle(ludoStart(n, idx)) + Math.PI / 4;
+  function ludoBaseCenter(start) {
+    var a = ludoAngle(start) + Math.PI / 4;
     return { x: LUDO.C + Math.cos(a) * 250, y: LUDO.C + Math.sin(a) * 250, a: a };
   }
 
-  function ludoBaseXY(n, idx, slot) {
-    var c = ludoBaseCenter(n, idx);
+  function ludoBaseXY(start, slot) {
+    var c = ludoBaseCenter(start);
     /* 最多 4 架，排成 2x2，避免第 3、4 架画在第 1、2 架上面 */
     var col = slot % 2 ? 1 : -1;
     var row = slot >= 2 ? 1 : -1;
@@ -58,12 +58,12 @@
     };
   }
 
-  /* 某架飞机在棋盘上的坐标；返回 null 表示到家了 */
-  R.ludoPlaneXY = function (n, idx, pos, slotIndex) {
+  /* 某架飞机在棋盘上的坐标；start 是该玩家的起跑格（服务端冻结下发） */
+  R.ludoPlaneXY = function (start, pos, slotIndex) {
     if (pos === LUDO.N + LUDO.HOME) return null;
-    if (pos < 0) return ludoBaseXY(n, idx, slotIndex || 0);
-    if (pos < LUDO.N) return ludoCellXY((ludoStart(n, idx) + pos) % LUDO.N);
-    return ludoHomeXY(n, idx, pos - LUDO.N);
+    if (pos < 0) return ludoBaseXY(start, slotIndex || 0);
+    if (pos < LUDO.N) return ludoCellXY((start + pos) % LUDO.N);
+    return ludoHomeXY(start, pos - LUDO.N);
   };
 
   /* 点击命中：只在「当前回合玩家」的飞机里找，返回 0/1 或 -1 */
@@ -76,10 +76,11 @@
     for (var i = 0; i < (s.pl || []).length; i++) {
       var row = s.pl[i];
       if (row[0] !== s.c) continue;
+      var start = (s.st && typeof s.st[i] === 'number') ? s.st[i] : ludoStart(s.n, i);
       for (var k = 0; k < row.length - 1; k++) {
         var pos = row[k + 1];
         if (s.mv && s.mv.indexOf(k) < 0) continue;
-        var xy = R.ludoPlaneXY(s.n, i, pos, k);
+        var xy = R.ludoPlaneXY(start, pos, k);
         if (!xy) continue;
         var d = Math.hypot(xy.x - wx, xy.y - wy);
         if (d < bestD) { bestD = d; best = k; }
@@ -94,8 +95,12 @@
     V.tf = tf;
 
     var n = s.n || 4;
-    var startCells = [];
-    for (var i = 0; i < n; i++) startCells.push(ludoStart(n, i));
+    var starts = [];
+    for (var i = 0; i < n; i++) {
+      starts.push((s.st && typeof s.st[i] === 'number') ? s.st[i] : ludoStart(n, i));
+    }
+    var byId = {};
+    for (var gp = 0; gp < G.players.length; gp++) byId[G.players[gp].id] = G.players[gp];
 
     ctx.save();
     ctx.translate(tf.ox, tf.oy);
@@ -113,9 +118,10 @@
     /* 环上的 40 格 */
     for (var c = 0; c < LUDO.N; c++) {
       var pos = ludoCellXY(c);
-      var owner = startCells.indexOf(c);
+      var owner = starts.indexOf(c);
       var safe = [0, 7, 14, 21, 28, 35].indexOf(c) >= 0;
-      var color = owner >= 0 ? ((G.players[owner] || {}).color || '#22d3ee') : null;
+      var ownerRow = owner >= 0 ? s.pl[owner] : null;
+      var color = ownerRow ? ((byId[ownerRow[0]] || {}).color || '#22d3ee') : null;
 
       ctx.save();
       ctx.translate(pos.x, pos.y);
@@ -138,10 +144,10 @@
 
     /* 归航道 + 基地 */
     for (var pi = 0; pi < n; pi++) {
-      var pl = G.players[pi] || {};
+      var pl = byId[s.pl[pi][0]] || {};
       var col = pl.color || '#22d3ee';
       for (var k = 0; k < LUDO.HOME; k++) {
-        var hp = ludoHomeXY(n, pi, k);
+        var hp = ludoHomeXY(starts[pi], k);
         ctx.save();
         ctx.translate(hp.x, hp.y);
         ctx.rotate(hp.a + Math.PI / 2);
@@ -154,7 +160,7 @@
         ctx.restore();
       }
       /* 基地圆 */
-      var bc = ludoBaseCenter(n, pi);
+      var bc = ludoBaseCenter(starts[pi]);
       ctx.fillStyle = AR.rgba(col, 0.08);
       ctx.beginPath();
       ctx.arc(bc.x, bc.y, 60, 0, TAU);
@@ -168,15 +174,15 @@
     for (var pj = 0; pj < n; pj++) {
       var row = s.pl[pj];
       if (!row) continue;
-      var pcol = (G.players[pj] || {}).color || '#22d3ee';
+      var pcol = (byId[row[0]] || {}).color || '#22d3ee';
       var mine = row[0] === G.me;
       var planeN = row.length - 1;
       for (var q = 0; q < planeN; q++) {
         var ppx = row[q + 1];
-        var xy = R.ludoPlaneXY(n, pj, ppx, q);
+        var xy = R.ludoPlaneXY(starts[pj], ppx, q);
         if (!xy) continue;
         var isTurn = row[0] === s.c;
-        drawPlane(ctx, xy.x, xy.y, xy.a, pcol, mine, isTurn && ppx >= 0 && ppx < LUDO.N, ppx + LUDO.N * pj);
+        drawPlane(ctx, xy.x, xy.y, xy.a, pcol, mine, isTurn && ppx >= 0 && ppx < LUDO.N);
       }
     }
 
@@ -218,7 +224,7 @@
 
   };
 
-  function drawPlane(ctx, x, y, a, color, mine, active, seed) {
+  function drawPlane(ctx, x, y, a, color, mine, active) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(a);

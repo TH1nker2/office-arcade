@@ -95,6 +95,8 @@ async function main() {
   ok('封禁成功', ban.status === 200);
   await sleep(600);
   ok('在线用户被立刻踢下线', kickedMsg !== null, kickedMsg || '没收到 kicked');
+  ok('封禁后旧会话的 HTTP 请求失效',
+    (await request('GET', '/api/me', null, userCookie)).status === 401);
 
   const loginBanned = await request('POST', '/api/login', { username: 'victim', password: '123456' });
   ok('被封禁后无法登录', loginBanned.status === 403, loginBanned.body.error);
@@ -108,12 +110,15 @@ async function main() {
 
   const unban = await request('POST', '/api/admin/ban', { id: row.id, banned: 0 }, adminCookie);
   ok('解封成功', unban.status === 200);
-  ok('解封后可以登录',
-    (await request('POST', '/api/login', { username: 'victim', password: '123456' })).status === 200);
+  const relogin = await request('POST', '/api/login', { username: 'victim', password: '123456' });
+  ok('解封后可以登录', relogin.status === 200);
+  const reloginCookie = cookieOf(relogin);
 
   console.log('\n=== 重置密码 ===');
   const pw = await request('POST', '/api/admin/password', { id: row.id, password: 'newpass123' }, adminCookie);
   ok('改密成功', pw.status === 200, pw.body.password);
+  ok('重置密码后旧会话失效',
+    (await request('GET', '/api/me', null, reloginCookie)).status === 401);
   ok('旧密码失效',
     (await request('POST', '/api/login', { username: 'victim', password: '123456' })).status === 401);
   ok('新密码可登录',

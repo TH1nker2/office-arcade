@@ -2,17 +2,101 @@
 /* HTTP 静态资源与 REST API */
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const {
   ROOT, MIME, VERSION, COOKIE, SESSION_DAYS, store
 } = require('./config');
-const { json, readJson, parseCookies } = require('./http-utils');
+const { json, readJson, parseCookies, SECURITY_HEADERS } = require('./http-utils');
 const {
-  currentUser, publicUser, hashPassword, verifyPassword, newToken, sessionCookie
+  currentUser, publicUser, hashPassword, verifyPassword, newToken, sessionCookie,
+  loginBlocked, loginFailed, loginSuccess
 } = require('./auth');
 const { presence, rooms } = require('./state');
 const { scheduleLobby } = require('./presence');
 const { userInRoom, broadcastRoom } = require('./rooms');
 const AR = globalThis.AR;
+
+/* 内网也值得做：gzip 把首屏 JS/CSS 压到约 1/3；ETag 让重复打开只回 304。
+   静态资源的缓存策略用 no-cache（每次重验证），避免发版后浏览器拿旧文件。 */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self' ws: wss:",
+  "media-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'"
+].join('; ');
+const STATIC_HEADERS = Object.assign({}, SECURITY_HEADERS, {
+  'Content-Security-Policy': CSP
+});
+const COMPRESSIBLE = /\.(html|js|css|json|svg|txt)$/i;
+const GZIP_MAX = 2 * 1024 * 1024;
+const gzipCache = new Map();
+
+function staticHeaders(filePath, st, ext) {
+  const mtime = Math.floor(st.mtimeMs || (st.mtime && st.mtime.getTime()) || 0);
+  return Object.assign({}, STATIC_HEADERS, {
+    'Content-Type': MIME[ext] || 'application/octet-stream',
+    'Cache-Control': 'no-cache',
+    'ETag': 'W/"' + st.size.toString(16) + '-' + mtime.toString(16) + '"',
+    'Last-Modified': st.mtime.toUTCString(),
+    'Vary': 'Accept-Encoding'
+  });
+}
+
+function serveStatic(req, res, filePath, st) {
+  const ext = path.extname(filePath).toLowerCase();
+  const headers = staticHeaders(filePath, st, ext);
+  const etag = headers['ETag'];
+
+  if (req.headers['if-none-match'] === etag) {
+    res.writeHead(304, headers);
+    return res.end();
+  }
+
+  const accept = String(req.headers['accept-encoding'] || '');
+  const compress = COMPRESSIBLE.test(filePath) && st.size <= GZIP_MAX && /\bgzip\b/i.test(accept);
+  if (!compress) {
+    headers['Content-Length'] = st.size;
+    res.writeHead(200, headers);
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', () => { try { res.destroy(); } catch (e) { /* ignore */ } });
+    stream.pipe(res);
+    return;
+  }
+
+  const mtime = Math.floor(st.mtimeMs || (st.mtime && st.mtime.getTime()) || 0);
+  const cached = gzipCache.get(filePath);
+  if (cached && cached.size === st.size && cached.mtimeMs === mtime) {
+    headers['Content-Encoding'] = 'gzip';
+    headers['Content-Length'] = cached.buf.length;
+    res.writeHead(200, headers);
+    return res.end(cached.buf);
+  }
+
+  fs.readFile(filePath, (err, buf) => {
+    if (err) {
+      if (!res.headersSent) json(res, 500, { error: '服务器错误' });
+      return;
+    }
+    zlib.gzip(buf, (err2, gz) => {
+      if (err2) {
+        if (!res.headersSent) json(res, 500, { error: '服务器错误' });
+        return;
+      }
+      gzipCache.set(filePath, { size: st.size, mtimeMs: mtime, buf: gz });
+      headers['Content-Encoding'] = 'gzip';
+      headers['Content-Length'] = gz.length;
+      res.writeHead(200, headers);
+      res.end(gz);
+    });
+  });
+}
 
 let handleAdmin = null;
 
@@ -66,18 +150,12 @@ function createHandler(admin) {
 
     fs.stat(filePath, (err, st) => {
       if (err || !st.isFile()) {
-        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.writeHead(404, Object.assign({}, SECURITY_HEADERS, {
+          'Content-Type': 'text/plain; charset=utf-8'
+        }));
         return res.end('404 not found');
       }
-      const ext = path.extname(filePath).toLowerCase();
-      res.writeHead(200, {
-        'Content-Type': MIME[ext] || 'application/octet-stream',
-        'Content-Length': st.size,
-        'Cache-Control': 'no-store'
-      });
-      const stream = fs.createReadStream(filePath);
-      stream.on('error', () => { try { res.destroy(); } catch (e) { /* ignore */ } });
-      stream.pipe(res);
+      serveStatic(req, res, filePath, st);
     });
   } catch (e) {
     console.error('[http]', e && e.stack || e);
@@ -126,13 +204,18 @@ async function handleApi(req, res, urlPath, query) {
     const body = await readJson(req);
     const username = String(body.username || '').trim();
     const password = String(body.password || '');
+    if (loginBlocked(req, username)) {
+      return json(res, 429, { error: '尝试次数过多，请稍后再试' });
+    }
     const u = store.userByName(username);
     if (!u || !verifyPassword(password, u.salt, u.passHash)) {
+      loginFailed(req, username);
       return json(res, 401, { error: '用户名或密码不对' });
     }
     if (u.banned) {
       return json(res, 403, { error: '该账号已被管理员封禁，请联系管理员' });
     }
+    loginSuccess(req, username);
     store.updateUser(u.id, { lastLogin: Date.now() });
     const token = newToken();
     store.sessionCreate(token, u.id, Date.now() + SESSION_DAYS * 86400000);
@@ -249,6 +332,9 @@ async function handleApi(req, res, urlPath, query) {
     if (String(body.newPassword || '').length < 6) return json(res, 400, { error: '新密码至少 6 位' });
     const p = hashPassword(String(body.newPassword));
     store.updateUser(me.id, { passHash: p.hash, salt: p.salt });
+    /* 保留当前会话，其余旧会话全部失效；否则改密后旧设备仍能继续用 */
+    const token = parseCookies(req.headers.cookie)[COOKIE];
+    if (store.sessionDeleteByUser) store.sessionDeleteByUser(me.id, token);
     return json(res, 200, { ok: true });
   }
 

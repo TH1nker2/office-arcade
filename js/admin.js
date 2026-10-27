@@ -278,7 +278,6 @@
     $('dlg-cancel').addEventListener('click', function () { closeDialog(null); });
     $('dlg-input').addEventListener('keydown', function (e) {
       if (e.code === 'Enter') { e.preventDefault(); $('dlg-ok').click(); }
-      if (e.code === 'Escape') closeDialog(null);
     });
 
     api('GET', '/api/admin/me').then(function (data) {

@@ -12,6 +12,8 @@
   var toastFn = function (msg) { console.warn(msg); };
 
   var playerReqId = 0;
+  var menuTrigger = null;
+  var menuKeyBound = false;
 
   /* 后续新增选项：追加一条配置，必要时用 divider: true 做分组，
      用 when(user) 控制是否显示，并在 handlePlayerMenuAction 里处理 action。 */
@@ -29,10 +31,11 @@
     }
     if (!user) { hidePlayerMenu(); return; }
     e.preventDefault();
-    showPlayerMenu(user, e.clientX, e.clientY);
+    showPlayerMenu(user, e.clientX, e.clientY, row);
   }
 
-  function showPlayerMenu(user, x, y) {
+  function showPlayerMenu(user, x, y, trigger) {
+    menuTrigger = trigger || null;
     var menu = $('player-menu');
     $('player-menu-title').textContent = user.nickname || user.username || '玩家';
     buildPlayerMenu(user);
@@ -86,7 +89,36 @@
   }
 
   function hidePlayerMenu() {
-    $('player-menu').classList.add('hidden');
+    var menu = $('player-menu');
+    var hadFocus = menu.contains(document.activeElement);
+    menu.classList.add('hidden');
+    if (hadFocus && menuTrigger && document.contains(menuTrigger) &&
+      menuTrigger.getClientRects().length) {
+      menuTrigger.focus();
+    }
+    menuTrigger = null;
+  }
+
+  function onMenuKeydown(e) {
+    var items = Array.prototype.slice.call($('player-menu-list').querySelectorAll('.ctx-item'));
+    if (!items.length) return;
+    var idx = items.indexOf(document.activeElement);
+    if (e.code === 'ArrowDown') {
+      e.preventDefault();
+      items[(idx + 1) % items.length].focus();
+    } else if (e.code === 'ArrowUp') {
+      e.preventDefault();
+      items[(idx - 1 + items.length) % items.length].focus();
+    } else if (e.code === 'Home') {
+      e.preventDefault();
+      items[0].focus();
+    } else if (e.code === 'End') {
+      e.preventDefault();
+      items[items.length - 1].focus();
+    } else if ((e.code === 'Enter' || e.code === 'Space') && idx >= 0) {
+      e.preventDefault();
+      items[idx].click();
+    }
   }
 
   function openPlayerProfile(userId) {
@@ -184,6 +216,10 @@
   AR.PlayerPanel = {
     init: function (deps) {
       if (deps && deps.toast) toastFn = deps.toast;
+      if (!menuKeyBound) {
+        menuKeyBound = true;
+        $('player-menu').addEventListener('keydown', onMenuKeydown);
+      }
     },
     onPlayerContextMenu: onPlayerContextMenu,
     showPlayerMenu: showPlayerMenu,

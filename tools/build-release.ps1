@@ -1,18 +1,14 @@
 ﻿# ============================================================
-# 构建多平台发行包（标准版 + 便携版）
+# 构建多平台便携版发行包（数据在包内 data/）
 #
 #   powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
-#   powershell -ExecutionPolicy Bypass -File tools\build-release.ps1 -Edition standard
 #   powershell -ExecutionPolicy Bypass -File tools\build-release.ps1 -Target win-x64 -WithShots
 #
-# 两个版本的区别只有一个：数据放哪
-#   standard  标准版   数据放用户目录（Windows: %APPDATA%\office-arcade）
-#   portable  便携版   数据放软件目录下的 data\
-#
-# 产物：dist\office-arcade-v<版本>-<平台>-<版本类型>.zip|.tar.gz
+# 产物：dist\office-arcade-v<版本>-<平台>.zip|.tar.gz
 #       dist\SHA256SUMS.txt
 #
 # 前置：先跑 tools\fetch-runtime.ps1 把 vendor/ 里三个平台的运行时准备好
+# 说明：文档已统一为便携版；standard（数据放用户目录）尚未实现，传入会报错。
 # ============================================================
 param(
     [string[]]$Target = @('win-x64', 'linux-x64', 'darwin-arm64'),
@@ -72,8 +68,9 @@ foreach ($t in $Target) {
     $isWin = $t -like 'win-*'
 
     foreach ($ed in $Edition) {
-        if ($ed -ne 'standard' -and $ed -ne 'portable') { continue }
-        $isPortable = $ed -eq 'portable'
+        if ($ed -ne 'portable') {
+            throw "只支持 portable 版；standard 的数据目录能力尚未实现，请使用默认参数"
+        }
 
         $name = "office-arcade-v$ver-$t"
         $stage = Join-Path $stageRoot $name
@@ -133,16 +130,16 @@ foreach ($t in $Target) {
 
         # ---- 首次使用说明 ----
         $launch = if ($isWin) {
-            if ($isPortable) { '双击「启动游戏厅-便携版.bat」' } else { '双击「启动游戏厅.bat」' }
+            '双击「启动游戏厅.bat」'
         } else {
-            if ($isPortable) { './start-portable.sh（macOS 也可以双击 start-portable.command）' } else { './start.sh（macOS 也可以双击 start.command）' }
+            './start.sh（macOS 也可以双击 start.command）'
         }
         $dataWhere = if ($isWin) {
-            if ($isPortable) { '本文件夹下的 data\ 目录' } else { '%APPDATA%\office-arcade（即 C:\Users\<你>\AppData\Roaming\office-arcade）' }
+            '本文件夹下的 data\ 目录'
         } else {
-            if ($isPortable) { '本文件夹下的 data/ 目录' } else { 'macOS: ~/Library/Application Support/office-arcade；Linux: ~/.local/share/office-arcade' }
+            '本文件夹下的 data/ 目录'
         }
-        $editionName = if ($isPortable) { '便携版' } else { '标准版' }
+        $editionName = '便携版'
 
         $readme = @"
 摸鱼游戏厅 v$ver · $t · $editionName

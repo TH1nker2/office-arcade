@@ -7,6 +7,8 @@
 
 const { spawn } = require('child_process');
 const fs = require('fs');
+const http = require('http');
+const zlib = require('zlib');
 const { makeRequest, cookieOf } = require('./lib/http');
 const os = require('os');
 const path = require('path');
@@ -80,6 +82,28 @@ async function main() {
   }
   ok('可以下载 /index.html', (await request('GET', '/index.html')).status === 200);
   ok('可以下载 /shared/core.js', (await request('GET', '/shared/core.js')).status === 200);
+
+  console.log('\n=== 静态交付 ===');
+  const rawGet = (p, headers) => new Promise((resolve, reject) => {
+    http.get({ host: '127.0.0.1', port: PORT, path: p, headers: headers || {} }, (r) => {
+      const chunks = [];
+      r.on('data', (d) => chunks.push(d));
+      r.on('end', () => resolve({ status: r.statusCode, headers: r.headers, body: Buffer.concat(chunks) }));
+    }).on('error', reject);
+  });
+  const plain = await rawGet('/js/ui.js');
+  ok('静态资源带 ETag', !!plain.headers.etag, plain.headers.etag || 'missing');
+  ok('静态资源使用 no-cache', plain.headers['cache-control'] === 'no-cache', plain.headers['cache-control']);
+  ok('静态资源带 CSP', String(plain.headers['content-security-policy'] || '').indexOf("default-src 'self'") >= 0);
+  const gz = await rawGet('/js/ui.js', { 'Accept-Encoding': 'gzip' });
+  ok('gzip 压缩生效', gz.headers['content-encoding'] === 'gzip' &&
+    gz.headers.vary && gz.headers.vary.indexOf('Accept-Encoding') >= 0,
+    (gz.headers['content-encoding'] || 'none') + ' / ' + (gz.headers.vary || ''));
+  let gzText = '';
+  try { gzText = zlib.gunzipSync(gz.body).toString('utf8'); } catch (e) { /* ignore */ }
+  ok('gzip 内容可解压', gzText.indexOf('AR.UI') >= 0, gzText.length + ' chars');
+  const cached = await rawGet('/js/ui.js', { 'If-None-Match': plain.headers.etag });
+  ok('ETag 命中返回 304', cached.status === 304, 'status=' + cached.status);
 
   /* ================= 三、房间生命周期 ================= */
   console.log('\n=== 房间 ===');

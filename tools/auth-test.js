@@ -237,6 +237,20 @@ async function main() {
   ok('最后一个真人离开后房间销毁', roomsLeft.body.rooms.length === 0,
     'rooms=' + roomsLeft.body.rooms.length);
 
+  console.log('\n=== 修改密码与旧会话 ===');
+  const login2 = await request('POST', '/api/login', { username: 'alice', password: '123456' });
+  const cookieA2 = cookieOf(login2);
+  ok('第二个会话建立', login2.status === 200 && cookieA2.indexOf('sid=') === 0);
+  const pwChange = await request('POST', '/api/password',
+    { oldPassword: '123456', newPassword: '654321' }, cookieA);
+  ok('修改密码成功', pwChange.status === 200, pwChange.body.error);
+  ok('其他旧会话失效', (await request('GET', '/api/me', null, cookieA2)).status === 401);
+  ok('当前会话保留', (await request('GET', '/api/me', null, cookieA)).status === 200);
+  ok('旧密码不能登录',
+    (await request('POST', '/api/login', { username: 'alice', password: '123456' })).status === 401);
+  ok('新密码可以登录',
+    (await request('POST', '/api/login', { username: 'alice', password: '654321' })).status === 200);
+
   console.log('\n=== 资料与历史 ===');
   const hist = await request('GET', '/api/history?limit=5', null, cookieA);
   ok('历史接口可用', hist.status === 200 && Array.isArray(hist.body.list));

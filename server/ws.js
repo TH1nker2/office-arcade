@@ -210,6 +210,10 @@ function handle(conn, msg) {
       if (!room) return;
       if (room.hostId !== u.id) { conn.send({ t: 'error', msg: '只有房主能开始' }); return; }
       if (room.phase === 'playing') return;
+      if (room.phase !== 'lobby') {
+        conn.send({ t: 'error', msg: '本局刚结束，稍等一下再开' });
+        return;
+      }
       startRound(room);
       break;
     }

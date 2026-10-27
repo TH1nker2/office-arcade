@@ -75,7 +75,40 @@ async function main() {
   const hardText = await B.ev('document.getElementById("word-table").textContent');
   check('搜索结果是画蛇添足', hardText.indexOf('画蛇添足') >= 0, hardText.slice(0, 40));
 
-  console.log('\n[4] 控制台');
+  console.log('\n[4] 管理弹窗焦点');
+  await B.ev('fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},' +
+    'body:JSON.stringify({username:"dlguser",password:"123456",nickname:"弹窗测试"})}).then(function(r){return r.json()})');
+  await sleep(400);
+  await B.ev('document.querySelector(\'#admin-tabs [data-view="users"]\').click()');
+  await sleep(500);
+  await B.ev('document.getElementById("btn-refresh").click()');
+  await sleep(700);
+  const opened = JSON.parse(await B.ev(`(function(){
+    var rows = document.querySelectorAll('#user-table .admin-row:not(.head)');
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].textContent.indexOf('弹窗测试') < 0) continue;
+      var btn = rows[i].querySelector('button[data-act="ban"]');
+      if (!btn) continue;
+      btn.click();
+      return JSON.stringify({ ok: true });
+    }
+    return JSON.stringify({ ok: false });
+  })()`));
+  await sleep(300);
+  const dlg = JSON.parse(await B.ev(`JSON.stringify({
+    hidden: document.getElementById('dialog').classList.contains('hidden'),
+    aria: document.getElementById('dialog').getAttribute('aria-hidden'),
+    inside: document.getElementById('dialog').contains(document.activeElement)
+  })`));
+  check('管理弹窗能打开', opened.ok === true && dlg.hidden === false, JSON.stringify(dlg));
+  check('管理弹窗 aria-hidden=false', dlg.aria === 'false', dlg.aria);
+  check('管理弹窗焦点在内部', dlg.inside === true);
+  await B.ev('document.getElementById("dialog").dispatchEvent(new KeyboardEvent("keydown",{code:"Escape",bubbles:true,cancelable:true}))');
+  await sleep(150);
+  check('Esc 关闭管理弹窗',
+    await B.ev('document.getElementById("dialog").classList.contains("hidden")'));
+
+  console.log('\n[5] 控制台');
   console.log('  错误:', B.errors.length ? B.errors.slice(0, 3) : '无');
   check('无控制台错误', B.errors.length === 0);
 

@@ -24,6 +24,7 @@
  *   启动            打印局域网地址、打开浏览器、优雅退出
  *
  * ---- WebSocket 协议：客户端 → 服务器 ----
+ *   ping                                心跳探测（回 pong）
  *   createRoom  { gameId }              建房
  *   joinRoom    { code }                按 4 位码加入
  *   leaveRoom                           离开房间
@@ -31,16 +32,18 @@
  *   inviteReply { inviteId, accept }    接受 / 拒绝邀请
  *   setting     { key, value }          房主改设置（draw 的 level、ludo 的 planes）
  *   botAdd / botRemove { id }           加 / 删人机（固定普通难度）
- *   start                               房主开局
+ *   start                               房主开局（仅 lobby 阶段）
  *   input       { i }                   对局输入，i 的内容由各游戏自己约定
- *   draw        { ... }                 你画我猜的笔迹 / 清空画布
+ *   draw        { ... }                 你画我猜的选词 / 笔迹 / 清空画布
  *   chat        { text }                房间或大厅聊天
- *   kick        { id }                  房主踢人
  *   lobbySync                           主动拉一次大厅在线列表
  *
  * ---- WebSocket 协议：服务器 → 客户端 ----
- *   hello  lobby  room  leftRoom  game  state  over
- *   chat  chatHistory  invite  inviteSent  error  version
+ *   me（首包：user/lobby/games/version）  pong  hb
+ *   lobby  room  leftRoom  game  state  over
+ *   chat  chatHistory  invite  inviteSent  inviteResult  error
+ *   choices  word  paint  paintClear      你画我猜的私有/广播消息
+ *   kicked                                被顶号、封禁或管理员请离
  *
  * ---- 必须守住的不变式 ----
  *   1. 所有游戏逻辑跑在服务端，客户端只发输入、画快照（防作弊 + 一致）
@@ -96,6 +99,10 @@ const handleAdmin = require('./shared/admin-api')({
   adminFrom: auth.adminFrom,
   hashPassword: auth.hashPassword,
   newToken: auth.newToken,
+  loginBlocked: auth.loginBlocked,
+  loginFailed: auth.loginFailed,
+  loginSuccess: auth.loginSuccess,
+  safeEqual: auth.safeEqual,
   setPresence: presence.setPresence,
   scheduleLobby: presence.scheduleLobby,
   leaveRoom: rooms.leaveRoom,

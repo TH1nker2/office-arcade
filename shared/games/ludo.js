@@ -1,11 +1,11 @@
 /* ============================================================
  * 飞行棋 · AERO CHESS（服务端权威）
- * 快节奏版：40 格环 + 4 格归航道，每人 2 架飞机
- *   - 开局第 1 架已在起点，第 2 架要掷到 6 才能起飞
- *   - 掷到 6 可以再掷一次
+ * 40 格环 + 4 格归航道；每人飞机数由房间设置（1-4 架）
+ *   - 所有飞机从基地起飞，掷到 5 或 6 才能起飞
+ *   - 掷到 5 或 6 可以再掷一次
  *   - 6 个安全格，踩上去不会被吃
  *   - 落到对手所在格 → 对手回起点
- *   - 两架都到家即胜
+ *   - 全部飞机到家即完成；只剩一人未到家时结束
  * ============================================================ */
 (function (root) {
   'use strict';
@@ -25,12 +25,10 @@
 
   var BOT_SKILL = { easy: 0.3, normal: 0.6, hard: 0.85, insane: 1.0 };
 
-  function startOf(state, idx) {
-    return Math.floor(idx * N / state.n);
-  }
-
-  function absCell(state, idx, pos) {
-    return (startOf(state, idx) + pos) % N;
+  /* 起跑格在 create 时冻结到玩家身上。玩家中途退出后不能再按
+   * "当前人数"重算起跑格，否则剩下的人会跟着一起瞬移。 */
+  function absCell(start, pos) {
+    return (start + pos) % N;
   }
 
   function currentId(state) {
@@ -98,7 +96,7 @@
 
     /* 环上踩人 */
     if (target >= 0 && target < N) {
-      var cell = absCell(state, me.index, target);
+      var cell = absCell(me.start, target);
       if (SAFE.indexOf(cell) < 0) {
         state.order.forEach(function (oid) {
           if (oid === me.id) return;
@@ -106,7 +104,7 @@
           for (var j = 0; j < other.planes.length; j++) {
             var op = other.planes[j];
             if (op < 0 || op >= N) continue;
-            if (absCell(state, other.index, op) === cell) {
+            if (absCell(other.start, op) === cell) {
               other.planes[j] = -1;
               state.events.push({
                 t: 'capture', by: me.id, who: oid, cell: cell,
@@ -139,12 +137,8 @@
         state.wait = 0;
         return;
       }
-      /* 已到家的玩家跳过回合 */
+      /* 已到家的玩家由 nextTurn 跳过 */
       nextTurn(state);
-      while (!state.finishTime[currentId(state)] && state.finishOrder.length < state.order.length) {
-        if (!state.finishTime[currentId(state)]) break;
-        state.turn = (state.turn + 1) % state.order.length;
-      }
       return;
     }
 
@@ -173,7 +167,6 @@
         planes: planeCount,
         finishOrder: [],
         finishTime: {},
-        n: n,
         order: [],
         players: {},
         turn: 0,
@@ -194,7 +187,7 @@
           id: p.id,
           name: p.name,
           color: p.color,
-          index: i,
+          start: Math.floor(i * N / n),
           planes: planes
         };
       });
@@ -202,7 +195,8 @@
       return state;
     },
 
-    /* 玩家中途退出，把他从对局里摘掉，避免一直等他操作。 */
+    /* 玩家中途退出，把他从对局里摘掉，避免一直等他操作。
+       起跑格已经冻结在 player.start 上，这里不能重算，否则棋子会瞬移。 */
     removePlayer: function (state, id) {
       var i = state.order.indexOf(id);
       if (i < 0) return;
@@ -212,12 +206,14 @@
         state.ended = true;
         return;
       }
+      if (i < state.turn) state.turn--;
       if (state.turn >= state.order.length) state.turn = 0;
-      /* 索引要跟着重排，否则起跑格会错位 */
-      state.order.forEach(function (oid, k) {
-        state.players[oid].index = k;
-      });
-      state.n = state.order.length;
+      /* 剩下的人如果全都到家了，这局直接结束 */
+      if (state.order.every(function (oid) { return allHome(state, oid); })) {
+        state.winnerId = state.finishOrder[0] || null;
+        state.ended = true;
+        return;
+      }
       state.phase = 'roll';
       state.wait = ROLL_WAIT;
       state.dice = 0;
@@ -298,7 +294,7 @@
 
         if (to === MAXP) score += 260;                       /* 到家 */
         if (to >= 0 && to < N) {
-          var cell = absCell(state, me.index, to);
+          var cell = absCell(me.start, to);
           /* 能踩人就踩 */
           state.order.forEach(function (oid) {
             if (oid === id) return;
@@ -306,7 +302,7 @@
             for (var j = 0; j < other.planes.length; j++) {
               var op = other.planes[j];
               if (op < 0 || op >= N) continue;
-              if (absCell(state, other.index, op) === cell && SAFE.indexOf(cell) < 0) {
+              if (absCell(other.start, op) === cell && SAFE.indexOf(cell) < 0) {
                 score += 180;
               }
             }
@@ -373,6 +369,7 @@
         var p = state.players[id];
         return [id].concat(p.planes);
       });
+      var st = state.order.map(function (id) { return state.players[id].start; });
       var ev = state.events;
       state.events = [];
       return {
@@ -387,6 +384,7 @@
         planes: state.planes || 2,
         ft: state.finishTime || {},
         pl: pl,
+        st: st,
         win: state.winnerId,
         e: ev.slice(0, 12)
       };

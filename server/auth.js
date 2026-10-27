@@ -27,6 +27,56 @@ const ADMINS = loadAdmins();
 const adminSessions = new Map();     /* token -> { username, name, expires } */
 const ADMIN_TTL = 8 * 3600 * 1000;
 
+/* 登录失败限流：同一 IP + 用户名 60 秒内最多 8 次失败。
+   只放在内存里，重启即清；内网场景够用，不引入额外依赖。 */
+const LOGIN_WINDOW = 60 * 1000;
+const LOGIN_MAX = 8;
+const loginFails = new Map();
+
+function loginKey(req, username) {
+  const ip = (req && req.socket && req.socket.remoteAddress) || '';
+  return ip + '|' + String(username || '').toLowerCase();
+}
+
+function loginBlocked(req, username) {
+  const key = loginKey(req, username);
+  const rec = loginFails.get(key);
+  if (!rec) return false;
+  if (Date.now() - rec.at > LOGIN_WINDOW) {
+    loginFails.delete(key);
+    return false;
+  }
+  return rec.count >= LOGIN_MAX;
+}
+
+function loginFailed(req, username) {
+  const key = loginKey(req, username);
+  const now = Date.now();
+  const rec = loginFails.get(key);
+  if (!rec || now - rec.at > LOGIN_WINDOW) {
+    loginFails.set(key, { count: 1, at: now });
+  } else {
+    rec.count++;
+    rec.at = now;
+  }
+  if (loginFails.size > 1000) {
+    loginFails.forEach(function (v, k) {
+      if (now - v.at > LOGIN_WINDOW) loginFails.delete(k);
+    });
+  }
+}
+
+function loginSuccess(req, username) {
+  loginFails.delete(loginKey(req, username));
+}
+
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a || ''));
+  const bb = Buffer.from(String(b || ''));
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+
 function adminFrom(req) {
   const token = parseCookies(req.headers.cookie)['asid'];
   if (!token) return null;
@@ -66,7 +116,10 @@ function currentUser(req) {
   if (!token) return null;
   const s = store.sessionGet(token);
   if (!s || s.expiresAt <= Date.now()) return null;
-  return store.userById(s.userId);
+  const u = store.userById(s.userId);
+  /* 封禁后即使旧 Cookie 还在，也不能继续访问 HTTP 接口 */
+  if (!u || u.banned) return null;
+  return u;
 }
 
 function publicUser(u) {
@@ -96,5 +149,9 @@ module.exports = {
   newToken,
   sessionCookie,
   currentUser,
-  publicUser
+  publicUser,
+  loginBlocked,
+  loginFailed,
+  loginSuccess,
+  safeEqual
 };

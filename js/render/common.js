@@ -52,14 +52,44 @@
     ctx.fillText(text, x, y);
   }
 
-  function glowCircle(ctx, x, y, r, color, alpha) {
-    var g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, AR.rgba(color, alpha));
+  /* 光晕 sprite 缓存：同颜色同半径只做一次径向渐变。
+     蛇球 110 个光点、弹幕数百发子弹都在 60Hz 下调这里，
+     每帧 createRadialGradient 是之前最大的 Canvas 分配来源。 */
+  var glowCache = {};
+
+  function glowSprite(color, radius) {
+    var key = color + '|' + radius;
+    var hit = glowCache[key];
+    if (hit) return hit;
+    var size = Math.max(4, radius * 4);          /* 2x 渲染，DPR=2 时不糊 */
+    var cv = document.createElement('canvas');
+    cv.width = size;
+    cv.height = size;
+    var c = cv.getContext('2d');
+    if (!c) return null;
+    var half = size / 2;
+    var g = c.createRadialGradient(half, half, 0, half, half, half);
+    g.addColorStop(0, AR.rgba(color, 1));
     g.addColorStop(1, AR.rgba(color, 0));
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, TAU);
-    ctx.fill();
+    c.fillStyle = g;
+    c.fillRect(0, 0, size, size);
+    glowCache[key] = cv;
+    return cv;
+  }
+
+  function glowCircle(ctx, x, y, r, color, alpha) {
+    if (!(r > 0) || !(alpha > 0)) return;
+    /* 炸弹的呼吸光晕半径是小数，量化后缓存数量才可控 */
+    var sprite = glowSprite(color, Math.max(1, Math.round(r)));
+    if (!sprite) return;
+    var prev = ctx.globalAlpha;
+    ctx.globalAlpha = prev * Math.min(1, alpha);
+    ctx.drawImage(sprite, x - r, y - r, r * 2, r * 2);
+    ctx.globalAlpha = prev;
+  }
+
+  function reducedMotion() {
+    return !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
   function particles(key) {
@@ -69,6 +99,7 @@
   }
 
   function addBurst(list, x, y, color, n, speed) {
+    if (reducedMotion()) return;
     for (var i = 0; i < n; i++) {
       var a = Math.random() * TAU;
       var sp = speed * (0.3 + Math.random() * 0.9);
@@ -86,6 +117,7 @@
   }
 
   function stepParticles(list, dt) {
+    if (reducedMotion()) { list.length = 0; return; }
     for (var i = list.length - 1; i >= 0; i--) {
       var p = list[i];
       p.life -= dt;
@@ -98,6 +130,7 @@
   }
 
   function drawParticles(ctx, list) {
+    if (reducedMotion()) { list.length = 0; return; }
     for (var i = 0; i < list.length; i++) {
       var p = list[i];
       var a = Math.max(0, p.life / p.max);

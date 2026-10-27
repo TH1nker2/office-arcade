@@ -245,3 +245,24 @@ input:focus { border-color: var(--line-2); box-shadow: 0 0 0 3px rgba(34, 211, 2
   color: var(--dim);
 }
 
+
+/* 系统开启“减少动态效果”时，关闭装饰性动画/过渡，避免前庭不适 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 键盘焦点必须可见；鼠标点击不出现描边 */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}

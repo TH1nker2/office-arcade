@@ -233,6 +233,7 @@ function realPlayers(room) {
  * 回合
  * ============================================================ */
 function startRound(room) {
+  if (!room || room.phase !== 'lobby') return;
   const info = AR.getInfo(room.gameId);
   const g = AR.games[room.gameId];
   if (!g) return;

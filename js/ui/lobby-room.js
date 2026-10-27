@@ -15,6 +15,7 @@
   var hideOverFn = function () {};
   var closeChatFn = function () {};
   var avatarHtmlFn = function () { return ''; };
+  var lastLobbyKey = null;
 
   function buildLobbyGames() {
     var grid = $('lobby-games');
@@ -41,12 +42,21 @@
     var me = APP.me;
     if (!me) return;
 
+    var users = APP.lobby || [];
+    /* 大厅每 10 秒还有一次主动同步；内容没变就别整块重建 DOM。
+       room 状态会影响“加入”按钮，必须一起进 key。 */
+    var key = JSON.stringify([
+      me.id, me.nickname, me.points, me.avatar, me.color,
+      APP.room ? APP.room.code : '', users
+    ]);
+    if (key === lastLobbyKey) return;
+    lastLobbyKey = key;
+
     $('pc-avatar').textContent = me.avatar || String(me.nickname || '?').slice(0, 1);
     $('pc-avatar').style.background = me.color || '#22d3ee';
     $('pc-name').textContent = me.nickname;
     $('pc-points').textContent = me.points + ' 分';
 
-    var users = APP.lobby || [];
     var online = users.filter(function (u) { return u.status !== 'offline'; }).length;
     $('lobby-stat').textContent = '在线 ' + online + ' / ' + users.length + ' 人';
     $('user-count').textContent = online + ' 在线';
@@ -73,7 +83,9 @@
 
       row.className = 'user-row ' + cls + (u.id === me.id ? ' me' : '');
       row.setAttribute('data-user-id', String(u.id));
-      row.title = '右键查看 ' + u.nickname + ' 的操作';
+      row.tabIndex = 0;
+      row.setAttribute('aria-haspopup', 'menu');
+      row.title = '右键或回车查看 ' + u.nickname + ' 的操作';
       row.innerHTML = avatarHtmlFn(u, 'u-avatar') +
         '<span class="u-main"><span class="u-name">' + esc(u.nickname) + (u.id === me.id ? '（我）' : '') +
         '</span><span class="u-status">' + esc(statusText) + '</span></span>' +

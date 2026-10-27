@@ -78,7 +78,7 @@
   </section>
 
   <!-- ================= 通用弹窗 ================= -->
-  <div class="overlay hidden" id="dialog">
+  <div class="overlay hidden" id="dialog" role="dialog" aria-modal="true" aria-hidden="true" aria-label="确认操作">
     <div class="panel narrow">
       <h2 class="panel-title" id="dlg-title">确认</h2>
       <p class="panel-sub" id="dlg-text"></p>
@@ -93,7 +93,7 @@
     </div>
   </div>
 
-  <div class="toast hidden" id="toast"></div>
+  <div class="toast hidden" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 </div>
 <script src="shared/core.js"></script>
 <script src="js/core/dom.js"></script>

@@ -11,7 +11,8 @@ module.exports = function install(ctx) {
     json, readJson, store, presence, rooms, AR,
     ADMINS, adminSessions, ADMIN_TTL, adminFrom,
     hashPassword, newToken, setPresence, scheduleLobby,
-    leaveRoom, kickUser, WORDS
+    leaveRoom, kickUser, WORDS,
+    loginBlocked, loginFailed, loginSuccess, safeEqual
   } = ctx;
 
   const COOKIE = 'asid';
@@ -64,8 +65,15 @@ module.exports = function install(ctx) {
       const body = await readJson(req);
       const username = String(body.username || '').trim();
       const password = String(body.password || '');
-      const hit = ADMINS.find((a) => a.username === username && a.password === password);
-      if (!hit) return json(res, 401, { error: '管理员账号或密码不对' });
+      if (loginBlocked(req, 'admin:' + username)) {
+        return json(res, 429, { error: '尝试次数过多，请稍后再试' });
+      }
+      const hit = ADMINS.find((a) => a.username === username && safeEqual(a.password, password));
+      if (!hit) {
+        loginFailed(req, 'admin:' + username);
+        return json(res, 401, { error: '管理员账号或密码不对' });
+      }
+      loginSuccess(req, 'admin:' + username);
 
       const token = newToken();
       adminSessions.set(token, { username: hit.username, name: hit.name, expires: Date.now() + ADMIN_TTL });
@@ -126,6 +134,7 @@ module.exports = function install(ctx) {
       const banned = body.banned ? 1 : 0;
       store.updateUser(target.id, { banned: banned });
       if (banned) {
+        if (store.sessionDeleteByUser) store.sessionDeleteByUser(target.id);
         kickUser(target.id, '你已被管理员封禁');
         console.log('[admin] 封禁 ' + target.username + ' by ' + admin.username);
       } else {
@@ -157,6 +166,8 @@ module.exports = function install(ctx) {
       if (pw.length < 6) return json(res, 400, { error: '新密码至少 6 位' });
       const h = hashPassword(pw);
       store.updateUser(target.id, { passHash: h.hash, salt: h.salt });
+      if (store.sessionDeleteByUser) store.sessionDeleteByUser(target.id);
+      kickUser(target.id, '密码已被管理员重置，请重新登录');
       console.log('[admin] 重置密码 ' + target.username);
       return json(res, 200, { ok: true, password: pw });
     }

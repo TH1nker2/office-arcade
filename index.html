@@ -24,7 +24,7 @@
     </header>
         <div class="kill-feed" id="kill-feed"></div>
 
-<div class="draw-hints hidden" id="draw-hints">
+<div class="draw-hints hidden" id="draw-hints" aria-live="polite">
       <span class="dh-label">提示</span>
       <span class="dh-list" id="dh-list"></span>
       <span class="dh-next" id="dh-next"></span>
@@ -33,11 +33,11 @@
     <aside class="hud-board" id="hud-board"></aside>
     <div class="hud-hint" id="hud-hint"></div>
     <div class="hud-center" id="hud-center"></div>
-    <div class="chat-peek hidden" id="chat-peek"></div>
+    <div class="chat-peek hidden" id="chat-peek" aria-live="polite"></div>
   </div>
 
   <div id="chat-panel" class="hidden">
-    <div class="chat-log" id="chat-log"></div>
+    <div class="chat-log" id="chat-log" aria-live="polite" aria-relevant="additions"></div>
     <div class="chat-input">
       <button class="emoji-toggle" id="chat-emoji-btn" title="表情">😊</button>
       <input id="chat-text" maxlength="120" placeholder="回车发送" autocomplete="off">
@@ -107,7 +107,7 @@
                 <span>大厅聊天</span>
                 <button class="emoji-toggle" id="lobby-emoji-btn" title="表情">😊</button>
               </div>
-              <div class="chat-log" id="lobby-chat-log"><div class="chat-empty" id="lobby-chat-empty">还没有人说话，打个招呼吧</div></div>
+              <div class="chat-log" id="lobby-chat-log" aria-live="polite" aria-relevant="additions"><div class="chat-empty" id="lobby-chat-empty">还没有人说话，打个招呼吧</div></div>
               <div class="chat-input">
                 <input id="lobby-chat-text" maxlength="120" placeholder="说点什么…" autocomplete="off">
                 <button id="lobby-chat-send">发送</button>
@@ -252,7 +252,7 @@
   </div>
 
   <!-- ================= 收到邀请 ================= -->
-  <div class="overlay hidden" id="invite-overlay">
+  <div class="overlay hidden" id="invite-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="收到邀请">
     <div class="panel narrow">
       <h2 class="panel-title">收到邀请</h2>
       <p class="panel-sub" id="invite-text">有人邀请你加入房间</p>
@@ -264,7 +264,7 @@
   </div>
 
   <!-- ================= 更新说明 ================= -->
-  <div class="overlay hidden" id="version-overlay">
+  <div class="overlay hidden" id="version-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="更新说明">
     <div class="panel">
       <h2 class="panel-title">更新说明</h2>
       <p class="panel-sub" id="version-sub">当前版本 —</p>
@@ -276,7 +276,7 @@
   </div>
 
   <!-- ================= 你画我猜：等待作者选词 ================= -->
-  <div class="overlay hidden" id="draw-wait">
+  <div class="overlay hidden" id="draw-wait" role="dialog" aria-modal="true" aria-hidden="true" aria-label="等待画手选词">
     <div class="panel narrow wait-panel">
       <div class="wait-spin"></div>
       <h2 class="panel-title" id="wait-title">作者正在选词…</h2>
@@ -286,7 +286,7 @@
   </div>
 
   <!-- ================= 你画我猜选词 ================= -->
-  <div class="overlay hidden" id="choose-overlay">
+  <div class="overlay hidden" id="choose-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="选择要画的词">
     <div class="panel narrow">
       <h2 class="panel-title">选一个词</h2>
       <p class="panel-sub">只有你能看到，把它画出来让大家猜</p>
@@ -296,7 +296,7 @@
   </div>
 
   <!-- ================= 邀请面板 ================= -->
-  <div class="overlay hidden" id="pick-overlay">
+  <div class="overlay hidden" id="pick-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="邀请玩家">
     <div class="panel">
       <h2 class="panel-title">邀请谁？</h2>
       <p class="panel-sub">只有在线且不在房间里的玩家会出现在这里</p>
@@ -308,7 +308,7 @@
   </div>
 
   <!-- ================= 结算 ================= -->
-  <div class="overlay hidden" id="over-overlay">
+  <div class="overlay hidden" id="over-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="over-title">
     <div class="panel">
       <h2 class="panel-title" id="over-title">本局结束</h2>
       <p class="panel-sub" id="over-sub"></p>
@@ -321,7 +321,7 @@
   </div>
 
   <!-- ================= 排行榜 ================= -->
-  <div class="overlay hidden" id="board-overlay">
+  <div class="overlay hidden" id="board-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="排行榜">
     <div class="panel">
       <h2 class="panel-title">摸鱼排行榜</h2>
       <p class="panel-sub">按累计积分排序：第 1 名 +5、第 2 名 +3、第 3 名 +1</p>
@@ -339,7 +339,7 @@
   </div>
 
   <!-- ================= 玩家资料 ================= -->
-  <div class="overlay hidden" id="player-overlay">
+  <div class="overlay hidden" id="player-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="player-nick">
     <div class="panel player-panel">
       <header class="player-head">
         <span class="player-avatar" id="player-avatar">?</span>
@@ -365,7 +365,7 @@
   </div>
 
   <!-- ================= 二次确认 ================= -->
-  <div class="overlay hidden" id="confirm-overlay">
+  <div class="overlay hidden" id="confirm-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="confirm-title">
     <div class="panel narrow">
       <h2 class="panel-title" id="confirm-title">确认退出？</h2>
       <p class="panel-sub" id="confirm-text">退出后本局成绩照常结算，房间会留给其他人。</p>
@@ -376,9 +376,9 @@
     </div>
   </div>
 
-  <div class="toast hidden" id="toast"></div>
+  <div class="toast hidden" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <div class="overlay hidden" id="fatal">
+  <div class="overlay hidden" id="fatal" role="dialog" aria-modal="true" aria-hidden="true" aria-label="游戏出错了">
     <div class="panel">
       <h2 class="panel-title">游戏出错了</h2>
       <pre id="fatal-text"></pre>
@@ -418,6 +418,7 @@
 <script src="js/ui/game-session.js"></script>
 <script src="js/ui/version.js"></script>
 <script src="js/ui/lobby-room.js"></script>
+<script src="js/ui/a11y.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>

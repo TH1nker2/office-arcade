@@ -1,8 +1,15 @@
 'use strict';
 /* HTTP 基础工具：JSON 响应、Cookie、请求体读取 */
+
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer'
+};
+
 function json(res, code, obj, extraHeaders) {
   const body = JSON.stringify(obj);
-  const headers = Object.assign({
+  const headers = Object.assign({}, SECURITY_HEADERS, {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(body),
     'Cache-Control': 'no-store'
@@ -16,7 +23,14 @@ function parseCookies(header) {
   String(header || '').split(';').forEach((part) => {
     const i = part.indexOf('=');
     if (i < 0) return;
-    out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    const key = part.slice(0, i).trim();
+    const raw = part.slice(i + 1).trim();
+    try {
+      out[key] = decodeURIComponent(raw);
+    } catch (e) {
+      /* 畸形百分号编码不能让整个请求/WS 升级崩掉；原样保留，后续鉴权自然失败 */
+      out[key] = raw;
+    }
   });
   return out;
 }
@@ -43,4 +57,4 @@ function readJson(req, limit) {
   });
 }
 
-module.exports = { json, parseCookies, readJson };
+module.exports = { json, parseCookies, readJson, SECURITY_HEADERS };

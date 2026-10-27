@@ -414,9 +414,11 @@
         }
       }
 
-      /* 炸弹倒计时 */
+      /* 炸弹倒计时。explode 会连锁删掉多颗炸弹，数组会变短，
+         倒序下标可能已经越界，取到 undefined 时跳过。 */
       for (i = state.bombs.length - 1; i >= 0; i--) {
         var b = state.bombs[i];
+        if (!b) continue;
         b.timer -= dt;
         if (b.timer <= 0) explode(state, b);
       }

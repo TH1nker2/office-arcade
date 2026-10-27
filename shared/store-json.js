@@ -132,6 +132,14 @@ function open(file) {
       save();
     },
 
+    sessionDeleteByUser(userId, exceptToken) {
+      const uid = Number(userId);
+      Object.keys(data.sessions).forEach((k) => {
+        if (data.sessions[k].userId === uid && k !== exceptToken) delete data.sessions[k];
+      });
+      save();
+    },
+
     sessionCleanup(now) {
       const t = now || Date.now();
       Object.keys(data.sessions).forEach((k) => {

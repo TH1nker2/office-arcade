@@ -146,6 +146,7 @@
     var btn = $('hud-clear');
     var show = !!(s && APP.screen === 'play' && APP.game && APP.game.id === 'draw' &&
       s.ph === 'draw' && s.dr === APP.me.id);
+    if (btn.classList.contains('hidden') === !show) return;
     btn.classList.toggle('hidden', !show);
   }
 

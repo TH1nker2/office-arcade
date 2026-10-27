@@ -83,7 +83,16 @@ function Read-Json($resp) {
 
 # ---------- 建发行版 ----------
 Write-Host "[2/3] 创建发行版 $tag ..."
-$notes = Read-Utf8 (Join-Path $dist 'release-notes.md')
+$notesFile = Join-Path $dist 'release-notes.md'
+if (-not (Test-Path $notesFile)) {
+    $verInfo = Read-Utf8 (Join-Path $root 'version.json') | ConvertFrom-Json
+    $lines = @("## 摸鱼游戏厅 v$($verInfo.version)", '')
+    if ($verInfo.released) { $lines += "发布日期：$($verInfo.released)"; $lines += '' }
+    foreach ($n in @($verInfo.notes)) { $lines += "- $n" }
+    Write-Utf8 $notesFile (($lines -join "`n") + "`n")
+    Write-Host "       已自动生成 dist\release-notes.md" -ForegroundColor DarkGray
+}
+$notes = Read-Utf8 $notesFile
 $pairs = [ordered]@{
     tag_name         = $tag
     name             = "摸鱼游戏厅 $tag"

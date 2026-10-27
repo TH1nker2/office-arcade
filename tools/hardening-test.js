@@ -66,6 +66,37 @@ async function main() {
   r = await request('POST', '/api/register', { username: 'x'.repeat(5000), password: '123456', nickname: 'y' });
   ok('超长用户名被拒', r.status === 400, 'status=' + r.status);
 
+  /* 同一 IP + 用户名连续失败会被限流（不影响其他账号） */
+  for (let i = 0; i < 8; i++) {
+    await request('POST', '/api/login', { username: 'nobody', password: 'bad' });
+  }
+  r = await request('POST', '/api/login', { username: 'nobody', password: 'bad' });
+  ok('连续登录失败触发限流', r.status === 429, 'status=' + r.status);
+  ok('限流不影响正常账号登录',
+    (await request('POST', '/api/login', { username: 'sec1', password: '123456' })).status === 200);
+
+  /* 畸形百分号编码：decodeURIComponent 不能把整个请求/WS 升级打崩 */
+  r = await request('GET', '/api/me', null, 'sid=%E0%A4%A');
+  ok('畸形 Cookie 返回未登录而不是崩溃', r.status === 401, 'status=' + r.status);
+  const rawUpgrade = await new Promise((resolve) => {
+    const sock = net.connect(PORT, '127.0.0.1', () => {
+      sock.write('GET /ws HTTP/1.1\r\n' +
+        'Host: 127.0.0.1:' + PORT + '\r\n' +
+        'Upgrade: websocket\r\n' +
+        'Connection: Upgrade\r\n' +
+        'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n' +
+        'Sec-WebSocket-Version: 13\r\n' +
+        'Cookie: sid=%E0%A4%A\r\n\r\n');
+    });
+    let data = '';
+    sock.on('data', (d) => { data += d.toString(); });
+    sock.on('end', () => resolve(data));
+    sock.on('error', () => resolve(data));
+    setTimeout(() => { try { sock.destroy(); } catch (e) { /* ignore */ } resolve(data); }, 800);
+  });
+  ok('WS 畸形 Cookie 被拒绝', rawUpgrade.indexOf('401') >= 0, rawUpgrade.split('\r\n')[0] || '(无响应)');
+  ok('WS 畸形 Cookie 后服务仍存活', (await request('GET', '/api/version')).status === 200);
+
   /* ================= 三、WebSocket 畸形消息 ================= */
   console.log('\n=== WebSocket 畸形消息 ===');
   const wsA = new WebSocket('ws://127.0.0.1:' + PORT + '/ws?token=' + ckA.split('=')[1]);

@@ -56,6 +56,9 @@
   }
 
   function sendInputs() {
+    /* 后台标签页不要继续发送输入：切走后键盘/鼠标状态可能已经过时，
+       继续发会让角色一直移动或开火。 */
+    if (document.hidden) return;
     if (AR.App.screen !== 'play' || !AR.App.game) return;
     var id = AR.App.game.id;
     if (id === 'draw') return;
@@ -88,6 +91,10 @@
 
     AR.Input.init(canvas);
     AR.UI.init();
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) AR.Input.reset();
+    });
 
     /* 首次交互解锁音频 */
     var unlock = function () {

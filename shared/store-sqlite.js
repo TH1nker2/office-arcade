@@ -270,6 +270,15 @@ function openOnce(file) {
       db.prepare('DELETE FROM sessions WHERE token = ?').run(String(token || ''));
     },
 
+    sessionDeleteByUser(userId, exceptToken) {
+      if (exceptToken) {
+        db.prepare('DELETE FROM sessions WHERE user_id = ? AND token != ?')
+          .run(Number(userId), String(exceptToken));
+      } else {
+        db.prepare('DELETE FROM sessions WHERE user_id = ?').run(Number(userId));
+      }
+    },
+
     sessionCleanup(now) {
       db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(now || Date.now());
     },

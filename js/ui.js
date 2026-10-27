@@ -115,6 +115,7 @@
    * 初始化
    * ============================================================ */
   UI.init = function () {
+    if (AR.A11y) AR.A11y.init();
     PlayerPanel.init({ toast: toast });
     ProfileScreen.init({ toast: toast, showScreen: showScreen, renderLobby: renderLobby, renderRoom: renderRoom });
     VersionUI.init({ toast: toast });
@@ -246,6 +247,21 @@
 
     /* 大厅右键查看玩家资料 */
     $('user-list').addEventListener('contextmenu', onPlayerContextMenu);
+    $('user-list').addEventListener('keydown', function (e) {
+      if (e.code !== 'Enter' && e.code !== 'Space' && e.code !== 'ContextMenu') return;
+      if (e.target.closest('button')) return;
+      var row = e.target.closest('.user-row');
+      if (!row) return;
+      var userId = Number(row.getAttribute('data-user-id'));
+      var user = null;
+      for (var i = 0; i < APP.lobby.length; i++) {
+        if (APP.lobby[i].id === userId) { user = APP.lobby[i]; break; }
+      }
+      if (!user) return;
+      e.preventDefault();
+      var r = row.getBoundingClientRect();
+      showPlayerMenu(user, r.left + 12, r.bottom - 4, row);
+    });
     $('player-close').addEventListener('click', closePlayerProfile);
     $('player-done').addEventListener('click', closePlayerProfile);
     $('player-edit').addEventListener('click', function () {
@@ -567,7 +583,8 @@
   /* HUD 排行榜的内容缓存：html 没变就不碰 innerHTML，
      避免每帧重建 DOM 触发布局。 */
   var lastHudKey = '';
-  function resetHud() { lastHudKey = ''; }
+  var hudAcc = 0;
+  function resetHud() { lastHudKey = ''; hudAcc = 0; }
 
   /* 每帧调用。这里只允许做便宜的事：改文本、切类名。
      不要在这里读布局（getBoundingClientRect）、不要重建 DOM——
@@ -593,7 +610,15 @@
     } else {
       left = Math.max(0, s.d - (s.t || 0));
     }
-    $('hud-timer').textContent = AR.fmtTime(left);
+    var timerText = AR.fmtTime(left);
+    var timerEl = $('hud-timer');
+    if (timerEl.textContent !== timerText) timerEl.textContent = timerText;
+
+    /* 排行榜不需要每帧重建：快照频率最高 60Hz，但展示 10Hz 足够。
+       文本本身还有 lastHudKey 兜底，内容不变不会碰 innerHTML。 */
+    hudAcc += dt;
+    if (hudAcc < 0.1) return;
+    hudAcc = 0;
 
     var board = $('hud-board');
     var list = [];
