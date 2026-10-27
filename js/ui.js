@@ -23,55 +23,13 @@
   var AR = root.AR;
   var Net = root.Net;
   var Sfx = AR.Sfx;
+  var $ = AR.Dom.$;
+  var esc = AR.Dom.esc;
+  var api = AR.Http.request;
 
-  function $(id) { return document.getElementById(id); }
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
-  var EMOJIS = ['🐱', '🐶', '🦊', '🐼', '🐸', '🐵', '🦁', '🐯', '🐨', '🐷',
-    '🐔', '🐙', '🦄', '🐳', '🐝', '🦉', '🐺', '🐮', '🐹', '🦖'];
-
-  var APP = AR.App = {
-    screen: 'auth',
-    me: null,
-    lobby: [],
-    gameId: null,
-    room: null,
-    game: null,
-    snap: null,
-    round: 0,
-    word: null,
-    over: null,
-    rooms: [],
-    authMode: 'login',
-    invite: null,
-    drawing: false,
-    lastDraw: null,
-    profileDraft: null,
-    connected: false,
-    version: null
-  };
+  var APP = AR.App;
 
   var UI = AR.UI = {};
-
-  /* ---------------- 网络请求 ---------------- */
-  function api(method, url, body) {
-    return fetch(url, {
-      method: method,
-      credentials: 'same-origin',
-      headers: body ? { 'Content-Type': 'application/json' } : {},
-      body: body ? JSON.stringify(body) : undefined
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (data) {
-        if (!r.ok) throw new Error(data.error || ('请求失败 ' + r.status));
-        return data;
-      });
-    });
-  }
 
   /* ---------------- 通用 UI ---------------- */
   var toastTimer = 0;
@@ -157,6 +115,15 @@
    * 初始化
    * ============================================================ */
   UI.init = function () {
+    PlayerPanel.init({ toast: toast });
+    ProfileScreen.init({ toast: toast, showScreen: showScreen, renderLobby: renderLobby, renderRoom: renderRoom });
+    VersionUI.init({ toast: toast });
+    LobbyRoom.init({ showScreen: showScreen, hideOver: hideOver, closeChat: closeChat, avatarHtml: avatarHtml });
+    AuthUI.init({ showScreen: showScreen, toast: toast });
+    GameSession.init({
+      showScreen: showScreen, hideOver: hideOver, showOver: showOver,
+      renderLobby: renderLobby, renderRoom: renderRoom, resetHud: resetHud
+    });
     /* 登录 / 注册 */
     var tabs = document.querySelectorAll('.tab');
     for (var i = 0; i < tabs.length; i++) {
@@ -511,1118 +478,88 @@
     });
   };
 
-  function enterGameHall(fresh) {
-    if (fresh) Net.close();          /* 换账号后必须换一条连接，否则服务端还认为是旧用户 */
-    APP.lobby = [];
-    showScreen('lobby');
-    renderLobby();
-    Net.connect().then(function () {
-      APP.connected = true;
-      Net.send({ t: 'lobbySync' });
-    }).catch(function (err) {
-      toast(err.message || '无法连接服务器');
-    });
-  }
-
-  /* ============================================================
-   * 登录 / 注册
-   * ============================================================ */
-  function setAuthMode(mode) {
-    APP.authMode = mode;
-    var tabs = document.querySelectorAll('.tab');
-    for (var i = 0; i < tabs.length; i++) {
-      tabs[i].classList.toggle('active', tabs[i].getAttribute('data-auth') === mode);
-    }
-    $('nick-field').classList.toggle('hidden', mode !== 'register');
-    $('auth-submit').textContent = mode === 'register' ? '注 册 并 进 入' : '登 录';
-  }
-
-  function submitAuth() {
-    var username = ($('auth-user').value || '').trim();
-    var password = $('auth-pass').value || '';
-    var nickname = ($('auth-nick').value || '').trim();
-    if (!username || !password) { toast('请填写用户名和密码'); return; }
-
-    var btn = $('auth-submit');
-    btn.disabled = true;
-    Sfx.click();
-
-    var req = APP.authMode === 'register'
-      ? api('POST', '/api/register', { username: username, password: password, nickname: nickname })
-      : api('POST', '/api/login', { username: username, password: password });
-
-    req.then(function (data) {
-      APP.me = data.user;
-      $('auth-pass').value = '';
-      enterGameHall(true);
-      Sfx.ok();
-    }).catch(function (err) {
-      toast(err.message || '登录失败');
-      Sfx.bad();
-    }).then(function () {
-      btn.disabled = false;
-    });
-  }
-
-  function logout() {
-    api('POST', '/api/logout').catch(function () { /* ignore */ }).then(function () {
-      Net.close();
-      APP.me = null;
-      APP.room = null;
-      APP.lobby = [];
-      showScreen('auth');
-      toast('已退出登录');
-    });
-  }
+  var AuthUI = AR.AuthUI;
+  var enterGameHall = AuthUI.enterGameHall;
+  var setAuthMode = AuthUI.setAuthMode;
+  var submitAuth = AuthUI.submitAuth;
+  var logout = AuthUI.logout;
 
   /* ============================================================
    * 大厅
    * ============================================================ */
-  function buildLobbyGames() {
-    var grid = $('lobby-games');
-    grid.innerHTML = '';
-    AR.GAME_INFO.forEach(function (g) {
-      var card = document.createElement('button');
-      card.className = 'game-card';
-      card.setAttribute('data-game', g.id);
-      card.innerHTML =
-        '<span class="badge">' + (g.min === g.max ? g.max + '人' : g.min + '-' + g.max + '人') + '</span>' +
-        '<div class="gc-icon">' + (g.icon || '🎮') + '</div>' +
-        '<b>' + g.name + '</b><em>' + g.sub + '</em><p>' + g.desc + '</p>' +
-        '<div class="gc-meta"><span>在玩 <span class="live" data-live="' + g.id + '">0</span></span>' +
-        '<span>' + g.tag + '</span></div>';
-      card.addEventListener('click', function () {
-        Sfx.click();
-        openGame(g.id);
-      });
-      grid.appendChild(card);
-    });
-  }
-
-  function renderLobby() {
-    var me = APP.me;
-    if (!me) return;
-
-    $('pc-avatar').textContent = me.avatar || String(me.nickname || '?').slice(0, 1);
-    $('pc-avatar').style.background = me.color || '#22d3ee';
-    $('pc-name').textContent = me.nickname;
-    $('pc-points').textContent = me.points + ' 分';
-
-    var users = APP.lobby || [];
-    var online = users.filter(function (u) { return u.status !== 'offline'; }).length;
-    $('lobby-stat').textContent = '在线 ' + online + ' / ' + users.length + ' 人';
-    $('user-count').textContent = online + ' 在线';
-
-    var list = $('user-list');
-    list.innerHTML = '';
-    users.forEach(function (u) {
-      var row = document.createElement('div');
-      var cls = 'offline';
-      var statusText = '离线';
-      var joinable = false;
-
-      if (u.status === 'online') {
-        cls = 'online';
-        statusText = '大厅中';
-      } else if (u.status === 'waiting') {
-        cls = 'waiting';
-        statusText = (u.gameName || '游戏') + '（等待中，' + u.roomCount + '/' + u.roomMax + '人）';
-        joinable = !APP.room && u.id !== me.id && u.roomCount < u.roomMax;
-      } else if (u.status === 'playing') {
-        cls = 'playing';
-        statusText = (u.gameName || '游戏') + '（游戏中）';
-      }
-
-      row.className = 'user-row ' + cls + (u.id === me.id ? ' me' : '');
-      row.setAttribute('data-user-id', String(u.id));
-      row.title = '右键查看 ' + u.nickname + ' 的操作';
-      row.innerHTML = avatarHtml(u, 'u-avatar') +
-        '<span class="u-main"><span class="u-name">' + esc(u.nickname) + (u.id === me.id ? '（我）' : '') +
-        '</span><span class="u-status">' + esc(statusText) + '</span></span>' +
-        '<span class="u-points">' + u.points + '</span>';
-
-      if (joinable) {
-        var btn = document.createElement('button');
-        btn.className = 'u-join';
-        btn.textContent = '加入';
-        btn.title = '直接进入 TA 的房间';
-        btn.addEventListener('click', function () {
-          Net.send({ t: 'joinRoom', code: u.roomCode });
-        });
-        row.appendChild(btn);
-      }
-      list.appendChild(row);
-    });
-    if (!users.length) {
-      list.innerHTML = '<div class="empty-hint">还没有人，去注册几个同事吧</div>';
-    }
-
-    var counts = {};
-    users.forEach(function (u) {
-      if ((u.status === 'playing' || u.status === 'waiting') && u.gameId) {
-        counts[u.gameId] = (counts[u.gameId] || 0) + 1;
-      }
-    });
-    AR.GAME_INFO.forEach(function (g) {
-      var el = document.querySelector('[data-live="' + g.id + '"]');
-      if (el) el.textContent = counts[g.id] || 0;
-    });
-  }
-
-  /* ============================================================
-   * 游戏分区
-   * ============================================================ */
-  function openGame(gameId) {
-    APP.gameId = gameId;
-    var info = AR.getInfo(gameId);
-    $('hub-name').textContent = info.name;
-    $('hub-sub').textContent = info.sub;
-    $('hub-desc').innerHTML = info.desc + '<br>' + info.keys.join('　·　');
-    $('join-code').value = '';
-    showScreen('game');
-    loadRooms();
-  }
-
-  function loadRooms() {
-    api('GET', '/api/rooms?game=' + encodeURIComponent(APP.gameId)).then(function (data) {
-      APP.rooms = data.rooms || [];
-      renderRooms();
-    }).catch(function () { /* ignore */ });
-  }
-
-  function renderRooms() {
-    var list = $('room-list');
-    var rooms = APP.rooms || [];
-    $('rooms-hint').textContent = rooms.length ? (rooms.length + ' 个可加入') : '暂无';
-    if (!rooms.length) {
-      list.innerHTML = '<div class="empty-hint">还没有人开房，点上面的「创建房间」当第一个房主</div>';
-      return;
-    }
-    list.innerHTML = '';
-    rooms.forEach(function (r) {
-      var el = document.createElement('button');
-      el.className = 'room-item';
-      el.innerHTML = '<span class="ri-code">' + esc(r.code) + '</span>' +
-        '<span class="ri-host">房主 ' + esc(r.host) + '</span>' +
-        '<span class="ri-count">' + r.count + ' / ' + r.max + ' 人</span>';
-      el.addEventListener('click', function () {
-        Net.send({ t: 'joinRoom', code: r.code });
-      });
-      list.appendChild(el);
-    });
-  }
-
-  function renderHub() {
-    if (!APP.gameId) return;
-    loadRooms();
-  }
-
-  /* ============================================================
-   * 房间
-   * ============================================================ */
-  function onRoom(msg) {
-    APP.room = msg;
-
-    /* 本局结束、房间回到等待中：自动从游戏画面退回房间 */
-    if (APP.screen === 'play' && msg.phase === 'lobby') {
-      hideOver();
-      APP.over = null;
-      closeChat();
-      showScreen('room');
-      renderRoom();
-      return;
-    }
-
-    if (msg.phase === 'playing' || APP.screen === 'play') {
-      renderRoom();
-      return;
-    }
-    if (APP.screen === 'game' || APP.screen === 'room' || APP.screen === 'lobby') {
-      showScreen('room');
-    }
-    renderRoom();
-  }
-
-  var BOT_CN = { normal: '人机' };
-
-  function renderRoom() {
-    var room = APP.room;
-    if (!room || !APP.me) return;
-    var info = AR.getInfo(room.gameId);
-    var isHost = room.hostId === APP.me.id;
-    var supportsBot = room.gameId !== 'draw';
-
-    $('room-code').textContent = room.code;
-    $('room-game').textContent = info.name + ' · ' + info.sub;
-    $('room-count').textContent = room.players.length + ' / ' + room.max + ' 人';
-    $('room-desc').innerHTML = info.desc;
-
-    var start = $('btn-start');
-    var enough = room.players.length >= room.min;
-    start.disabled = !(isHost && room.phase === 'lobby' && enough);
-    start.textContent = isHost
-      ? (enough ? '开始游戏' : ('至少 ' + room.min + ' 人' + (supportsBot ? '（可加人机）' : '')))
-      : '等待房主开始';
-    $('room-status').textContent = room.phase === 'playing'
-      ? '本局进行中…'
-      : (room.phase === 'over' ? '本局结束，稍后回到房间' : (isHost ? '你是房主，可以开始了' : '等待房主开始…'));
-    $('btn-invite').disabled = room.players.length >= room.max;
-
-    /* 你画我猜：难度选择（房里只有房主能点） */
-    var levelBox = $('level-box');
-    var showLevel = room.gameId === 'draw';
-    levelBox.classList.toggle('hidden', !showLevel);
-    if (showLevel) {
-      var cur = room.level || 'normal';
-      var btns = $('level-seg').querySelectorAll('.seg-btn');
-      for (var li = 0; li < btns.length; li++) {
-        var b = btns[li];
-        b.classList.toggle('on', b.getAttribute('data-level') === cur);
-        b.disabled = !(isHost && room.phase === 'lobby');
-      }
-    }
-
-    /* 飞行棋：每人飞机数 */
-    var planesBox = $('planes-box');
-    var showPlanes = room.gameId === 'ludo';
-    planesBox.classList.toggle('hidden', !showPlanes);
-    if (showPlanes) {
-      var pc = room.planes || 1;
-      var pbtns = $('planes-seg').querySelectorAll('.seg-btn');
-      for (var pi = 0; pi < pbtns.length; pi++) {
-        var pb = pbtns[pi];
-        pb.classList.toggle('on', Number(pb.getAttribute('data-planes')) === pc);
-        pb.disabled = !(isHost && room.phase === 'lobby');
-      }
-    }
-
-    var botBox = $('bot-box');
-    botBox.classList.toggle('hidden', !(isHost && supportsBot && room.phase === 'lobby'));
-    $('btn-add-bot').disabled = room.players.length >= room.max;
-
-    var wrap = $('room-players');
-    wrap.innerHTML = '';
-    room.players.forEach(function (p) {
-      var el = document.createElement('div');
-      el.className = 'room-player' + (p.id === APP.me.id ? ' me' : '') + (p.bot ? ' is-bot' : '');
-      var tags = '';
-      if (p.host) tags += '<span class="rp-tag">房主</span>';
-      if (p.bot) tags += '<span class="rp-tag bot">人机</span>';
-
-      el.innerHTML = avatarHtml(p, 'rp-avatar') +
-        '<div class="rp-main"><div class="rp-name">' + esc(p.name) + (p.id === APP.me.id ? '（我）' : '') + '</div>' +
-        '<div class="rp-sub">' + (p.bot ? (BOT_CN[p.bot] || '普通') + ' · ' : '') + (p.score || 0) + ' 分' + (p.streak > 1 ? ' · 连胜 ' + p.streak : '') + '</div></div>' +
-        tags;
-
-      if (p.bot && isHost && room.phase === 'lobby') {
-        var x = document.createElement('button');
-        x.className = 'rp-x';
-        x.textContent = '✕';
-        x.title = '移除这个人机';
-        x.addEventListener('click', function () {
-          Net.send({ t: 'botRemove', id: p.id });
-        });
-        el.appendChild(x);
-      }
-      wrap.appendChild(el);
-    });
-
-    var slots = Math.min(2, Math.max(0, room.max - room.players.length));
-    for (var i = 0; i < slots; i++) {
-      var ph = document.createElement('div');
-      ph.className = 'room-player empty';
-      ph.innerHTML = '<span class="rp-avatar" style="background:#1b2636"></span>' +
-        '<div class="rp-main"><div class="rp-name">等待玩家…</div>' +
-        '<div class="rp-sub">' + (supportsBot ? '也可以加个人机陪你' : '把房间码或邀请发出去') + '</div></div>';
-      wrap.appendChild(ph);
-    }
-  }
-
-  function openInvitePicker() {
-    var room = APP.room;
-    if (!room) return;
-    var candidates = (APP.lobby || []).filter(function (u) {
-      return u.id !== APP.me.id && u.status === 'online';
-    });
-    var list = $('pick-list');
-    if (!candidates.length) {
-      list.innerHTML = '<div class="empty-hint">现在没有空闲的在线玩家，把房间码发给他们也行</div>';
-    } else {
-      list.innerHTML = '';
-      candidates.forEach(function (u) {
-        var btn = document.createElement('button');
-        btn.className = 'pick-item';
-        btn.innerHTML = avatarHtml(u, 'pi-avatar') +
-          '<span>' + esc(u.nickname) + '</span>' +
-          '<span class="pi-sub">' + u.points + ' 分</span>';
-        btn.addEventListener('click', function () {
-          Net.send({ t: 'invite', toId: u.id });
-          Sfx.click();
-        });
-        list.appendChild(btn);
-      });
-    }
-    $('pick-overlay').classList.remove('hidden');
-  }
+  var LobbyRoom = AR.LobbyRoom;
+  var buildLobbyGames = LobbyRoom.buildLobbyGames;
+  var renderLobby = LobbyRoom.renderLobby;
+  var openGame = LobbyRoom.openGame;
+  var loadRooms = LobbyRoom.loadRooms;
+  var renderRooms = LobbyRoom.renderRooms;
+  var renderHub = LobbyRoom.renderHub;
+  var onRoom = LobbyRoom.onRoom;
+  var renderRoom = LobbyRoom.renderRoom;
+  var openInvitePicker = LobbyRoom.openInvitePicker;
 
   /* ============================================================
    * 游戏开始 / 结束
    * ============================================================ */
-  function onGame(msg) {
-    APP.game = msg;
-    APP.round = msg.round || 1;
-    APP.snap = null;
-    APP.word = null;
-    lastHudKey = '';
-    APP.over = null;
-    APP.drawTurn = -1;
-    $('choose-overlay').classList.add('hidden');
-    $('draw-wait').classList.add('hidden');
-    $('hud-clear').classList.add('hidden');
-    AR.View.init(msg.id);
-    AR.Input.mode = msg.id;
-    AR.Input.reset();
-
-    var info = AR.getInfo(msg.id);
-    $('hud-name').textContent = info.name;
-    $('hud-sub').textContent = info.sub;
-    $('hud-round').textContent = '第 ' + APP.round + ' 局';
-    $('hud-hint').textContent = info.keys.join('　·　');
-    $('hud-center').textContent = '';
-    hideOver();
-    $('invite-overlay').classList.add('hidden');
-    $('stage').classList.toggle('aiming', msg.id === 'tank');
-    $('chat-panel').classList.toggle('chat-bottom', msg.id !== 'draw');
-    $('chat-panel').classList.toggle('hidden', msg.id !== 'draw');
-
-    if (msg.id === 'draw') {
-      AR.Render.clearBoard();
-      chatLine('room', { kind: 'system', text: '第 ' + APP.round + ' 轮开始，准备画画' }, true);
-    }
-
-    showScreen('play');
-    Sfx.start();
-  }
-
-  function onOver(msg) {
-    APP.over = msg;
-    var list = msg.results || [];
-    var title = '本局结束';
-    if (list.length) {
-      title = list[0].name + ' 获胜';
-      if (list[0].id === APP.me.id) title = '你赢了！';
-    }
-    $('over-title').textContent = title;
-    $('over-sub').textContent = AR.getInfo(msg.gameId).name + ' · 第 ' + APP.round + ' 局';
-
-    var html = '<div class="res-row head"><span>名次</span><span>玩家</span><span class="v">本局</span><span class="d">积分</span><span class="s">总分</span></div>';
-    list.forEach(function (r) {
-      html += '<div class="res-row' + (r.id === APP.me.id ? ' me' : '') + '">' +
-        '<span class="p">' + r.place + '</span>' +
-        '<span>' + esc(r.name) + (r.detail && r.detailLabel ? ' <em class="det">' + r.detailLabel + ' ' + r.detail + '</em>' : '') + '</span>' +
-        '<span class="v">' + r.score + '</span>' +
-        '<span class="d">' + (r.delta ? '+' + r.delta : '—') + '</span>' +
-        '<span class="s">' + r.total + '</span>' +
-        '</div>';
-    });
-    $('over-table').innerHTML = html;
-    showOver();
-    if (list.length && list[0].id === APP.me.id) Sfx.ok();
-    else Sfx.beep(300, 0.2, 'sine', 0.07);
-
-    /* 刷新自己的总分 */
-    if (APP.me) {
-      var mine = list.filter(function (r) { return r.id === APP.me.id; })[0];
-      if (mine) {
-        APP.me.points = mine.total;
-        APP.me.streak = mine.streak;
-      }
-    }
-  }
-
-  function backToRoom() {
-    if (!APP.room) { showScreen('lobby'); renderLobby(); return; }
-    showScreen('room');
-    renderRoom();
-  }
+  var GameSession = AR.GameSession;
+  var onGame = GameSession.onGame;
+  var onOver = GameSession.onOver;
+  var backToRoom = GameSession.backToRoom;
 
   /* ============================================================
    * 个人资料
    * ============================================================ */
-  function buildProfileStatic() {
-    var grid = $('profile-emojis');
-    grid.innerHTML = '';
-    EMOJIS.forEach(function (e) {
-      var b = document.createElement('button');
-      b.className = 'emoji-btn';
-      b.textContent = e;
-      b.setAttribute('data-emoji', e);
-      b.addEventListener('click', function () {
-        APP.profileDraft.avatar = e;
-        renderProfileDraft();
-      });
-      grid.appendChild(b);
-    });
-
-    var colors = $('profile-colors');
-    colors.innerHTML = '';
-    AR.PLAYER_COLORS.forEach(function (c) {
-      var b = document.createElement('button');
-      b.className = 'swatch';
-      b.style.background = c;
-      b.setAttribute('data-color', c);
-      b.addEventListener('click', function () {
-        APP.profileDraft.color = c;
-        renderProfileDraft();
-      });
-      colors.appendChild(b);
-    });
-  }
-
-  function openProfile() {
-    var me = APP.me;
-    if (!me) return;
-    APP.profileDraft = {
-      nickname: me.nickname,
-      bio: me.bio || '',
-      avatar: me.avatar || '',
-      color: me.color || '#22d3ee'
-    };
-    $('profile-nick').value = me.nickname;
-    $('profile-bio').value = me.bio || '';
-    $('old-pass').value = '';
-    $('new-pass').value = '';
-    renderProfileDraft();
-    renderProfileStats();
-    loadHistory();
-    showScreen('profile');
-  }
-
-  function closeProfile() {
-    showScreen('lobby');
-    renderLobby();
-  }
+  var ProfileScreen = AR.ProfileScreen;
+  var buildProfileStatic = ProfileScreen.buildProfileStatic;
+  var openProfile = ProfileScreen.openProfile;
+  var closeProfile = ProfileScreen.closeProfile;
+  var renderProfileDraft = ProfileScreen.renderProfileDraft;
+  var renderProfileStats = ProfileScreen.renderProfileStats;
+  var loadHistory = ProfileScreen.loadHistory;
+  var saveProfile = ProfileScreen.saveProfile;
+  var changePassword = ProfileScreen.changePassword;
 
   /* ---------- 玩家右键菜单 / 查看资料 ---------- */
-  var playerReqId = 0;
-
-  /* 后续新增选项：追加一条配置，必要时用 divider: true 做分组，
-     用 when(user) 控制是否显示，并在 handlePlayerMenuAction 里处理 action。 */
-  var PLAYER_MENU_ITEMS = [
-    { action: 'profile', label: '查看资料', icon: '👤' }
-  ];
-
-  function onPlayerContextMenu(e) {
-    var row = e.target && e.target.closest ? e.target.closest('.user-row') : null;
-    var userId = row ? Number(row.getAttribute('data-user-id')) : 0;
-    if (!userId) { hidePlayerMenu(); return; }
-    var user = null;
-    for (var i = 0; i < APP.lobby.length; i++) {
-      if (APP.lobby[i].id === userId) { user = APP.lobby[i]; break; }
-    }
-    if (!user) { hidePlayerMenu(); return; }
-    e.preventDefault();
-    showPlayerMenu(user, e.clientX, e.clientY);
-  }
-
-  function showPlayerMenu(user, x, y) {
-    var menu = $('player-menu');
-    $('player-menu-title').textContent = user.nickname || user.username || '玩家';
-    buildPlayerMenu(user);
-    menu.classList.remove('hidden');
-    menu.style.left = '0px';
-    menu.style.top = '0px';
-    var rect = menu.getBoundingClientRect();
-    var left = Math.max(8, Math.min(x, root.innerWidth - rect.width - 8));
-    var top = Math.max(8, Math.min(y, root.innerHeight - rect.height - 8));
-    menu.style.left = left + 'px';
-    menu.style.top = top + 'px';
-    var first = menu.querySelector('.ctx-item');
-    if (first) first.focus();
-  }
-
-  function buildPlayerMenu(user) {
-    var list = $('player-menu-list');
-    list.innerHTML = '';
-    PLAYER_MENU_ITEMS.forEach(function (item) {
-      if (item.divider) {
-        var d = document.createElement('div');
-        d.className = 'ctx-divider';
-        d.setAttribute('role', 'separator');
-        list.appendChild(d);
-        return;
-      }
-      if (item.when && !item.when(user)) return;
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'ctx-item';
-      btn.setAttribute('role', 'menuitem');
-      btn.setAttribute('data-action', item.action || '');
-      var icon = document.createElement('span');
-      icon.className = 'ctx-icon';
-      icon.textContent = item.icon || '';
-      var label = document.createElement('span');
-      label.className = 'ctx-label';
-      label.textContent = item.label || '';
-      btn.appendChild(icon);
-      btn.appendChild(label);
-      btn.addEventListener('click', function () {
-        hidePlayerMenu();
-        handlePlayerMenuAction(item.action, user);
-      });
-      list.appendChild(btn);
-    });
-  }
-
-  function handlePlayerMenuAction(action, user) {
-    if (action === 'profile') openPlayerProfile(user.id);
-  }
-
-  function hidePlayerMenu() {
-    $('player-menu').classList.add('hidden');
-  }
-
-  function openPlayerProfile(userId) {
-    if (!userId) return;
-    hidePlayerMenu();
-    var seq = ++playerReqId;
-    var av = $('player-avatar');
-    av.textContent = '?';
-    av.style.background = '#1b2636';
-    $('player-nick').textContent = '加载中…';
-    $('player-username').textContent = '';
-    $('player-bio').textContent = '';
-    var st = $('player-status');
-    st.textContent = '正在读取资料…';
-    st.className = 'player-status';
-    $('player-stats').innerHTML = '';
-    $('player-history').innerHTML = '<div class="empty-hint">加载中…</div>';
-    $('player-edit').classList.add('hidden');
-    $('player-overlay').classList.remove('hidden');
-
-    api('GET', '/api/players/' + userId).then(function (data) {
-      if (seq !== playerReqId) return;
-      renderPlayerProfile(data);
-    }).catch(function (err) {
-      if (seq !== playerReqId) return;
-      closePlayerProfile();
-      toast(err.message || '加载玩家资料失败');
-    });
-  }
-
-  function renderPlayerProfile(data) {
-    var u = data.user || {};
-    var av = $('player-avatar');
-    av.textContent = u.avatar || String(u.nickname || '?').slice(0, 1);
-    av.style.background = u.color || '#22d3ee';
-    $('player-nick').textContent = u.nickname || u.username || '玩家';
-    $('player-username').textContent = '@' + (u.username || '') + (data.isSelf ? ' · 这是你' : '');
-    $('player-bio').textContent = u.bio || '这个人很懒，还没有写签名。';
-
-    var st = $('player-status');
-    var text = '离线';
-    var cls = 'offline';
-    if (data.status === 'online') {
-      text = '大厅中';
-      cls = 'online';
-    } else if (data.status === 'waiting') {
-      text = (data.gameName || '游戏') + '（等待中，' + data.roomCount + '/' + data.roomMax + '人）';
-      cls = 'waiting';
-    } else if (data.status === 'playing') {
-      text = (data.gameName || '游戏') + '（游戏中）';
-      cls = 'playing';
-    }
-    st.textContent = text;
-    st.className = 'player-status ' + cls;
-
-    $('player-stats').innerHTML =
-      '<div class="stat-card"><b>' + (u.points || 0) + '</b><span>积分</span></div>' +
-      '<div class="stat-card"><b>' + (u.wins || 0) + '</b><span>胜场</span></div>' +
-      '<div class="stat-card"><b>' + (u.rounds || 0) + '</b><span>总局数</span></div>' +
-      '<div class="stat-card"><b>' + (u.bestStreak || 0) + '</b><span>最高连胜</span></div>';
-
-    $('player-edit').classList.toggle('hidden', !data.isSelf);
-    renderPlayerHistory(data.history || []);
-  }
-
-  function renderPlayerHistory(list) {
-    var el = $('player-history');
-    if (!list.length) {
-      el.innerHTML = '<div class="empty-hint">还没有战绩</div>';
-      return;
-    }
-    el.innerHTML = '';
-    list.forEach(function (m) {
-      var d = new Date(m.endedAt);
-      var time = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
-        String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-      var row = document.createElement('div');
-      row.className = 'history-row';
-      row.innerHTML = '<b>' + esc(m.gameName) + '</b>' +
-        '<span class="h-place">第 ' + m.place + ' 名</span>' +
-        '<span>' + m.score + '</span>' +
-        '<span class="h-delta">+' + m.delta + ' · ' + time + '</span>';
-      el.appendChild(row);
-    });
-  }
-
-  function closePlayerProfile() {
-    playerReqId++;
-    $('player-overlay').classList.add('hidden');
-    $('player-edit').classList.add('hidden');
-  }
-
-  function renderProfileDraft() {
-    var d = APP.profileDraft;
-    var prev = $('profile-avatar-preview');
-    prev.textContent = d.avatar || String(d.nickname || '?').slice(0, 1);
-    prev.style.background = d.color;
-
-    var emojis = document.querySelectorAll('.emoji-btn');
-    for (var i = 0; i < emojis.length; i++) {
-      emojis[i].classList.toggle('active', emojis[i].getAttribute('data-emoji') === d.avatar);
-    }
-    var colors = document.querySelectorAll('#profile-colors .swatch');
-    for (var j = 0; j < colors.length; j++) {
-      colors[j].classList.toggle('active', colors[j].getAttribute('data-color') === d.color);
-    }
-  }
-
-  function renderProfileStats() {
-    var me = APP.me;
-    $('profile-stats').innerHTML =
-      '<div class="stat-card"><b>' + me.points + '</b><span>积分</span></div>' +
-      '<div class="stat-card"><b>' + me.wins + '</b><span>胜场</span></div>' +
-      '<div class="stat-card"><b>' + me.rounds + '</b><span>总局数</span></div>' +
-      '<div class="stat-card"><b>' + me.bestStreak + '</b><span>最高连胜</span></div>';
-  }
-
-  function loadHistory() {
-    api('GET', '/api/history?limit=20').then(function (data) {
-      var list = data.list || [];
-      var el = $('profile-history');
-      if (!list.length) {
-        el.innerHTML = '<div class="empty-hint">还没有战绩，去玩一局</div>';
-        return;
-      }
-      el.innerHTML = '';
-      list.forEach(function (m) {
-        var d = new Date(m.endedAt);
-        var time = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
-          String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-        var row = document.createElement('div');
-        row.className = 'history-row';
-        row.innerHTML = '<b>' + esc(m.gameName) + '</b>' +
-          '<span class="h-place">第 ' + m.place + ' 名</span>' +
-          '<span>' + m.score + '</span>' +
-          '<span class="h-delta">+' + m.delta + ' · ' + time + '</span>';
-        el.appendChild(row);
-      });
-    }).catch(function () { /* ignore */ });
-  }
-
-  function saveProfile() {
-    var d = APP.profileDraft;
-    var nickname = ($('profile-nick').value || '').trim();
-    if (!nickname) { toast('昵称不能为空'); return; }
-    d.nickname = nickname;
-    d.bio = $('profile-bio').value || '';
-
-    api('POST', '/api/profile', d).then(function (data) {
-      APP.me = Object.assign(APP.me, data.user);
-      toast('资料已保存');
-      Sfx.ok();
-      renderLobby();
-      if (APP.room) {
-        renderRoom();
-      }
-    }).catch(function (err) {
-      toast(err.message || '保存失败');
-      Sfx.bad();
-    });
-  }
-
-  function changePassword() {
-    var oldP = $('old-pass').value;
-    var newP = $('new-pass').value;
-    if (!oldP || !newP) { toast('请填写原密码和新密码'); return; }
-    api('POST', '/api/password', { oldPassword: oldP, newPassword: newP }).then(function () {
-      toast('密码已修改');
-      $('old-pass').value = '';
-      $('new-pass').value = '';
-      Sfx.ok();
-    }).catch(function (err) {
-      toast(err.message || '修改失败');
-      Sfx.bad();
-    });
-  }
+  var PlayerPanel = AR.PlayerPanel;
+  var onPlayerContextMenu = PlayerPanel.onPlayerContextMenu;
+  var showPlayerMenu = PlayerPanel.showPlayerMenu;
+  var buildPlayerMenu = PlayerPanel.buildPlayerMenu;
+  var handlePlayerMenuAction = PlayerPanel.handlePlayerMenuAction;
+  var hidePlayerMenu = PlayerPanel.hidePlayerMenu;
+  var openPlayerProfile = PlayerPanel.openPlayerProfile;
+  var renderPlayerProfile = PlayerPanel.renderPlayerProfile;
+  var renderPlayerHistory = PlayerPanel.renderPlayerHistory;
+  var closePlayerProfile = PlayerPanel.closePlayerProfile;
 
   /* ============================================================
    * 排行榜
    * ============================================================ */
-  function loadVersion() {
-    return api('GET', '/api/version').then(function (v) {
-      APP.version = v;
-      var tag = 'v' + (v.version || '?');
-      $('auth-version').textContent = tag;
-      $('lobby-version').textContent = tag;
-      $('lobby-version').title = '当前版本 ' + tag + '，点击查看更新说明';
-      document.title = '摸鱼游戏厅 ' + tag + ' · OFFICE ARCADE';
-    }).catch(function () { /* 版本信息拿不到不影响使用 */ });
-  }
-
-  function openVersion() {
-    var v = APP.version;
-    if (!v) {
-      $('version-sub').textContent = '版本信息还没加载到，稍后再试';
-      $('version-body').innerHTML = '';
-      $('version-overlay').classList.remove('hidden');
-      return;
-    }
-    $('version-sub').textContent = '当前版本 v' + v.version + (v.released ? ' · ' + v.released : '');
-    var html = '<div class="v-sec">本次更新</div><ul class="v-notes">' +
-      (v.notes || []).map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
-    if ((v.history || []).length) {
-      html += '<div class="v-sec">历史版本</div>';
-      v.history.forEach(function (h) {
-        html += '<div class="v-hist"><b>v' + esc(h.version) + '</b><span>' + esc(h.released || '') + '</span>' +
-          '<ul class="v-notes">' +
-          (h.notes || []).map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') +
-          '</ul></div>';
-      });
-    }
-    $('version-body').innerHTML = html;
-    $('version-overlay').classList.remove('hidden');
-  }
-
-  function openBoard() {
-    api('GET', '/api/board').then(function (data) {
-      var list = data.list || [];
-      var el = $('board-table');
-      if (!list.length) {
-        el.innerHTML = '<div class="empty-hint">还没有人玩过</div>';
-      } else {
-        var html = '<div class="res-row head"><span>名次</span><span>玩家</span><span class="v">积分</span><span class="d">胜场</span><span class="s">连胜</span></div>';
-        list.forEach(function (r, i) {
-          html += '<div class="res-row">' +
-            '<span class="p">' + (i + 1) + '</span>' +
-            '<span>' + esc(r.nickname) + '</span>' +
-            '<span class="v">' + r.points + '</span>' +
-            '<span class="d">' + r.wins + '</span>' +
-            '<span class="s">' + r.bestStreak + '</span>' +
-            '</div>';
-        });
-        el.innerHTML = html;
-      }
-      $('board-overlay').classList.remove('hidden');
-    }).catch(function () {
-      toast('排行榜暂时不可用');
-    });
-  }
+  var VersionUI = AR.VersionUI;
+  var loadVersion = VersionUI.loadVersion;
+  var openVersion = VersionUI.openVersion;
+  var openBoard = VersionUI.openBoard;
 
   /* ============================================================
    * 聊天（大厅 + 对局，两个通道互相隔离）
    * ============================================================ */
-  var CHAT_EMOJIS = [
-    '😀', '😄', '😁', '😆', '😅', '😂', '🙂', '😉',
-    '😊', '😍', '😘', '😜', '🤪', '🤔', '😐', '😴',
-    '😮', '😱', '🥳', '😎', '🤖', '👻', '💀', '👍',
-    '👎', '👏', '🙏', '💪', '🎉', '🔥', '💯', '⚡',
-    '⭐', '✨', '❤️', '💔', '🎮', '🏆', '🍺', '🍜',
-    '☕', '🐶', '🐱', '🦊', '🐼', '🐸', '🐵', '🦁'
-  ];
+  /* 聊天子模块在 js/ui/chat.js */
+  var Chat = AR.Chat;
+  var emojiPop = Chat.emojiPop;
+  var chatLine = Chat.chatLine;
+  var showPeek = Chat.showPeek;
+  var sendChat = Chat.sendChat;
+  var chatOpen = Chat.chatOpen;
+  var openChat = Chat.openChat;
+  var closeChat = Chat.closeChat;
 
-  function emojiPop(popId, inputId) {
-    var pop = $(popId);
-    if (!pop.dataset.built) {
-      pop.dataset.built = '1';
-      CHAT_EMOJIS.forEach(function (e) {
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = e;
-        b.addEventListener('click', function (ev) {
-          ev.stopPropagation();
-          var inp = $(inputId);
-          inp.value = (inp.value || '') + e;
-          inp.focus();
-        });
-        pop.appendChild(b);
-      });
-    }
-    var willShow = pop.classList.contains('hidden');
-    $('lobby-emoji-pop').classList.add('hidden');
-    $('chat-emoji-pop').classList.add('hidden');
-    if (willShow) pop.classList.remove('hidden');
-  }
-
-  function chatLine(ch, msg, silent) {
-    var log = $(ch === 'lobby' ? 'lobby-chat-log' : 'chat-log');
-    if (!log) return;
-    var el = document.createElement('div');
-    el.className = 'chat-line' +
-      (msg.kind === 'correct' ? ' correct' : (msg.kind === 'system' ? ' system' : ''));
-    if (msg.from) {
-      var body = msg.kind === 'correct'
-        ? '<span class="masked">' + esc(msg.text) + '</span><span class="ok-badge">✓ 回答正确</span>'
-        : esc(msg.text);
-      el.innerHTML = '<b style="color:' + (msg.from.color || '#8ea3c0') + '">' +
-        esc(msg.from.name) + '</b>：' + body;
-    } else {
-      el.textContent = msg.text || '';
-    }
-    var emptyHint = log.querySelector('.chat-empty');
-    if (emptyHint) emptyHint.remove();
-    log.appendChild(el);
-    while (log.children.length > 80) log.removeChild(log.firstChild);
-    log.scrollTop = log.scrollHeight;
-
-    if (ch === 'room' && !silent && !chatOpen()) showPeek(msg);
-  }
-
-  function showPeek(msg) {
-    var el = $('chat-peek');
-    if (el.classList.contains('hidden')) {
-      $('chat-peek').innerHTML = '<b style="color:' + (msg.from.color || '#8ea3c0') + '">' +
-        esc(msg.from.name) + '</b>：' + esc(msg.text);
-      el.classList.remove('hidden');
-    } else {
-      el.innerHTML = '新消息：<b style="color:' + (msg.from.color || '#8ea3c0') + '">' +
-        esc(msg.from.name) + '</b>：' + esc(msg.text);
-    }
-    if (showPeek.timer) clearTimeout(showPeek.timer);
-    showPeek.timer = setTimeout(function () {
-      $('chat-peek').classList.add('hidden');
-    }, 4500);
-  }
-
-  function sendChat(ch) {
-    var inp = $(ch === 'lobby' ? 'lobby-chat-text' : 'chat-text');
-    var text = (inp.value || '').trim();
-    if (!text) return false;
-    Net.send({ t: 'chat', text: text });
-    inp.value = '';
-    Sfx.click();
-    return true;
-  }
-
-  function chatOpen() {
-    return !$('chat-panel').classList.contains('hidden');
-  }
-
-  function openChat() {
-    $('chat-panel').classList.remove('hidden');
-    $('chat-peek').classList.add('hidden');
-    $('chat-text').focus();
-  }
-
-  function closeChat() {
-    $('chat-text').blur();
-    /* 你画我猜的聊天框常驻，其余游戏收起 */
-    if (!(APP.game && APP.game.id === 'draw')) $('chat-panel').classList.add('hidden');
-  }
-
-  /* 选词列表每次快照都会重发（10Hz），内容没变就别重建，
-     否则按钮每秒被重新创建 10 次，鼠标悬浮的高亮会不停闪 */
-  var lastChoicesKey = '';
-  function showChoices(list) {
-    var box = $('choose-list');
-    var key = (list || []).join('|');
-    var visible = !$('choose-overlay').classList.contains('hidden');
-    if (key === lastChoicesKey && visible && box.children.length) return;
-    lastChoicesKey = key;
-    box.innerHTML = '';
-    (list || []).forEach(function (w, i) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = (w && typeof w === 'object') ? (w.w || '') : w;
-      b.addEventListener('click', function () {
-        Net.send({ t: 'draw', n: i });
-        $('choose-overlay').classList.add('hidden');
-        Sfx.click();
-      });
-      box.appendChild(b);
-    });
-    if (box.children.length) $('choose-overlay').classList.remove('hidden');
-  }
-
-  /* 击杀播报的浮层 */
-  var feedTimer = 0;
-  function pushFeed(e) {
-    var box = $('kill-feed');
-    if (!box) return;
-    var el = document.createElement('div');
-    el.className = 'kf-line';
-    el.innerHTML = '<b style="color:' + (e.color || '#8ea3c0') + '">' + esc(e.name) + '</b>' +
-      '<span class="kf-x">' + (e.verb === undefined ? '击毁' : e.verb) + '</span>' +
-      '<b style="color:' + (e.vcolor || '#8ea3c0') + '">' + esc(e.vname) + '</b>';
-    box.appendChild(el);
-    while (box.children.length > 4) box.removeChild(box.firstChild);
-    setTimeout(function () {
-      el.classList.add('out');
-      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
-    }, 3200);
-  }
-
-  function askExit() {
-    $('confirm-title').textContent = '退出本局？';
-    $('confirm-text').textContent = '退出后本局照常结算，房间会留给其他玩家继续。';
-    $('confirm-overlay').classList.remove('hidden');
-  }
-
-  function bindDraw() {
-    var canvas = $('stage');
-
-    function pos(e) {
-      var r = canvas.getBoundingClientRect();
-      return { mx: e.clientX - r.left, my: e.clientY - r.top };
-    }
-    function send(point, prev, kind) {
-      var stroke = {
-        x: Math.round(point.x), y: Math.round(point.y),
-        p: prev ? [Math.round(prev.x), Math.round(prev.y)] : null,
-        e: kind, c: '#111827', w: 4
-      };
-      AR.Render.paint({ s: stroke });        /* 自己的笔迹先画在本地 */
-      Net.send({ t: 'draw', s: stroke });
-    }
-
-    canvas.addEventListener('mousedown', function (e) {
-      if (e.button !== 0) return;
-      if (!APP.game || APP.game.id !== 'draw' || !APP.snap) return;
-      if (APP.snap.dr !== APP.me.id || APP.snap.ph !== 'draw') return;
-      var p = pos(e);
-      var b = AR.Render.toBoard(p.mx, p.my);
-      if (!b) return;
-      APP.drawing = true;
-      APP.lastDraw = b;
-      send(b, null, 'b');
-    });
-    canvas.addEventListener('mousemove', function (e) {
-      if (!APP.drawing) return;
-      var p = pos(e);
-      var b = AR.Render.toBoard(p.mx, p.my);
-      if (!b) return;
-      send(b, APP.lastDraw, 'm');
-      APP.lastDraw = b;
-    });
-    root.addEventListener('mouseup', function () { APP.drawing = false; });
-
-    /* 五子棋：点棋盘落子 */
-    canvas.addEventListener('mousedown', function (e) {
-      if (e.button !== 0) return;
-      if (!APP.game || APP.game.id !== 'gomoku' || !APP.snap) return;
-      if (APP.snap.win || APP.snap.cur !== APP.me.id) return;
-      var r = canvas.getBoundingClientRect();
-      var cell = AR.Render.gomokuHit(e.clientX - r.left, e.clientY - r.top, APP.snap);
-      if (!cell) return;
-      Net.send({ t: 'input', i: cell });
-      Sfx.click();
-    });
-
-    /* 飞行棋：点棋盘掷骰 / 点飞机选择 */
-    /* 坦克：记录鼠标位置，供自绘准心用；离开画布就恢复系统箭头 */
-    canvas.addEventListener('mousemove', function (e) {
-      var rect = canvas.getBoundingClientRect();
-      AR.Render.cursor.x = e.clientX - rect.left;
-      AR.Render.cursor.y = e.clientY - rect.top;
-      AR.Render.cursor.on = !!(APP.game && APP.game.id === 'tank');
-    });
-    canvas.addEventListener('mouseleave', function () {
-      AR.Render.cursor.on = false;
-    });
-
-    canvas.addEventListener('mousedown', function (e) {
-      if (e.button !== 0) return;
-      if (!APP.game || APP.game.id !== 'ludo' || !APP.snap) return;
-      if (APP.snap.c !== APP.me.id) return;
-      if (APP.snap.ph === 'roll') {
-        Net.send({ t: 'input', i: { roll: 1 } });
-        Sfx.click();
-        return;
-      }
-      if (APP.snap.ph === 'move') {
-        var r = canvas.getBoundingClientRect();
-        var idx = AR.Render.ludoHitTest(e.clientX - r.left, e.clientY - r.top, APP.snap);
-        if (idx >= 0) {
-          Net.send({ t: 'input', i: { plane: idx } });
-          Sfx.click();
-        }
-      }
-    });
-  }
-
-  /* 你画我猜：抽屉才看得到的「清空画布」按钮 */
-  function updateDrawToolbar(s) {
-    var btn = $('hud-clear');
-    var show = !!(s && APP.screen === 'play' && APP.game && APP.game.id === 'draw' &&
-      s.ph === 'draw' && s.dr === APP.me.id);
-    btn.classList.toggle('hidden', !show);
-  }
-
-  /* 你画我猜：游戏内提示条 */
-  var lastHintKey = '';
-  function updateHintBar(s) {
-    var box = $('draw-hints');
-    if (!s || APP.screen !== 'play' || !APP.game || APP.game.id !== 'draw' || s.ph !== 'draw') {
-      box.classList.add('hidden');
-      return;
-    }
-    var hs = s.hs || [];
-    var key = hs.join('|') + '#' + (s.ht || 0);
-    if (key === lastHintKey) { box.classList.remove('hidden'); return; }
-    lastHintKey = key;
-
-    var list = '';
-    for (var i = 0; i < hs.length; i++) {
-      list += '<span class="dh-item"><i>' + (i + 1) + '</i>' + esc(hs[i]) + '</span>';
-    }
-    if (!hs.length) list = '<span class="dh-empty">暂无提示</span>';
-    $('dh-list').innerHTML = list;
-
-    var next = '';
-    if (hs.length < (s.hn || 3)) next = (s.ht || 0) + ' 秒后提示 ' + (hs.length + 1);
-    $('dh-next').textContent = next;
-    box.classList.remove('hidden');
-  }
-
-  /* 你画我猜的面板：选词倒计时（作者）/ 等待蒙版（其他人） */
-  var lastMask = '';
-  function updateDrawMasks() {
-    var chooseOv = $('choose-overlay');
-    var waitOv = $('draw-wait');
-    var s = APP.snap;
-    if (!s || APP.screen !== 'play' || !APP.game || APP.game.id !== 'draw') {
-      chooseOv.classList.add('hidden');
-      waitOv.classList.add('hidden');
-      return;
-    }
-    var isDrawer = s.dr === APP.me.id;
-    var choosing = s.ph === 'choose';
-    var left = Math.max(0, Math.ceil(s.tl));
-
-    if (choosing && isDrawer) {
-      var tip = left + ' 秒后自动随机选择';
-      if ($('choose-tip').textContent !== tip) $('choose-tip').textContent = tip;
-    } else {
-      chooseOv.classList.add('hidden');
-    }
-
-    if (choosing && !isDrawer) {
-      var drawerName = '';
-      for (var i = 0; i < APP.game.players.length; i++) {
-        if (APP.game.players[i].id === s.dr) drawerName = APP.game.players[i].name;
-      }
-      var key = drawerName + '|' + left;
-      if (key !== lastMask) {
-        lastMask = key;
-        $('wait-title').textContent = (drawerName || '作者') + ' 正在选词…';
-        $('wait-num').textContent = left;
-      }
-      waitOv.classList.remove('hidden');
-    } else {
-      waitOv.classList.add('hidden');
-    }
-  }
+  var GameUI = AR.GameUI;
+  var showChoices = GameUI.showChoices;
+  var pushFeed = GameUI.pushFeed;
+  var askExit = GameUI.askExit;
+  var bindDraw = GameUI.bindDraw;
+  var updateDrawToolbar = GameUI.updateDrawToolbar;
+  var updateHintBar = GameUI.updateHintBar;
+  var updateDrawMasks = GameUI.updateDrawMasks;
 
   /* ============================================================
    * 每帧 HUD
@@ -1630,6 +567,7 @@
   /* HUD 排行榜的内容缓存：html 没变就不碰 innerHTML，
      避免每帧重建 DOM 触发布局。 */
   var lastHudKey = '';
+  function resetHud() { lastHudKey = ''; }
 
   /* 每帧调用。这里只允许做便宜的事：改文本、切类名。
      不要在这里读布局（getBoundingClientRect）、不要重建 DOM——

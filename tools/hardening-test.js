@@ -6,9 +6,9 @@
 'use strict';
 
 const { spawn } = require('child_process');
-const http = require('http');
 const net = require('net');
 const fs = require('fs');
+const { makeRequest, cookieOf } = require('./lib/http');
 const os = require('os');
 const path = require('path');
 
@@ -23,28 +23,8 @@ function ok(name, cond, extra) {
   if (!cond) fails++;
 }
 
-function request(method, p, body, cookie) {
-  return new Promise((resolve, reject) => {
-    const payload = body ? JSON.stringify(body) : null;
-    const headers = Object.assign({ 'Content-Type': 'application/json' },
-      cookie ? { Cookie: cookie } : {},
-      payload ? { 'Content-Length': Buffer.byteLength(payload) } : {});
-    const req = http.request({ host: '127.0.0.1', port: PORT, path: p, method, headers }, (res) => {
-      let b = '';
-      res.on('data', (d) => b += d);
-      res.on('end', () => {
-        let j = {};
-        try { j = JSON.parse(b); } catch (e) { /* 非 JSON */ }
-        resolve({ status: res.statusCode, body: j, headers: res.headers, raw: b });
-      });
-    });
-    req.on('error', reject);
-    if (payload) req.write(payload);
-    req.end();
-  });
-}
+const request = makeRequest(PORT);
 
-const cookieOf = (r) => ((r.headers['set-cookie'] || [''])[0].split(';')[0] || '');
 
 async function main() {
   try { fs.rmSync(DATA, { recursive: true, force: true }); } catch (e) { /* ignore */ }

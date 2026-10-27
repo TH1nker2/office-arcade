@@ -1,0 +1,95 @@
+/* ---------------- 聊天（大厅 + 对局） ---------------- */
+.lobby-chat {
+  flex: 0 0 auto;
+  height: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  position: relative;
+}
+
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.emoji-toggle {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* 聊天输入框里的表情按钮：不要继承 .chat-input button 的左右内边距 */
+.chat-input .emoji-toggle {
+  width: 30px;
+  padding: 0;
+  flex: 0 0 auto;
+  font-size: 15px;
+}
+.emoji-toggle:hover { border-color: var(--line-2); background: rgba(255, 255, 255, 0.08); }
+
+.lobby-chat .chat-log {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  font-size: 11.5px;
+}
+
+.lobby-chat .chat-input input { padding: 6px 9px; font-size: 12px; }
+.lobby-chat .chat-input button { padding: 0 10px; font-size: 11.5px; }
+
+.emoji-pop {
+  position: absolute;
+  bottom: 46px;
+  right: 0;
+  width: 244px;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  padding: 8px;
+  background: #0b1220;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.65);
+  z-index: 30;
+  max-height: 196px;
+  overflow-y: auto;
+}
+.emoji-pop button {
+  height: 26px;
+  border-radius: 6px;
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.emoji-pop button:hover { background: rgba(34, 211, 238, 0.16); }
+
+/* 对局内聊天：默认收在左下角，回车展开 */
+#chat-panel.chat-bottom {
+  right: auto;
+  left: 14px;
+  bottom: 14px;
+  top: auto;
+  width: 380px;
+}
+
+#chat-panel.chat-bottom .chat-log { max-height: 210px; }
+
+#chat-panel .chat-input { position: relative; }
+

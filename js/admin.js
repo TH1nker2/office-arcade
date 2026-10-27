@@ -4,13 +4,10 @@
 (function (root) {
   'use strict';
 
-  function $(id) { return document.getElementById(id); }
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  var AR = root.AR;
+  var $ = AR.Dom.$;
+  var esc = AR.Dom.esc;
+  var api = AR.Http.request;
 
   var App = {
     admin: null,
@@ -25,20 +22,6 @@
     wordCache: {}
   };
 
-  function api(method, url, body) {
-    return fetch(url, {
-      method: method,
-      credentials: 'same-origin',
-      headers: body ? { 'Content-Type': 'application/json' } : {},
-      body: body ? JSON.stringify(body) : undefined
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (data) {
-        if (!r.ok) throw new Error(data.error || ('请求失败 ' + r.status));
-        return data;
-      });
-    });
-  }
-
   var toastTimer = 0;
   function toast(msg, bad) {
     var el = $('toast');
@@ -49,32 +32,9 @@
     toastTimer = setTimeout(function () { el.classList.add('hidden'); }, 2600);
   }
 
-  /* ---------- 通用弹窗 ---------- */
-  var dlgResolve = null;
-
-  function dialog(opt) {
-    $('dlg-title').textContent = opt.title || '确认';
-    $('dlg-text').textContent = opt.text || '';
-    var hasInput = !!opt.input;
-    $('dlg-field').classList.toggle('hidden', !hasInput);
-    if (hasInput) {
-      $('dlg-label').textContent = opt.label || '输入';
-      $('dlg-input').value = opt.value || '';
-      $('dlg-input').placeholder = opt.placeholder || '';
-    }
-    $('dlg-ok').textContent = opt.ok || '确定';
-    $('dlg-ok').className = 'btn ' + (opt.danger ? '' : 'primary');
-    if (opt.danger) $('dlg-ok').style.background = 'linear-gradient(135deg,#ff2e63,#c026d3)', $('dlg-ok').style.color = '#fff';
-    else $('dlg-ok').style.background = '', $('dlg-ok').style.color = '';
-    $('dialog').classList.remove('hidden');
-    if (hasInput) setTimeout(function () { $('dlg-input').focus(); }, 30);
-    return new Promise(function (resolve) { dlgResolve = resolve; });
-  }
-
-  function closeDialog(val) {
-    $('dialog').classList.add('hidden');
-    if (dlgResolve) { var r = dlgResolve; dlgResolve = null; r(val); }
-  }
+  var AdminDialog = AR.AdminDialog;
+  var dialog = AdminDialog.open;
+  var closeDialog = AdminDialog.close;
 
   /* ---------- 登录 ---------- */
   function showLogin(tip) {
@@ -87,6 +47,7 @@
     $('admin-login').classList.remove('active');
     $('admin-panel').classList.add('active');
     $('admin-name').textContent = App.admin.name + '（' + App.admin.username + '）';
+    AdminWords.init({ App: App, showLogin: showLogin });
     setView('users');
     loadUsers();
     if (App.timer) clearInterval(App.timer);
@@ -115,83 +76,11 @@
     });
   }
 
-  /* ---------- 页面切换 ---------- */
-  function setView(view) {
-    App.view = view;
-    var tabs = document.querySelectorAll('#admin-tabs .admin-tab');
-    for (var i = 0; i < tabs.length; i++) {
-      tabs[i].classList.toggle('on', tabs[i].getAttribute('data-view') === view);
-    }
-    $('view-users').classList.toggle('hidden', view !== 'users');
-    $('view-words').classList.toggle('hidden', view !== 'words');
-    if (view === 'words') loadWordLevel(App.wordLevel);
-  }
-
-  /* ---------- 词库 ---------- */
-  function updateWordCounts(levels) {
-    var btns = document.querySelectorAll('#word-levels .seg-btn');
-    for (var i = 0; i < btns.length; i++) {
-      var lv = btns[i].getAttribute('data-level');
-      var num = btns[i].querySelector('.seg-num');
-      if (num) num.textContent = levels && levels[lv] ? levels[lv].count : '—';
-    }
-  }
-
-  function loadWordLevel(level) {
-    App.wordLevel = level;
-    var btns = document.querySelectorAll('#word-levels .seg-btn');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].classList.toggle('on', btns[i].getAttribute('data-level') === level);
-    }
-    if (App.wordCache[level]) {
-      renderWords();
-      return;
-    }
-    $('word-hint').textContent = '词库加载中…';
-    $('word-table').innerHTML = '<div class="empty-hint">正在读取词库…</div>';
-    api('GET', '/api/admin/words?level=' + encodeURIComponent(level)).then(function (data) {
-      App.wordCache[level] = data;
-      updateWordCounts(data.levels);
-      renderWords();
-    }).catch(function (err) {
-      if (String(err.message).indexOf('登录') >= 0) showLogin('登录已过期，请重新登录');
-      else {
-        $('word-hint').textContent = '词库加载失败';
-        $('word-table').innerHTML = '<div class="empty-hint">' + esc(err.message) + '</div>';
-      }
-    });
-  }
-
-  function renderWords() {
-    var data = App.wordCache[App.wordLevel];
-    if (!data) return;
-    var q = App.wordQ.trim().toLowerCase();
-    var list = [];
-    data.words.forEach(function (e) {
-      if (q && e.w.toLowerCase().indexOf(q) < 0 && e.h.join(' ').toLowerCase().indexOf(q) < 0) return;
-      list.push(e);
-    });
-    var meta = data.levels[App.wordLevel] || {};
-    $('word-hint').textContent = (meta.name || '词库') + ' · ' +
-      (q ? '匹配 ' + list.length + ' / ' + data.words.length : data.words.length + ' 个词') +
-      ' · 修改 shared/words.json 后重启生效';
-    var box = $('word-table');
-    if (!list.length) {
-      box.innerHTML = '<div class="empty-hint">没有匹配的词条</div>';
-      return;
-    }
-    var html = '<div class="word-row head"><span>关键词</span><span>提示</span><span>字数</span></div>';
-    list.forEach(function (e) {
-      var hints = (e.h || []).map(function (h, i) {
-        return '<span class="' + (i === 0 ? 'hint-len' : '') + '">' + esc(h) + '</span>';
-      }).join('');
-      html += '<div class="word-row">' +
-        '<span class="word-main">' + esc(e.w) + '</span>' +
-        '<span class="word-hints">' + hints + '</span>' +
-        '<span class="word-len">' + Array.from(e.w).length + '</span></div>';
-    });
-    box.innerHTML = html;
-  }
+  var AdminWords = AR.AdminWords;
+  var setView = AdminWords.setView;
+  var updateWordCounts = AdminWords.updateWordCounts;
+  var loadWordLevel = AdminWords.loadWordLevel;
+  var renderWords = AdminWords.renderWords;
 
   function statusOf(u) {
     if (u.banned) return { cls: 'banned', text: '已封禁' };

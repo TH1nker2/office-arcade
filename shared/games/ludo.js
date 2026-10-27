@@ -12,8 +12,8 @@
 
   var AR = root.AR;
 
-  var N = 40;              /* 环上格数 */
-  var HOME = 4;            /* 归航道格数 */
+  var N = AR.GameConstants.LUDO.N;              /* 环上格数 */
+  var HOME = AR.GameConstants.LUDO.HOME;        /* 归航道格数 */
   var MAXP = N + HOME;     /* 44 = 到家 */
   var DURATION = 0;             /* 不限时：打到只剩一个人没到家 */
   var ROLL_WAIT = 8;       /* 不掷就自动掷 */

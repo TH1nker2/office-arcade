@@ -7,7 +7,7 @@
 
   var AR = root.AR;
 
-  var N = 15;                    /* 棋盘 15x15 */
+  var N = AR.GameConstants.GOMOKU.N;                    /* 棋盘 15x15 */
   var BOT_LEVEL = { easy: 0, normal: 1, hard: 2, insane: 3 };
   var WIN_DELAY = 1.0;          /* 连五后先在棋盘上亮 1 秒再结算 */
 

@@ -2,19 +2,14 @@
 /* v2 浏览器端到端：注册 / 大厅 / 选游戏 / 建房 / 邀请 / 开局 / 资料页 */
 'use strict';
 
-const { spawn } = require('child_process');
-const http = require('http');
 const path = require('path');
 const os = require('os');
-const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '..');
-const SHOTS = path.join(ROOT, 'shots');
-const EDGE = process.env.EDGE_PATH ||
-  path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'Application', 'msedge.exe');
 const PORT = 8650 + Math.floor(Math.random() * 40);
 const DATA = path.join(os.tmpdir(), 'arcade-ui-' + PORT);
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const { Browser, sleep } = require('./lib/browser');
+const { startServer } = require('./lib/fixture');
 
 const GAME_DESC = {
   snake: '吞下光点不断变长，撞上其他蛇身会暂时退场，随后复活。',
@@ -28,84 +23,6 @@ const GAME_DESC = {
   ludo: '掷骰子起飞，落到对手格就把对方送回起点；率先让全部飞机到家者获胜。'
 };
 const BAD_DESC_WORDS = ['打飞机', '爆开', '活着', '击杀', '垃圾行', '顶死', '阵亡', '撑不住', '送他回起点'];
-
-const getJson = (u) => new Promise((res, rej) => {
-  http.get(u, (r) => {
-    let b = '';
-    r.on('data', (d) => b += d);
-    r.on('end', () => { try { res(JSON.parse(b)); } catch (e) { rej(e); } });
-  }).on('error', rej);
-});
-
-class Browser {
-  constructor(tag, port) {
-    this.tag = tag;
-    this.port = port;
-    this.errors = [];
-  }
-  async launch() {
-    this.child = spawn(EDGE, [
-      '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
-      '--remote-debugging-port=' + this.port,
-      '--user-data-dir=' + path.join(os.tmpdir(), 'arcade-ui-' + this.port + '-' + Date.now()),
-      '--window-size=1440,900', 'about:blank'
-    ], { stdio: 'ignore' });
-    let targets = null;
-    for (let i = 0; i < 60; i++) {
-      try {
-        targets = await getJson('http://127.0.0.1:' + this.port + '/json/list');
-        if (targets && targets.length) break;
-      } catch (e) { /* retry */ }
-      await sleep(250);
-    }
-    if (!targets || !targets.length) throw new Error(this.tag + ' 启动失败');
-    const page = targets.find((t) => t.type === 'page') || targets[0];
-    this.ws = new WebSocket(page.webSocketDebuggerUrl);
-    this.id = 1;
-    this.cbs = new Map();
-    await new Promise((res, rej) => { this.ws.onopen = res; this.ws.onerror = rej; });
-    this.ws.onmessage = (ev) => {
-      const m = JSON.parse(ev.data);
-      if (m.id && this.cbs.has(m.id)) {
-        const c = this.cbs.get(m.id);
-        this.cbs.delete(m.id);
-        m.error ? c.rej(new Error(m.error.message)) : c.res(m.result);
-        return;
-      }
-      if (m.method === 'Runtime.exceptionThrown') {
-        const d = m.params.exceptionDetails;
-        this.errors.push((d.exception && d.exception.description) || d.text);
-      }
-      if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') {
-        this.errors.push((m.params.args || []).map((a) => a.value || a.description).join(' '));
-      }
-    };
-    await this.send('Page.enable');
-    await this.send('Runtime.enable');
-    await this.send('Network.enable');
-    await this.send('Network.setCacheDisabled', { cacheDisabled: true });
-  }
-  send(method, params) {
-    return new Promise((res, rej) => {
-      const i = this.id++;
-      this.cbs.set(i, { res, rej });
-      this.ws.send(JSON.stringify({ id: i, method, params: params || {} }));
-    });
-  }
-  async ev(expr) {
-    const r = await this.send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true });
-    if (r.exceptionDetails) {
-      throw new Error(this.tag + ' eval: ' + JSON.stringify(r.exceptionDetails).slice(0, 300));
-    }
-    return r.result.value;
-  }
-  async shot(name) {
-    const s = await this.send('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync(path.join(SHOTS, name + '.png'), Buffer.from(s.data, 'base64'));
-    console.log('    shot:', name + '.png');
-  }
-  kill() { try { this.child.kill(); } catch (e) { /* ignore */ } }
-}
 
 let fails = 0;
 function check(name, cond, extra) {
@@ -123,23 +40,8 @@ async function register(page, user, nick) {
 }
 
 async function main() {
-  fs.mkdirSync(SHOTS, { recursive: true });
-  try { fs.rmSync(DATA, { recursive: true, force: true }); } catch (e) { /* ignore */ }
-  fs.mkdirSync(DATA, { recursive: true });
+  const server = await startServer({ root: ROOT, port: PORT, data: DATA, waitMs: 1400 });
 
-  const server = spawn(process.execPath, [path.join(ROOT, 'server.js'), String(PORT)], {
-    cwd: ROOT,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: Object.assign({}, process.env, { ARCADE_DATA: DATA })
-  });
-  let slog = '';
-  server.stdout.on('data', (d) => slog += d.toString());
-  server.stderr.on('data', (d) => slog += d.toString());
-  await sleep(1200);
-  if (slog.indexOf('localhost:' + PORT) < 0) {
-    console.error('服务器未启动\n' + slog);
-    process.exit(1);
-  }
   const url = 'http://127.0.0.1:' + PORT + '/';
 
   const A = new Browser('A', 9930);
@@ -288,9 +190,8 @@ async function main() {
   check('无致命错误层', fatal === false);
 
   A.kill(); B.kill(); C.kill();
-  server.kill();
+  await server.stop();
   await sleep(400);
-  try { fs.rmSync(DATA, { recursive: true, force: true }); } catch (e) { /* ignore */ }
 
   console.log('');
   console.log(fails === 0 ? '全部通过' : fails + ' 项失败');

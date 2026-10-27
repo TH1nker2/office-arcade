@@ -3,7 +3,7 @@
 'use strict';
 
 const path = require('path');
-for (const f of ['core', 'registry']) require(path.join(__dirname, '..', 'shared', f + '.js'));
+for (const f of ['core', 'registry', 'games/constants']) require(path.join(__dirname, '..', 'shared', f + '.js'));
 for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw']) {
   require(path.join(__dirname, '..', 'shared', 'games', g + '.js'));
 }

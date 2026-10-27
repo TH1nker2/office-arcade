@@ -1,0 +1,73 @@
+/* ---------------- 房间 ---------------- */
+.room-panel {
+  width: min(860px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  animation: rise .3s ease both;
+}
+
+.room-head {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(34, 211, 238, 0.06), transparent);
+}
+.room-code-block .room-label { font-size: 10px; letter-spacing: .24em; color: var(--dim); }
+.room-code { font-size: 30px; font-weight: 900; letter-spacing: .28em; color: var(--cyan); line-height: 1.1; }
+.room-head-mid { flex: 1; }
+.room-game { font-size: 14px; font-weight: 700; }
+.room-status { font-size: 11.5px; color: var(--dim); margin-top: 3px; }
+
+.room-body { display: block; padding: 16px 18px; overflow-y: auto; flex: 1 1 auto; }
+
+.room-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.room-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--line);
+}
+.room-player.me { background: rgba(34, 211, 238, 0.10); border-color: rgba(34, 211, 238, 0.3); }
+.room-player .rp-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  color: #04121a;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+.room-player .rp-main { flex: 1; min-width: 0; }
+.room-player .rp-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-player .rp-sub { font-size: 10.5px; color: var(--dim); }
+.room-player .rp-tag { font-size: 9.5px; color: var(--amber); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 4px; padding: 0 5px; }
+
+.room-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.18);
+}
+.room-foot .game-desc { flex: 1; font-size: 11.5px; color: var(--dim); line-height: 1.5; }
+

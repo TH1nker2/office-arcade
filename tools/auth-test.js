@@ -3,10 +3,10 @@
 'use strict';
 
 const { spawn } = require('child_process');
-const http = require('http');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const { makeRequest, cookieOf } = require('./lib/http');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8900 + Math.floor(Math.random() * 40);
@@ -19,31 +19,7 @@ function ok(name, cond, extra) {
   if (!cond) fails++;
 }
 
-function request(method, p, body, cookie) {
-  return new Promise((resolve, reject) => {
-    const payload = body ? JSON.stringify(body) : null;
-    const headers = { 'Content-Type': 'application/json' };
-    if (cookie) headers['Cookie'] = cookie;
-    if (payload) headers['Content-Length'] = Buffer.byteLength(payload);
-    const req = http.request({ host: '127.0.0.1', port: PORT, path: p, method, headers }, (res) => {
-      let b = '';
-      res.on('data', (d) => b += d);
-      res.on('end', () => {
-        let json = {};
-        try { json = JSON.parse(b); } catch (e) { /* ignore */ }
-        resolve({ status: res.statusCode, headers: res.headers, body: json });
-      });
-    });
-    req.on('error', reject);
-    if (payload) req.write(payload);
-    req.end();
-  });
-}
-
-function cookieOf(res) {
-  const sc = res.headers['set-cookie'];
-  return sc && sc.length ? sc[0].split(';')[0] : '';
-}
+const request = makeRequest(PORT);
 
 class WsClient {
   constructor(token, label) {
