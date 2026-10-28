@@ -198,6 +198,53 @@
     });
   }
 
+  /* ============================================================
+   * 五子棋：悔棋 / 和棋 / 认输
+   * ============================================================ */
+  function gomokuPlayerName(id) {
+    var list = APP.game && APP.game.players || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) return list[i].name;
+    }
+    return '';
+  }
+
+  function hideGomokuActions() {
+    $('gomoku-actions').classList.add('hidden');
+    $('request-overlay').classList.add('hidden');
+    $('resign-overlay').classList.add('hidden');
+  }
+
+  function updateGomokuActions(s) {
+    var box = $('gomoku-actions');
+    if (!s || APP.screen !== 'play' || !APP.game || APP.game.id !== 'gomoku' ||
+      APP.over || s.win || s.draw) {
+      hideGomokuActions();
+      return;
+    }
+    box.classList.remove('hidden');
+
+    var rq = s.rq || { undo: 0, draw: 0 };
+    var pending = !!s.pending;
+    $('gomoku-undo-count').textContent = Math.max(0, 3 - (rq.undo || 0));
+    $('gomoku-draw-count').textContent = Math.max(0, 3 - (rq.draw || 0));
+    $('gomoku-undo').disabled = pending || (rq.undo || 0) >= 3 || s.mv <= 0;
+    $('gomoku-draw').disabled = pending || (rq.draw || 0) >= 3;
+    $('gomoku-resign').disabled = pending;
+
+    if (pending && s.pending.from !== APP.me.id) {
+      var type = s.pending.type;
+      var from = gomokuPlayerName(s.pending.from) || '对方';
+      $('request-title').textContent = from + (type === 'undo' ? ' 请求悔棋' : ' 请求和棋');
+      $('request-text').textContent = type === 'undo'
+        ? '同意后将撤销最近一手，由落子方重新下。'
+        : '同意后本局以平局结束，双方各 +2 分。';
+      $('request-overlay').classList.remove('hidden');
+    } else {
+      $('request-overlay').classList.add('hidden');
+    }
+  }
+
   /* 你画我猜：只有画手看得到的画布右上角工具栏 */
   function updateDrawToolbar(s) {
     var box = $('draw-tools');
@@ -283,6 +330,8 @@
     pushFeed: pushFeed,
     askExit: askExit,
     bindDraw: bindDraw,
+    updateGomokuActions: updateGomokuActions,
+    hideGomokuActions: hideGomokuActions,
     updateDrawToolbar: updateDrawToolbar,
     updateHintBar: updateHintBar,
     updateDrawMasks: updateDrawMasks

@@ -187,6 +187,34 @@
     }
     $('hud-clear').addEventListener('click', clearCanvas);
 
+    /* 五子棋：悔棋 / 和棋 / 认输 */
+    $('gomoku-undo').addEventListener('click', function () {
+      Net.send({ t: 'input', i: { act: 'undo' } });
+      toast('已请求悔棋，等待对方同意');
+    });
+    $('gomoku-draw').addEventListener('click', function () {
+      Net.send({ t: 'input', i: { act: 'draw' } });
+      toast('已请求和棋，等待对方同意');
+    });
+    $('gomoku-resign').addEventListener('click', function () {
+      $('resign-overlay').classList.remove('hidden');
+    });
+    $('resign-cancel').addEventListener('click', function () {
+      $('resign-overlay').classList.add('hidden');
+    });
+    $('resign-ok').addEventListener('click', function () {
+      $('resign-overlay').classList.add('hidden');
+      Net.send({ t: 'input', i: { act: 'resign' } });
+    });
+    $('request-accept').addEventListener('click', function () {
+      $('request-overlay').classList.add('hidden');
+      Net.send({ t: 'input', i: { act: 'reply', accept: true } });
+    });
+    $('request-decline').addEventListener('click', function () {
+      $('request-overlay').classList.add('hidden');
+      Net.send({ t: 'input', i: { act: 'reply', accept: false } });
+    });
+
     /* 画手快捷键：C 清空画布（输入框/弹层打开时不触发） */
     root.addEventListener('keydown', function (e) {
       if (e.code !== 'KeyC' || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -460,6 +488,12 @@
           pushFeed({ verb: '', color: e.color, name: e.name, vcolor: '#a3e635', vname: '起飞' });
         } else if (e.t === 'move' && e.to === 44) {
           pushFeed({ verb: '', color: e.color, name: e.name, vcolor: '#a3e635', vname: '到家' });
+        } else if (e.t === 'decline') {
+          toast('对方拒绝了' + (e.kind === 'undo' ? '悔棋' : '和棋') + '请求');
+        } else if (e.t === 'undo') {
+          toast('悔棋成功');
+        } else if (e.t === 'draw') {
+          toast('双方同意和棋');
         }
       }
     });
@@ -605,7 +639,12 @@
       toastTimer -= dt;
       if (toastTimer <= 0) $('toast').classList.add('hidden');
     }
-    if (APP.screen !== 'play' || !APP.snap) return;
+    if (APP.screen !== 'play' || !APP.snap) {
+      if (AR.GameUI && AR.GameUI.hideGomokuActions) AR.GameUI.hideGomokuActions();
+      return;
+    }
+
+    if (APP.game && APP.game.id === 'gomoku') AR.GameUI.updateGomokuActions(APP.snap);
 
     updateDrawMasks();
     updateDrawToolbar(APP.snap);

@@ -52,7 +52,7 @@
       id: 'gomoku', name: '五子棋', sub: 'GOMOKU', tag: '棋类', icon: '⚫',
       time: 0, min: 2, max: 2,
       desc: '15×15 经典棋盘，不限时轮流落子，率先连成五子者获胜。',
-      keys: ['点击棋盘：落子']
+      keys: ['点击棋盘：落子', '悔棋 / 和棋：需对方同意', '认输：立即结束']
     },
     {
       id: 'ludo', name: '飞行棋', sub: 'AERO CHESS', tag: '派对', icon: '✈️',

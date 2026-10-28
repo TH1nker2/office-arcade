@@ -124,6 +124,59 @@
     }
   }
 
+  /* 点到线段的距离平方：只抽查 trail 点会在长蛇身上漏判，
+     线段判定能覆盖"头从两个采样点之间穿过"的情况。 */
+  function segDist2(px, py, a, b) {
+    var dx = b.x - a.x;
+    var dy = b.y - a.y;
+    var l2 = dx * dx + dy * dy;
+    var t = 0;
+    if (l2 > 0) {
+      t = ((px - a.x) * dx + (py - a.y) * dy) / l2;
+      if (t < 0) t = 0;
+      else if (t > 1) t = 1;
+    }
+    var qx = a.x + dx * t;
+    var qy = a.y + dy * t;
+    return AR.dist2(px, py, qx, qy);
+  }
+
+  /* 空间网格：长蛇的 trail 点很多，逐对逐点扫描会随长度增长而卡顿。
+     先把所有蛇身线段放进 40px 网格，蛇头只检查周围格子。 */
+  function buildTrailGrid(state) {
+    var cell = 40;
+    var grid = new Map();
+    for (var id in state.snakes) {
+      var o = state.snakes[id];
+      if (!o.alive) continue;
+      var lim = Math.min(o.trail.length, o.len);
+      for (var i = 2; i < lim; i++) {
+        var a = o.trail[i - 1];
+        var b = o.trail[i];
+        var minX = Math.min(a.x, b.x) - 14;
+        var maxX = Math.max(a.x, b.x) + 14;
+        var minY = Math.min(a.y, b.y) - 14;
+        var maxY = Math.max(a.y, b.y) + 14;
+        var cx0 = Math.floor(minX / cell);
+        var cx1 = Math.floor(maxX / cell);
+        var cy0 = Math.floor(minY / cell);
+        var cy1 = Math.floor(maxY / cell);
+        for (var cx = cx0; cx <= cx1; cx++) {
+          for (var cy = cy0; cy <= cy1; cy++) {
+            var key = cx + ',' + cy;
+            var list = grid.get(key);
+            if (!list) {
+              list = [];
+              grid.set(key, list);
+            }
+            list.push({ id: id, a: a, b: b });
+          }
+        }
+      }
+    }
+    return { cell: cell, grid: grid };
+  }
+
   AR.games.snake = {
     id: 'snake',
 
@@ -232,31 +285,31 @@
         while (s.trail.length > s.len + 4) s.trail.pop();
       }
 
-      /* 撞身体检测 */
+      /* 撞身体检测：线段 + 空间网格，长蛇也不会出现抽样漏判或卡顿 */
+      var trailGrid = buildTrailGrid(state);
       for (id in state.snakes) {
         s = state.snakes[id];
         if (!s.alive) continue;
-        for (var oid in state.snakes) {
-          if (oid === id) continue;
-          var o = state.snakes[oid];
-          if (!o.alive) continue;
-          var lim = Math.min(o.trail.length, o.len);
-          /* 这里有两次踩坑记录：
-             1) 起点必须从 2 而不是 6 开始，否则对手的"脖子"整段判不到，
-                两条蛇会互相穿过去；
-             2) 判定半径要覆盖蛇身宽度（12px 左右），9px 太小。
-             前 30 个点逐点判（脖子最容易被穿），更远处每 3 点抽查一次省 CPU。 */
-          /* 颈部（前 30 个点）逐点判，避免从脖子中间穿过去；
-             远处按 3 点一个间隔抽查，够密且不会太吃 CPU */
-          for (i = 2; i < lim;) {
-            var p = o.trail[i];
-            if (AR.dist2(s.x, s.y, p.x, p.y) < 12 * 12) {
-              killSnake(state, s, o);
-              break;
+        var cell = trailGrid.cell;
+        var gx0 = Math.floor((s.x - 12) / cell);
+        var gx1 = Math.floor((s.x + 12) / cell);
+        var gy0 = Math.floor((s.y - 12) / cell);
+        var gy1 = Math.floor((s.y + 12) / cell);
+        for (var gx = gx0; gx <= gx1 && s.alive; gx++) {
+          for (var gy = gy0; gy <= gy1 && s.alive; gy++) {
+            var segs = trailGrid.grid.get(gx + ',' + gy);
+            if (!segs) continue;
+            for (var k = 0; k < segs.length; k++) {
+              var seg = segs[k];
+              if (seg.id === id) continue;
+              var owner = state.snakes[seg.id];
+              if (!owner || !owner.alive) continue;
+              if (segDist2(s.x, s.y, seg.a, seg.b) < 12 * 12) {
+                killSnake(state, s, owner);
+                break;
+              }
             }
-            i += (i < 30) ? 1 : 3;
           }
-          if (!s.alive) break;
         }
         /* 撞自己不再死亡：允许盘成麻花 */
       }

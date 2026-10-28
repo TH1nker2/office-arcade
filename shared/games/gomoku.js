@@ -126,6 +126,29 @@
     return false;
   }
 
+  /* 悔棋：撤销最近一手，由落子方重新下 */
+  function undoLast(state) {
+    var m = state.history.pop();
+    if (!m) return false;
+    state.board[idx(m.x, m.y)] = 0;
+    state.moves = Math.max(0, state.moves - 1);
+    var prev = state.history[state.history.length - 1];
+    state.last = prev ? { x: prev.x, y: prev.y, v: prev.v } : null;
+    state.winnerId = null;
+    state.winLine = null;
+    state.winPending = 0;
+    state.draw = false;
+    var turn = state.order.indexOf(m.id);
+    if (turn >= 0) state.turn = turn;
+    var p = state.players[m.id];
+    state.events.push({
+      t: 'undo', id: m.id,
+      name: p ? p.name : '',
+      x: m.x, y: m.y
+    });
+    return true;
+  }
+
   AR.games.gomoku = {
     id: 'gomoku',
     rate: 8,
@@ -143,6 +166,10 @@
         turn: 0,                   /* 0 黑 1 白 */
         side: {},                  /* id -> 1 或 2 */
         moves: 0,
+        history: [],
+        pending: null,
+        draw: false,
+        req: { undo: 0, draw: 0 },
         winnerId: null,
         winLine: null,
         winPending: 0,
@@ -163,6 +190,7 @@
       if (i < 0) return;
       state.order.splice(i, 1);
       delete state.players[id];
+      state.pending = null;
       if (!state.order.length || !state.ended) {
         state.ended = true;
         state.winnerId = state.order[0] || null;
@@ -172,6 +200,68 @@
     /* 处理一次玩家操作。inp 的结构由 js/input.js 里对应分支决定。 */
     input: function (state, id, inp) {
       if (state.ended || state.winPending > 0 || !inp) return;
+      if (!state.players[id]) return;
+
+      /* 认输：不需要对方同意，立即结束 */
+      if (inp.act === 'resign') {
+        var winner = null;
+        state.order.forEach(function (oid) { if (oid !== id) winner = oid; });
+        state.pending = null;
+        state.ended = true;
+        state.winnerId = winner;
+        state.winLine = null;
+        state.winPending = 0;
+        state.events.push({
+          t: 'resign', by: id, name: state.players[id].name, winner: winner
+        });
+        return;
+      }
+
+      /* 同意 / 拒绝对方的悔棋或和棋请求 */
+      if (inp.act === 'reply') {
+        var pend = state.pending;
+        if (!pend || pend.from === id) return;
+        var requester = state.players[pend.from];
+        if (inp.accept) {
+          if (pend.type === 'undo') {
+            undoLast(state);
+          } else if (pend.type === 'draw') {
+            state.draw = true;
+            state.ended = true;
+            state.winnerId = null;
+            state.winLine = null;
+            state.winPending = 0;
+            state.events.push({
+              t: 'draw', by: pend.from,
+              name: requester ? requester.name : '', id: id
+            });
+          }
+        } else {
+          state.events.push({
+            t: 'decline', kind: pend.type, by: id,
+            name: state.players[id].name
+          });
+        }
+        state.pending = null;
+        return;
+      }
+
+      /* 发起悔棋 / 和棋：每局全桌各最多 3 次，必须等对方回复 */
+      if (inp.act === 'undo' || inp.act === 'draw') {
+        if (state.pending) return;
+        var rq = state.req;
+        if (!rq || rq[inp.act] >= 3) return;
+        if (inp.act === 'undo' && !state.history.length) return;
+        rq[inp.act]++;
+        state.pending = { type: inp.act, from: id };
+        state.events.push({
+          t: 'request', kind: inp.act, by: id, name: state.players[id].name
+        });
+        return;
+      }
+
+      /* 等待对方回复期间不能落子 */
+      if (state.pending) return;
       if (state.order[state.turn % state.order.length] !== id) return;
       var x = inp.x | 0;
       var y = inp.y | 0;
@@ -182,6 +272,7 @@
       state.board[idx(x, y)] = v;
       state.moves++;
       state.last = { x: x, y: y, v: v };
+      state.history.push({ x: x, y: y, v: v, id: id });
       state.events.push({ t: 'place', id: id, name: state.players[id].name, color: state.players[id].color, x: x, y: y, v: v });
 
       var win = lineAt(state.board, x, y, v);
@@ -193,7 +284,8 @@
         return;
       }
       if (state.moves >= N * N) {
-        state.ended = true;          /* 和棋 */
+        state.draw = true;
+        state.ended = true;          /* 棋盘下满和棋 */
         return;
       }
       state.turn = (state.turn + 1) % state.order.length;
@@ -214,6 +306,12 @@
     /* 人机决策，返回一个 input 对象（或 null 表示这一帧什么都不做）。 */
     bot: function (state, id, dt, level) {
       if (state.ended) return null;
+      if (state.winPending > 0) return null;
+      /* 人机默认同意玩家的悔棋/和棋请求 */
+      if (state.pending) {
+        if (state.pending.from !== id) return { act: 'reply', accept: true };
+        return null;
+      }
       if (state.order[state.turn % state.order.length] !== id) return null;
       var lv = BOT_LEVEL[level] || 1;
       var me = state.side[id];
@@ -242,8 +340,9 @@
         list.push({
           id: id,
           name: p.name,
-          score: state.winnerId === id ? 100 : 0,
-          kills: state.winnerId === id ? 1 : 0
+          score: state.draw ? 50 : (state.winnerId === id ? 100 : 0),
+          kills: state.draw ? 0 : (state.winnerId === id ? 1 : 0),
+          draw: !!state.draw
         });
       });
       list.sort(function (a, b) { return b.score - a.score; });
@@ -265,6 +364,9 @@
         win: state.winnerId,
         wl: state.winLine || null,
         wp: Math.max(0, state.winPending || 0),
+        draw: !!state.draw,
+        pending: state.pending ? { type: state.pending.type, from: state.pending.from } : null,
+        rq: state.req,
         e: ev
       };
     }

@@ -5,7 +5,7 @@
 > **仓库**：https://gitee.com/th1nker/office-arcade.git
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
 > **基线**：`main` 分支，`18c87e4`（版本 3.4.1）→ `0e9c86a`（2026-10-28 优化）
-> **当前状态（最后同步时）**：合作弹幕 v2 与你画我猜画布工具栏均已合并推送到 `main`（工具栏合并提交 `355f972`；最终提交以 `git log` 为准）。
+> **当前状态（最后同步时）**：合作弹幕 v2 与画布工具栏已合并到 `main`；五子棋操作 + 蛇球长蛇修复在 `feature/gomoku-snake-fixes` 完成并通过全量测试，合并状态以 `git log` 为准。
 
 ---
 
@@ -41,6 +41,7 @@
 - 基线 `18c87e4`（v3.4.1）之上是一轮已推送优化 `0e9c86a`，涉及服务端、前端、测试、文档和发版脚本。
 - `feature/shmup-v2` 的合作弹幕 v2 已合并并推送到 `main`；最终分支/提交以 `git log` 为准。
 - `feature/draw-tools` 的你画我猜画布工具栏（画布外侧、8 色、C 快捷键）已合并并推送到 `main`。
+- `feature/gomoku-snake-fixes` 的五子棋悔棋/和棋/认输与蛇球长蛇碰撞/渲染修复已通过全量测试；合并状态以 `git log` 为准。
 - 本地额外文件：`runtime/`（Node 运行时）、`admins.json`（测试管理员）、`vendor/_cache`（运行时下载缓存），均被 `.gitignore` 排除。
 - UI 测试会改写 `shots/*.png`；跑完应 `git checkout -- shots/` 还原，除非明确要更新截图。
 - 本轮验证：`tools/test-all.js --with-ui` 19 个脚本全部通过（约 180s）；`bot-test` 连跑 10 次通过；首屏 gzip 后约 103 KB，snake/tank/shmup headless RAF p95 16.7ms。
@@ -80,6 +81,12 @@
 - 清空画布按钮与颜色选择移到画布右侧留白区，不遮挡画布；新增 `C` 快捷键。
 - 8 种画笔颜色，默认黑色；服务端校验 `#rrggbb`，非法颜色回退黑色。
 - 工具栏只对当前画手显示；`ui-v5` 覆盖位置/颜色/快捷键/猜手不可见；截图 `shots/83-draw-tools.png`。已合并推送。
+
+### 2026-10-28 · 五子棋操作 + 蛇球长蛇修复（feature/gomoku-snake-fixes）
+- 五子棋：新增悔棋/和棋/认输。悔棋撤销最近一手并由落子方重下；悔棋/和棋需对方同意；每局全桌每种最多发起 3 次；认输立即结束。
+- 和棋双方各 +2 分、不计胜场；结算/战绩显示平局。人机自动同意请求。
+- 蛇球：collision 从抽点改为线段 + 40px 空间网格，修复长蛇后段穿越，并降低长蛇同屏的 O(n²) 开销；渲染去掉每蛇 shadowBlur，改为半透明外圈光晕。
+- 验证：`game-test` 新增 gomoku 操作与长蛇穿越断言；`ui-v3` 覆盖人机和棋；新增 `ui-v8` 双浏览器覆盖同意/拒绝/平局/认输；全量 `test-all --with-ui` 20 个脚本通过（约 204s）。
 
 ### P3 可访问性/安全
 - 新增 `js/ui/a11y.js`：覆盖层 ARIA、打开聚焦、Tab 陷阱、关闭归还焦点；玩家行支持键盘打开菜单，菜单支持方向键/Home/End/Enter；全局 `:focus-visible`、减少动效 CSS。

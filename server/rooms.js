@@ -283,16 +283,22 @@ function finishRound(room) {
   const raw = g.results(room.game);
   const list = [];
   const matchPlayers = [];
+  /* 和棋：双方各 +2，不计胜场；place 用 0 表示平局 */
+  const isDraw = raw.length > 1 && raw.every((r) => r.draw);
 
   raw.forEach((r, i) => {
-    const place = i + 1;
+    const place = isDraw ? 0 : i + 1;
     const p = room.players.get(r.id);
     const isBot = !!(p && p.bot);
-    const delta = place === 1 ? 5 : (place === 2 ? 3 : (place === 3 ? 1 : 0));
+    const delta = isDraw ? 2 : (place === 1 ? 5 : (place === 2 ? 3 : (place === 3 ? 1 : 0)));
     if (p) {
       p.score += delta;
-      p.wins += place === 1 ? 1 : 0;
-      p.streak = place === 1 ? p.streak + 1 : 0;
+      if (!isDraw) {
+        p.wins += place === 1 ? 1 : 0;
+        p.streak = place === 1 ? p.streak + 1 : 0;
+      } else {
+        p.streak = 0;
+      }
     }
     /* 人机不写战绩库 */
     if (!isBot) {
@@ -306,6 +312,7 @@ function finishRound(room) {
       detailLabel: DETAIL_LABEL[room.gameId] || '',
       place: place,
       delta: delta,
+      draw: isDraw,
       total: 0,
       streak: 0,
       bot: isBot
@@ -358,7 +365,8 @@ function finishRound(room) {
   });
   broadcastRoom(room);
   scheduleLobby();
-  console.log('[over] ' + room.code + ' ' + room.gameId + ' 冠军 ' + (list[0] && list[0].name));
+  console.log('[over] ' + room.code + ' ' + room.gameId +
+    (isDraw ? ' 平局' : (' 冠军 ' + (list[0] && list[0].name))));
 }
 
 /* 强制下线（管理员用） */

@@ -28,6 +28,7 @@
     $('choose-overlay').classList.add('hidden');
     $('draw-wait').classList.add('hidden');
     $('draw-tools').classList.add('hidden');
+    if (AR.GameUI && AR.GameUI.hideGomokuActions) AR.GameUI.hideGomokuActions();
     AR.View.init(msg.id);
     AR.Input.mode = msg.id;
     AR.Input.reset();
@@ -55,9 +56,13 @@
 
   function onOver(msg) {
     APP.over = msg;
+    if (AR.GameUI && AR.GameUI.hideGomokuActions) AR.GameUI.hideGomokuActions();
     var list = msg.results || [];
+    var isDraw = list.length > 1 && list.every(function (r) { return r.draw; });
     var title = '本局结束';
-    if (list.length) {
+    if (isDraw) {
+      title = '平局';
+    } else if (list.length) {
       title = list[0].name + ' 获胜';
       if (list[0].id === APP.me.id) title = '你赢了！';
     }
@@ -67,7 +72,7 @@
     var html = '<div class="res-row head"><span>名次</span><span>玩家</span><span class="v">本局</span><span class="d">积分</span><span class="s">总分</span></div>';
     list.forEach(function (r) {
       html += '<div class="res-row' + (r.id === APP.me.id ? ' me' : '') + '">' +
-        '<span class="p">' + r.place + '</span>' +
+        '<span class="p">' + (r.draw ? '平' : r.place) + '</span>' +
         '<span>' + esc(r.name) + (r.detail && r.detailLabel ? ' <em class="det">' + r.detailLabel + ' ' + r.detail + '</em>' : '') + '</span>' +
         '<span class="v">' + r.score + '</span>' +
         '<span class="d">' + (r.delta ? '+' + r.delta : '—') + '</span>' +
@@ -76,7 +81,8 @@
     });
     $('over-table').innerHTML = html;
     showOverFn();
-    if (list.length && list[0].id === APP.me.id) Sfx.ok();
+    if (isDraw) Sfx.beep(440, 0.2, 'sine', 0.07);
+    else if (list.length && list[0].id === APP.me.id) Sfx.ok();
     else Sfx.beep(300, 0.2, 'sine', 0.07);
 
     /* 刷新自己的总分 */

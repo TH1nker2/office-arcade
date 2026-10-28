@@ -113,7 +113,7 @@
         var row = document.createElement('div');
         row.className = 'history-row';
         row.innerHTML = '<b>' + esc(m.gameName) + '</b>' +
-          '<span class="h-place">第 ' + m.place + ' 名</span>' +
+          '<span class="h-place">' + (m.place === 0 ? '平局' : ('第 ' + m.place + ' 名')) + '</span>' +
           '<span>' + m.score + '</span>' +
           '<span class="h-delta">+' + m.delta + ' · ' + time + '</span>';
         el.appendChild(row);
