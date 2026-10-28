@@ -19,9 +19,17 @@
       <div class="hud-timer" id="hud-timer">--</div>
       <div class="hud-round" id="hud-round">第 1 局</div>
       <div class="hud-spacer"></div>
-      <button class="hud-btn warn hidden" id="hud-clear" title="清空整块画布">清空画布</button>
       <button class="hud-btn" id="hud-back">退出游戏 (Esc)</button>
     </header>
+
+    <!-- 你画我猜：画布右上角悬浮工具栏 -->
+    <div class="draw-tools hidden" id="draw-tools" role="toolbar" aria-label="画笔工具">
+      <div class="draw-tools-title">画布工具</div>
+      <button class="hud-btn warn draw-clear" id="hud-clear" type="button"
+        title="清空整块画布（快捷键 C）" aria-keyshortcuts="C">清空画布 <kbd>C</kbd></button>
+      <div class="draw-tools-label">画笔颜色</div>
+      <div class="draw-colors" id="draw-colors"></div>
+    </div>
         <div class="kill-feed" id="kill-feed"></div>
 
 <div class="draw-hints hidden" id="draw-hints" aria-live="polite">
