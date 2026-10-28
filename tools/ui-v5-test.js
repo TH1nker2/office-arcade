@@ -98,6 +98,33 @@ async function main() {
   check('点选后拿到词语', !!word && word === choices[0], 'word=' + word + ' / 候选 ' + choices.join(','));
   check('猜手看不到词', (await guesser.ev('AR.App.word')) === null || (await guesser.ev('AR.App.word')) === undefined);
 
+  console.log('\n[2b] 画布工具栏与颜色');
+  const tools = JSON.parse(await drawer.ev(`(function(){
+    var d = AR.View.data;
+    var box = document.getElementById('draw-tools');
+    var r = box.getBoundingClientRect();
+    var active = document.querySelector('#draw-colors .draw-color.active');
+    return JSON.stringify({
+      visible: !box.classList.contains('hidden'),
+      swatches: document.querySelectorAll('#draw-colors .draw-color').length,
+      active: active && active.getAttribute('data-color'),
+      leftGap: Math.round(r.left - (d.bx + d.bw)),
+      topGap: Math.round(r.top - d.by)
+    });
+  })()`));
+  check('画手看到画布工具栏', tools.visible === true);
+  check('画笔颜色共 8 种', tools.swatches === 8, 'swatches=' + tools.swatches);
+  check('默认画笔是黑色', tools.active === '#111827', tools.active);
+  check('工具栏在画布右侧外，不遮挡画布',
+    tools.leftGap >= 4 && tools.leftGap <= 32 && tools.topGap >= 0 && tools.topGap <= 8,
+    'leftGap=' + tools.leftGap + ' topGap=' + tools.topGap);
+  const guesserTools = await guesser.ev('document.getElementById("draw-tools").classList.contains("hidden")');
+  check('猜手看不到画布工具栏', guesserTools === true);
+
+  await drawer.ev('document.querySelector(\'#draw-colors .draw-color[data-color="#ef4444"]\').click()');
+  await sleep(120);
+  check('切换画笔颜色', (await drawer.ev('AR.App.drawColor')) === '#ef4444', await drawer.ev('AR.App.drawColor'));
+
   console.log('\n[3] 作画与笔迹同步');
   const box = await drawer.ev('JSON.stringify({bx: AR.View.data.bx, by: AR.View.data.by, bw: AR.View.data.bw, bh: AR.View.data.bh})');
   const b = JSON.parse(box);
@@ -116,6 +143,14 @@ async function main() {
   const after = await darkPixels(guesser);
   check('画手的笔迹传到了猜手屏幕', after > before + 200, before + ' -> ' + after + ' 个深色像素');
   await guesser.shot('61-draw-board');
+  await drawer.shot('83-draw-tools');
+
+  const beforeClear = await darkPixels(guesser);
+  await drawer.ev('document.body.dispatchEvent(new KeyboardEvent("keydown",{code:"KeyC",bubbles:true,cancelable:true}))');
+  await sleep(500);
+  const afterClear = await darkPixels(guesser);
+  check('C 快捷键清空画布', afterClear < 50 && afterClear < beforeClear,
+    beforeClear + ' -> ' + afterClear + ' 个深色像素');
 
   console.log('\n[4] 猜中计分');
   await guesser.ev('document.getElementById("chat-text").value = ' + JSON.stringify(word));

@@ -22,6 +22,7 @@
     invite: null,
     drawing: false,
     lastDraw: null,
+    drawColor: '#111827',
     profileDraft: null,
     connected: false,
     version: null

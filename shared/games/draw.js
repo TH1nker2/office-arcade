@@ -159,8 +159,12 @@
 
       var s = msg.s;
       if (!s || typeof s.x !== 'number' || typeof s.y !== 'number') return null;
+      var color = String(s.c || '#111827');
+      if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = '#111827';
+      var width = Number(s.w);
+      if (!(width >= 1 && width <= 12)) width = 4;
       if (state.strokes.length < 4000) {
-        state.strokes.push([Math.round(s.x), Math.round(s.y), s.e || 'm', s.c || '#111']);
+        state.strokes.push([Math.round(s.x), Math.round(s.y), s.e || 'm', color]);
       }
       return {
         t: 'paint',
@@ -169,8 +173,8 @@
           y: Math.round(s.y),
           p: s.p ? [Math.round(s.p[0]), Math.round(s.p[1])] : null,
           e: s.e || 'm',
-          c: s.c || '#111',
-          w: s.w || 4
+          c: color,
+          w: width
         }
       };
     },

@@ -27,7 +27,7 @@
     APP.drawTurn = -1;
     $('choose-overlay').classList.add('hidden');
     $('draw-wait').classList.add('hidden');
-    $('hud-clear').classList.add('hidden');
+    $('draw-tools').classList.add('hidden');
     AR.View.init(msg.id);
     AR.Input.mode = msg.id;
     AR.Input.reset();

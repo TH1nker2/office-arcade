@@ -40,7 +40,7 @@
       id: 'draw', name: '你画我猜', sub: 'DRAW & GUESS', tag: '社交', icon: '🎨',
       time: 0, min: 2, max: 10,
       desc: '轮流当画手，其余人在聊天框抢答，猜得越快得分越高。',
-      keys: ['鼠标：画画', '回车：发送答案', '右上角「清空画布」：擦掉重画']
+      keys: ['鼠标：画画', '回车：发送答案', '右侧工具栏：颜色 / 清空（C）']
     },
     {
       id: 'racing', name: '极速环线', sub: 'NEON RACING', tag: '竞速', icon: '🏎️',

@@ -59,8 +59,65 @@
     $('confirm-overlay').classList.remove('hidden');
   }
 
+  var DRAW_COLORS = [
+    { c: '#111827', n: '黑色' },
+    { c: '#ef4444', n: '红色' },
+    { c: '#f97316', n: '橙色' },
+    { c: '#eab308', n: '黄色' },
+    { c: '#22c55e', n: '绿色' },
+    { c: '#3b82f6', n: '蓝色' },
+    { c: '#a855f7', n: '紫色' },
+    { c: '#92400e', n: '棕色' }
+  ];
+  var drawToolsBuilt = false;
+
+  function setDrawColor(color) {
+    APP.drawColor = color;
+    var buttons = document.querySelectorAll('#draw-colors .draw-color');
+    for (var i = 0; i < buttons.length; i++) {
+      var on = buttons[i].getAttribute('data-color') === color;
+      buttons[i].classList.toggle('active', on);
+      buttons[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+
+  function buildDrawTools() {
+    if (drawToolsBuilt) return;
+    var box = $('draw-colors');
+    if (!box) return;
+    DRAW_COLORS.forEach(function (item) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'draw-color';
+      btn.style.background = item.c;
+      btn.title = item.n;
+      btn.setAttribute('data-color', item.c);
+      btn.setAttribute('aria-label', item.n);
+      btn.addEventListener('click', function () {
+        setDrawColor(item.c);
+        Sfx.click();
+      });
+      box.appendChild(btn);
+    });
+    drawToolsBuilt = true;
+    setDrawColor(APP.drawColor || DRAW_COLORS[0].c);
+  }
+
+  function positionDrawTools() {
+    var d = AR.View.data;
+    var box = $('draw-tools');
+    if (!d || !d.bx || !box) return;
+    /* 放在画布右侧留白区，不覆盖画布 */
+    var left = d.bx + d.bw + 12;
+    var maxLeft = (root.innerWidth || document.documentElement.clientWidth) - 14 - box.offsetWidth;
+    if (left > maxLeft) left = maxLeft;
+    box.style.left = Math.max(8, Math.round(left)) + 'px';
+    box.style.top = Math.max(8, Math.round(d.by)) + 'px';
+  }
+
   function bindDraw() {
     var canvas = $('stage');
+    buildDrawTools();
 
     function pos(e) {
       var r = canvas.getBoundingClientRect();
@@ -70,7 +127,7 @@
       var stroke = {
         x: Math.round(point.x), y: Math.round(point.y),
         p: prev ? [Math.round(prev.x), Math.round(prev.y)] : null,
-        e: kind, c: '#111827', w: 4
+        e: kind, c: APP.drawColor || DRAW_COLORS[0].c, w: 4
       };
       AR.Render.paint({ s: stroke });        /* 自己的笔迹先画在本地 */
       Net.send({ t: 'draw', s: stroke });
@@ -141,13 +198,17 @@
     });
   }
 
-  /* 你画我猜：抽屉才看得到的「清空画布」按钮 */
+  /* 你画我猜：只有画手看得到的画布右上角工具栏 */
   function updateDrawToolbar(s) {
-    var btn = $('hud-clear');
+    var box = $('draw-tools');
     var show = !!(s && APP.screen === 'play' && APP.game && APP.game.id === 'draw' &&
       s.ph === 'draw' && s.dr === APP.me.id);
-    if (btn.classList.contains('hidden') === !show) return;
-    btn.classList.toggle('hidden', !show);
+    if (!show || !AR.View.data || !AR.View.data.bx) {
+      box.classList.add('hidden');
+      return;
+    }
+    if (box.classList.contains('hidden')) box.classList.remove('hidden');
+    positionDrawTools();
   }
 
   /* 你画我猜：游戏内提示条 */

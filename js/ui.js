@@ -179,11 +179,22 @@
       Net.send({ t: 'start' });
     });
     $('btn-invite').addEventListener('click', openInvitePicker);
-    $('hud-clear').addEventListener('click', function () {
-      if (!APP.snap || APP.snap.ph !== 'draw' || APP.snap.dr !== APP.me.id) return;
+    function clearCanvas() {
+      if (!APP.snap || APP.snap.ph !== 'draw' || !APP.me || APP.snap.dr !== APP.me.id) return;
       AR.Render.clearBoard();
       Net.send({ t: 'draw', clear: 1 });
       Sfx.click();
+    }
+    $('hud-clear').addEventListener('click', clearCanvas);
+
+    /* 画手快捷键：C 清空画布（输入框/弹层打开时不触发） */
+    root.addEventListener('keydown', function (e) {
+      if (e.code !== 'KeyC' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (APP.screen !== 'play' || !APP.game || APP.game.id !== 'draw') return;
+      var t = e.target;
+      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '')) return;
+      if (document.querySelector('.overlay:not(.hidden)')) return;
+      clearCanvas();
     });
 
     $('planes-seg').addEventListener('click', function (e) {
