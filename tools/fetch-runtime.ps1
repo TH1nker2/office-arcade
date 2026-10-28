@@ -23,6 +23,12 @@ function Read-Utf8($path) { [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8)
 
 $manifest = Read-Utf8 (Join-Path $root 'tools\runtime-manifest.json') | ConvertFrom-Json
 $nodeVer = $manifest.node
+# Windows 上 PATH 里的 tar 可能是 Git/MSYS 版本，会把 C:\ 当成远程主机。
+$TarExe = if ($env:OS -eq 'Windows_NT') {
+    Join-Path $env:SystemRoot 'System32\tar.exe'
+} else {
+    'tar'
+}
 
 # 当前机器的 target
 function Get-HostTarget {
@@ -86,7 +92,7 @@ foreach ($t in $Target) {
     if ($info.archive -like '*.zip') {
         Expand-Archive -Path $archive -DestinationPath $tmp -Force
     } else {
-        tar -xf $archive -C $tmp
+        & $TarExe -xf $archive -C $tmp
         if ($LASTEXITCODE -ne 0) { throw "解压失败: $($info.archive)" }
     }
 

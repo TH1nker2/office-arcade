@@ -32,6 +32,12 @@ $ver = (Read-Utf8 (Join-Path $root 'version.json') | ConvertFrom-Json).version
 $manifest = Read-Utf8 (Join-Path $root 'tools\runtime-manifest.json') | ConvertFrom-Json
 $dist = Join-Path $root 'dist'
 $stageRoot = Join-Path $dist '_stage'
+# Windows 上 PATH 里的 tar 可能是 Git/MSYS 版本，会把 C:\ 当成远程主机。
+$TarExe = if ($env:OS -eq 'Windows_NT') {
+    Join-Path $env:SystemRoot 'System32\tar.exe'
+} else {
+    'tar'
+}
 
 Write-Host ""
 Write-Host ("== 构建 v" + $ver + " / " + ($Target -join ', ') + " / " + ($Edition -join ', ') + " ==") -ForegroundColor Cyan
@@ -176,7 +182,7 @@ foreach ($t in $Target) {
                 if ($LASTEXITCODE -ne 0) { throw "pack-tar.py 失败" }
             } else {
                 Push-Location $stageRoot
-                tar -czf $out $name
+                & $TarExe -czf $out $name
                 Pop-Location
                 if ($LASTEXITCODE -ne 0) { throw "tar 打包失败" }
             }
