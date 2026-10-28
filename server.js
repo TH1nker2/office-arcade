@@ -30,7 +30,7 @@
  *   leaveRoom                           离开房间
  *   invite      { toId }                邀请某人（对方在线且不在房间）
  *   inviteReply { inviteId, accept }    接受 / 拒绝邀请
- *   setting     { key, value }          房主改设置（draw 的 level、ludo 的 planes）
+ *   setting     { key, value }          房主改设置（draw 的 level、ludo 的 planes、undercover 的 rounds）
  *   botAdd / botRemove { id }           加 / 删人机（固定普通难度）
  *   start                               房主开局（仅 lobby 阶段）
  *   input       { i }                   对局输入，i 的内容由各游戏自己约定
@@ -43,6 +43,7 @@
  *   lobby  room  leftRoom  game  state  over
  *   chat  chatHistory  invite  inviteSent  inviteResult  error
  *   choices  word  paint  paintClear      你画我猜的私有/广播消息
+ *   undercover                            谁是卧底只发给本人的身份和词
  *   kicked                                被顶号、封禁或管理员请离
  *
  * ---- 必须守住的不变式 ----
@@ -67,6 +68,7 @@ require('./shared/games/draw.js');
 require('./shared/games/racing.js');
 require('./shared/games/ludo.js');
 require('./shared/games/gomoku.js');
+require('./shared/games/undercover.js');
 
 /* ---------- 服务端模块 ---------- */
 const http = require('http');
@@ -76,6 +78,7 @@ const { PORT, HOST, ROOT, VERSION, VERSION_TAG, DATA_DIR, store } = require('./s
 const { json, readJson } = require('./server/http-utils');
 const auth = require('./server/auth');
 const { WORDS } = require('./server/words');
+const { UNDERCOVER_PAIRS } = require('./server/undercover-words');
 const { presence: presenceMap, conns } = require('./server/state');
 const presence = require('./server/presence');
 const rooms = require('./server/rooms');
@@ -164,6 +167,7 @@ server.listen(PORT, HOST, () => {
   } else {
     console.log('  画猜词库： 内置默认（shared/words.json 未读到）');
   }
+  console.log('  卧底词对： ' + UNDERCOVER_PAIRS.length + ' 对（shared/undercover-words.json）');
   console.log('  本机浏览器： http://localhost:' + PORT);
   if (HOST === '0.0.0.0') {
     ips.forEach((ip) => console.log('  局域网访问： http://' + ip + ':' + PORT));

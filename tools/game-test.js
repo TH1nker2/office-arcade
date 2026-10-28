@@ -4,7 +4,7 @@
 
 const path = require('path');
 for (const f of ['core', 'registry', 'games/constants']) require(path.join(__dirname, '..', 'shared', f + '.js'));
-for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'ludo', 'gomoku']) {
+for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'ludo', 'gomoku', 'undercover']) {
   require(path.join(__dirname, '..', 'shared', 'games', g + '.js'));
 }
 const AR = globalThis.AR;
@@ -540,6 +540,163 @@ for (const [id, n, secs, cap] of cases) {
   const resignRes = g.results(st3);
   ok('gomoku 认输立即结束', st3.ended === true && st3.winnerId === 'p0');
   ok('gomoku 认输后胜者是对方', resignRes[0] && resignRes[0].id === 'p0');
+
+  console.log('');
+})();
+
+/* ============================================================
+ * 谁是卧底：身份、描述、投票、平票、胜负与个人名次
+ * ============================================================ */
+(function undercoverTest() {
+  console.log('=== 谁是卧底 ===');
+  const g = AR.games.undercover;
+  const pairs = [{ a: '可乐', b: '雪碧' }];
+
+  function advance(st, seconds) {
+    for (let i = 0; i < Math.round(seconds * 60) + 2; i++) g.tick(st, 1 / 60);
+  }
+  function passDescriptions(st) {
+    let guard = 0;
+    while (st.phase === 'describe' && guard++ < 30) {
+      const id = st.turnOrder[st.turn];
+      g.input(st, id, { act: 'describe', text: '第 ' + guard + ' 条描述' });
+    }
+    return guard;
+  }
+  function voteAll(st, targetFn) {
+    const alive = st.order.filter((id) => st.alive[id]);
+    alive.forEach((id) => {
+      const target = targetFn(id, alive);
+      if (target && target !== id && st.alive[target]) {
+        g.input(st, id, { act: 'vote', target: target });
+      }
+    });
+  }
+  function firstUndercover(st) {
+    return st.order.find((id) => st.roles[id] === 'undercover');
+  }
+  function startVoting(st) {
+    advance(st, 5.2);
+    passDescriptions(st);
+  }
+
+  const ps6 = players(6);
+  const st = g.create(ps6, { seed: 100, rounds: 99, pairs: pairs });
+  const ucIds = st.order.filter((id) => st.roles[id] === 'undercover');
+  const civIds = st.order.filter((id) => st.roles[id] === 'civilian');
+  ok('卧底人数按人数分配（6 人 2 卧底）', ucIds.length === 2 && civIds.length === 4,
+    'uc=' + ucIds.length + ' civ=' + civIds.length);
+  [[4, 1], [5, 1], [8, 2], [9, 3], [10, 3]].forEach(([n, want]) => {
+    const bs = g.create(players(n), { seed: 900 + n, pairs: pairs });
+    const got = bs.order.filter((id) => bs.roles[id] === 'undercover').length;
+    ok(n + ' 人局卧底人数', got === want, got + ' / ' + want);
+  });
+  ok('平民拿到同一个词', civIds.every((id) => st.words[id] === st.words[civIds[0]]), st.words[civIds[0]]);
+  ok('卧底拿到同一个词', ucIds.every((id) => st.words[id] === st.words[ucIds[0]]), st.words[ucIds[0]]);
+  ok('平民和卧底的词不同', st.words[civIds[0]] !== st.words[ucIds[0]]);
+  ok('最大轮数限制在 4-12', st.maxRounds === 12, 'maxRounds=' + st.maxRounds);
+  ok('开局先进入准备阶段', st.phase === 'brief', st.phase);
+
+  const snap0 = g.snapshot(st);
+  ok('公开快照不泄露身份', snap0.roles === null && !('words' in snap0) &&
+    JSON.stringify(snap0).indexOf(st.words[civIds[0]]) < 0);
+  const pm = g.privateFor(st, ucIds[0]);
+  ok('私有消息只含自己的身份和词',
+    pm && pm.role === 'undercover' && pm.word === st.words[ucIds[0]] &&
+    !('team' in pm) && !('teammates' in pm) && !('roles' in pm) && !('words' in pm),
+    JSON.stringify(pm));
+  ok('卧底之间互不知道队友', g.privateFor(st, ucIds[1]).role === 'undercover' &&
+    !('team' in g.privateFor(st, ucIds[1])));
+
+  advance(st, 5.2);
+  ok('准备结束进入描述', st.phase === 'describe', st.phase);
+  const first = st.turnOrder[st.turn];
+  const other = st.order.find((id) => id !== first);
+  g.input(st, other, { act: 'describe', text: '抢答' });
+  ok('不是自己的发言顺序不能描述', st.desc.length === 0, 'desc=' + st.desc.length);
+  g.input(st, first, { act: 'describe', text: '我喜欢' + st.words[first] });
+  ok('描述不能包含自己的词', st.desc.length === 0 &&
+    st.events.some((e) => e.t === 'invalid' && e.to === first), 'desc=' + st.desc.length);
+  const longText = '这'.repeat(50);
+  g.input(st, first, { act: 'describe', text: longText });
+  ok('描述最多 40 字', st.desc.length === 1 && st.desc[0].t.length === 40,
+    'len=' + (st.desc[0] && st.desc[0].t.length));
+  const beforeVoteDesc = st.desc.length;
+  passDescriptions(st);
+  ok('所有存活玩家发言后立刻投票', st.phase === 'vote', st.phase);
+  ok('描述记录只保留本轮', beforeVoteDesc >= 1 && st.desc.length === 6, 'desc=' + st.desc.length);
+
+  const voteSnap = g.snapshot(st);
+  ok('投票期间公开快照不泄露票型', !('votes' in voteSnap));
+  const alive6 = st.order.filter((id) => st.alive[id]);
+  g.input(st, alive6[0], { act: 'vote', target: alive6[0] });
+  ok('不能投自己', !st.voted[alive6[0]]);
+
+  /* 两两对投 -> 全员各 1 票，平票无人出局 */
+  alive6.forEach((id, i) => {
+    const partner = alive6[i % 2 === 0 ? i + 1 : i - 1];
+    g.input(st, id, { act: 'vote', target: partner });
+  });
+  ok('未投票时直播不公布票数', voteSnap.voted.length === 0);
+  ok('平票无人出局', st.lastOut && st.lastOut.tie === true &&
+    alive6.every((id) => st.alive[id]), JSON.stringify(st.lastOut));
+  ok('平票进入公布阶段', st.phase === 'reveal', st.phase);
+  advance(st, 5.2);
+  ok('公布后进入下一轮', st.round === 2 && st.phase === 'describe' && st.desc.length === 0,
+    'round=' + st.round + ' phase=' + st.phase);
+
+  /* 描述超时自动记为未描述，并轮到下一位 */
+  const tps = players(4);
+  const tos = g.create(tps, { seed: 105, pairs: pairs });
+  advance(tos, 5.2);
+  const timeoutFirst = tos.turnOrder[tos.turn];
+  advance(tos, 15.2);
+  ok('描述超时自动跳过', tos.desc.length === 1 && tos.desc[0].t.indexOf('时间到') >= 0 &&
+    tos.desc[0].i === timeoutFirst, JSON.stringify(tos.desc[0]));
+
+  /* 平民全票投卧底 -> 平民胜 */
+  const cps = players(4);
+  const cs = g.create(cps, { seed: 101, rounds: 12, pairs: pairs });
+  startVoting(cs);
+  const uc1 = firstUndercover(cs);
+  voteAll(cs, (id) => (id === uc1 ? cs.order.find((x) => x !== id && cs.roles[x] === 'civilian') : uc1));
+  ok('投出卧底后进入公布', cs.lastOut && cs.lastOut.id === uc1 && cs.lastOut.role === 'undercover',
+    JSON.stringify(cs.lastOut));
+  advance(cs, 5.2);
+  ok('卧底全部出局平民获胜', cs.ended && cs.winner === 'civilian', 'winner=' + cs.winner);
+  const cres = g.results(cs);
+  ok('个人名次按个人得分排序',
+    cres.length === 4 && cres[0].role === 'civilian' && cres[0].score === 120 &&
+    cres.every((r, i) => i === 0 || cres[i - 1].score >= r.score),
+    cres.map((r) => r.name + ':' + r.role + '/' + r.score + '/k' + r.kills).join(' '));
+  ok('正确票计入个人战绩', cres.filter((r) => r.role === 'civilian').every((r) => r.kills === 1) &&
+    cres.find((r) => r.id === uc1).kills === 0);
+  ok('胜负标记写入结果', cres.every((r) => r.win === (r.role === 'civilian')), JSON.stringify(cres.map((r) => r.win)));
+
+  /* 一直平票 -> 到轮数上限卧底胜 */
+  const mps = players(4);
+  const ms = g.create(mps, { seed: 102, rounds: 4, pairs: pairs });
+  for (let round = 0; round < 4; round++) {
+    if (ms.phase === 'brief') advance(ms, 5.2);
+    passDescriptions(ms);
+    advance(ms, 25.2);       /* 全员超时 -> 0 票平票 */
+    advance(ms, 5.2);
+  }
+  ok('到达最大轮数卧底获胜', ms.ended && ms.winner === 'undercover',
+    'round=' + ms.round + ' winner=' + ms.winner);
+
+  const cps4 = players(4);
+  const rs = g.create(cps4, { seed: 103, rounds: 1, pairs: pairs });
+  ok('轮数下限为 4', rs.maxRounds === 4, 'maxRounds=' + rs.maxRounds);
+
+  /* 卧底中途退出：立即按剩余人数重算胜负 */
+  const lps = players(4);
+  const ls = g.create(lps, { seed: 104, pairs: pairs });
+  const leavingUc = firstUndercover(ls);
+  g.removePlayer(ls, leavingUc);
+  ok('卧底退出后平民直接获胜', ls.ended && ls.winner === 'civilian',
+    'winner=' + ls.winner);
+  ok('退出玩家不再出现在结果里', g.results(ls).every((r) => r.id !== leavingUc));
 
   console.log('');
 })();

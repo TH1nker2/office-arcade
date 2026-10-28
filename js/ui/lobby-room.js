@@ -200,7 +200,7 @@
     if (!room || !APP.me) return;
     var info = AR.getInfo(room.gameId);
     var isHost = room.hostId === APP.me.id;
-    var supportsBot = room.gameId !== 'draw';
+    var supportsBot = room.gameId !== 'draw' && room.gameId !== 'undercover';
 
     $('room-code').textContent = room.code;
     $('room-game').textContent = info.name + ' · ' + info.sub;
@@ -244,6 +244,16 @@
         pb.classList.toggle('on', Number(pb.getAttribute('data-planes')) === pc);
         pb.disabled = !(isHost && room.phase === 'lobby');
       }
+    }
+
+    /* 谁是卧底：最大轮数 */
+    var roundsBox = $('rounds-box');
+    var showRounds = room.gameId === 'undercover';
+    roundsBox.classList.toggle('hidden', !showRounds);
+    if (showRounds) {
+      var sel = $('rounds-select');
+      sel.value = String(room.rounds || 6);
+      sel.disabled = !(isHost && room.phase === 'lobby');
     }
 
     var botBox = $('bot-box');

@@ -27,6 +27,36 @@
       <button class="hud-btn" id="hud-back">退出游戏 (Esc)</button>
     </header>
 
+    <!-- 谁是卧底：对局面板 -->
+    <div id="undercover-panel" class="undercover-panel hidden" aria-label="谁是卧底对局面板">
+      <div class="uc-head">
+        <div class="uc-identity">
+          <span class="uc-label">你的身份</span>
+          <b id="uc-role">—</b>
+          <span class="uc-word" id="uc-word">—</span>
+        </div>
+        <div class="uc-round">第 <b id="uc-round">1</b> / <span id="uc-max-rounds">6</span> 轮</div>
+        <div class="uc-phase"><b id="uc-phase">准备</b><span id="uc-timer">--</span></div>
+      </div>
+      <div class="uc-body">
+        <div class="uc-main">
+          <div class="uc-turn" id="uc-turn">等待开始…</div>
+          <div class="uc-desc" id="uc-desc" aria-live="polite"></div>
+          <div class="uc-input hidden" id="uc-input-box">
+            <input id="uc-text" maxlength="40" placeholder="输入你的描述，不能直接说出自己的词" autocomplete="off">
+            <button class="btn primary" id="uc-send" type="button">发送</button>
+          </div>
+          <div class="uc-hint" id="uc-hint"></div>
+        </div>
+        <aside class="uc-side">
+          <div class="uc-side-title">玩家 <span id="uc-alive-count"></span></div>
+          <div class="uc-players" id="uc-players"></div>
+          <div class="uc-vote-status" id="uc-vote-status"></div>
+        </aside>
+      </div>
+      <div class="uc-last-out" id="uc-last-out"></div>
+    </div>
+
     <!-- 你画我猜：画布右上角悬浮工具栏 -->
     <div class="draw-tools hidden" id="draw-tools" role="toolbar" aria-label="画笔工具">
       <div class="draw-tools-title">画布工具</div>
@@ -205,6 +235,16 @@
               <button class="seg-btn" data-planes="3">3</button>
               <button class="seg-btn" data-planes="4">4</button>
             </div>
+          </div>
+          <div class="level-box hidden" id="rounds-box">
+            <span class="level-label">最大轮数</span>
+            <select id="rounds-select" class="rounds-select">
+              <option value="4">4</option><option value="5">5</option>
+              <option value="6">6</option><option value="7">7</option>
+              <option value="8">8</option><option value="9">9</option>
+              <option value="10">10</option><option value="11">11</option>
+              <option value="12">12</option>
+            </select>
           </div>
           <div class="bot-box" id="bot-box">
             <button class="btn small" id="btn-add-bot">+ 人机</button>
@@ -446,6 +486,7 @@
 <script src="js/render/racing.js"></script>
 <script src="js/render/ludo.js"></script>
 <script src="js/render/gomoku.js"></script>
+<script src="js/render/undercover.js"></script>
 <script src="js/render/index.js"></script>
 <script src="js/ui/chat.js"></script>
 <script src="js/ui/auth.js"></script>
@@ -454,6 +495,7 @@
 <script src="js/ui/game-ui.js"></script>
 <script src="js/ui/game-session.js"></script>
 <script src="js/ui/version.js"></script>
+<script src="js/ui/undercover.js"></script>
 <script src="js/ui/lobby-room.js"></script>
 <script src="js/ui/a11y.js"></script>
 <script src="js/ui.js"></script>

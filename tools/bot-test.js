@@ -7,7 +7,7 @@ const ROOT = path.resolve(__dirname, '..');
 require(path.join(ROOT, 'shared/core.js'));
 require(path.join(ROOT, 'shared/registry.js'));
 require(path.join(ROOT, 'shared/games/constants.js'));
-['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'racing', 'ludo', 'gomoku'].forEach((id) => {
+['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'racing', 'ludo', 'gomoku', 'undercover'].forEach((id) => {
   require(path.join(ROOT, 'shared/games/' + id + '.js'));
 });
 const AR = globalThis.AR;
@@ -258,10 +258,10 @@ console.log('\n=== 五子棋：快照带执棋颜色 ===');
 
 console.log('\n=== 注册与元信息 ===');
 {
-  ok('游戏数量为 9', AR.GAME_INFO.length === 9, AR.GAME_INFO.map((g) => g.name).join(' / '));
+  ok('游戏数量为 10', AR.GAME_INFO.length === 10, AR.GAME_INFO.map((g) => g.name).join(' / '));
   ok('你画我猜最低 2 人', AR.getInfo('draw').min === 2, 'min=' + AR.getInfo('draw').min);
-  ok('每个游戏都有人机', AR.GAME_INFO.every((g) => g.id === 'draw' || typeof AR.games[g.id].bot === 'function'),
-    AR.GAME_INFO.filter((g) => g.id !== 'draw' && typeof AR.games[g.id].bot !== 'function').map((g) => g.id).join(','));
+  ok('每个游戏都有人机（画猜/卧底除外）', AR.GAME_INFO.every((g) => g.id === 'draw' || g.id === 'undercover' || typeof AR.games[g.id].bot === 'function'),
+    AR.GAME_INFO.filter((g) => g.id !== 'draw' && g.id !== 'undercover' && typeof AR.games[g.id].bot !== 'function').map((g) => g.id).join(','));
 }
 
 console.log('');

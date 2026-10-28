@@ -64,7 +64,7 @@
     while (log.children.length > 80) log.removeChild(log.firstChild);
     log.scrollTop = log.scrollHeight;
 
-    if (ch === 'room' && !silent && !chatOpen()) showPeek(msg);
+    if (ch === 'room' && !silent && !chatOpen() && msg.from) showPeek(msg);
   }
 
   function showPeek(msg) {

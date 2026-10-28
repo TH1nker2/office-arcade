@@ -23,6 +23,7 @@
     drawing: false,
     lastDraw: null,
     drawColor: '#111827',
+    uc: null,
     profileDraft: null,
     connected: false,
     version: null

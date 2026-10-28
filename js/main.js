@@ -61,7 +61,7 @@
     if (document.hidden) return;
     if (AR.App.screen !== 'play' || !AR.App.game) return;
     var id = AR.App.game.id;
-    if (id === 'draw') return;
+    if (id === 'draw' || id === 'undercover') return;
     var inp = AR.Input.collect(id);
     if (inp) Net.send({ t: 'input', i: inp });
   }

@@ -237,6 +237,12 @@ function handle(conn, msg) {
         room.level = lv;
         broadcastRoom(room);
       }
+      if (msg.key === 'rounds' && room.gameId === 'undercover') {
+        const rn = parseInt(msg.value, 10);
+        if (!(rn >= 4 && rn <= 12)) return;
+        room.rounds = rn;
+        broadcastRoom(room);
+      }
       break;
     }
 
@@ -312,6 +318,15 @@ function handle(conn, msg) {
       if (!room) {
         pushChat(lobbyChat, { kind: 'say', from: from, text: text, at: now });
         broadcastAll({ t: 'chat', ch: 'lobby', kind: 'say', from: from, text: text, at: now });
+        return;
+      }
+
+      /* 谁是卧底：对局中关闭自由聊天，避免身份和词被直接说出来 */
+      if (room.gameId === 'undercover' && room.phase === 'playing') {
+        conn.send({
+          t: 'chat', ch: 'room', kind: 'system',
+          text: '谁是卧底对局中关闭了自由聊天，请用描述和投票交流'
+        });
         return;
       }
 

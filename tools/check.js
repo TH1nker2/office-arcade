@@ -47,7 +47,7 @@ jsFiles.forEach((f) => {
 ok(jsFiles.length + ' 个 JS 文件语法通过', syntaxBad === 0, syntaxBad + ' 个失败');
 
 console.log('\n=== JSON ===');
-['package.json', 'version.json', 'shared/words.json', 'tools/runtime-manifest.json', 'admins.example.json'].forEach((rel) => {
+['package.json', 'version.json', 'shared/words.json', 'shared/undercover-words.json', 'tools/runtime-manifest.json', 'admins.example.json'].forEach((rel) => {
   try {
     JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
     ok(rel + ' 可解析', true);
@@ -66,6 +66,20 @@ try {
   });
 } catch (e) {
   ok('词库可读取', false, e.message);
+}
+
+console.log('\n=== 卧底词对 ===');
+try {
+  const bank = JSON.parse(fs.readFileSync(path.join(ROOT, 'shared', 'undercover-words.json'), 'utf8'));
+  const pairs = bank.pairs || [];
+  const words = [];
+  pairs.forEach((p) => { words.push(p.a, p.b); });
+  ok('卧底词对不少于 100 对', pairs.length >= 100, 'count=' + pairs.length);
+  ok('每对词非空且不相同', pairs.every((p) => p && p.a && p.b && p.a !== p.b));
+  ok('词面全局唯一', new Set(words).size === words.length,
+    'unique=' + new Set(words).size + '/' + words.length);
+} catch (e) {
+  ok('卧底词库可读取', false, e.message);
 }
 
 console.log('\n=== 本地资源引用 ===');

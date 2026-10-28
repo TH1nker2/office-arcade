@@ -20,7 +20,8 @@ const GAME_DESC = {
   draw: '轮流当画手，其余人在聊天框抢答，猜得越快得分越高。',
   racing: '俯视角漂移竞速，四条赛道各跑两圈，率先冲线者获胜。',
   gomoku: '15×15 经典棋盘，不限时轮流落子，率先连成五子者获胜。',
-  ludo: '掷骰子起飞，落到对手格就把对方送回起点；率先让全部飞机到家者获胜。'
+  ludo: '掷骰子起飞，落到对手格就把对方送回起点；率先让全部飞机到家者获胜。',
+  undercover: '平民和卧底拿到相近的词，轮流描述后投票，找出所有卧底。'
 };
 const BAD_DESC_WORDS = ['打飞机', '爆开', '活着', '击杀', '垃圾行', '顶死', '阵亡', '撑不住', '送他回起点'];
 
@@ -80,10 +81,10 @@ async function main() {
     domText.slice(0, 50));
   await A.shot('31b-lobby-3p');
 
-  console.log('\n[1b] 九款游戏简介');
+  console.log('\n[1b] 十款游戏简介');
   const descs = await A.ev('AR.GAME_INFO.map(function (g) { return { id: g.id, desc: g.desc }; })');
-  check('九款游戏都有简介且不超过 40 字',
-    descs.length === 9 && descs.every((g) => g.desc && g.desc.length <= 40),
+  check('十款游戏都有简介且不超过 40 字',
+    descs.length === 10 && descs.every((g) => g.desc && g.desc.length <= 40),
     descs.map((g) => g.id + ':' + (g.desc || '').length).join(' '));
   check('简介文案与预期一致', descs.every((g) => g.desc === GAME_DESC[g.id]),
     descs.filter((g) => g.desc !== GAME_DESC[g.id]).map((g) => g.id).join(',') || 'all match');
@@ -95,7 +96,7 @@ async function main() {
     'Array.prototype.map.call(document.querySelectorAll("#lobby-games .game-card"),' +
     ' function (c) { return { id: c.getAttribute("data-game"), desc: c.querySelector("p").textContent }; })'
   );
-  check('大厅九张卡片展示简介', cards.length === 9 && cards.every((c) => c.desc === GAME_DESC[c.id]),
+  check('大厅十张卡片展示简介', cards.length === 10 && cards.every((c) => c.desc === GAME_DESC[c.id]),
     cards.map((c) => c.id).join(','));
 
   const hubBad = [];
@@ -107,7 +108,7 @@ async function main() {
     await A.ev('document.getElementById("hub-back").click()');
     await sleep(200);
   }
-  check('九个游戏分区展示简介', hubBad.length === 0, hubBad.join(',') || 'all match');
+  check('十个游戏分区展示简介', hubBad.length === 0, hubBad.join(',') || 'all match');
 
   console.log('\n[2] 进入游戏分区');
   await A.ev('document.querySelector(\'[data-game="snake"]\').click()');

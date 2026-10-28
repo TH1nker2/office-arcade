@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const { ROUND_OVER_MS, store } = require('./config');
 const { WORDS } = require('./words');
+const { UNDERCOVER_PAIRS } = require('./undercover-words');
 const { presence, rooms, invites, lobbyChat } = require('./state');
 const { broadcast, setPresence, scheduleLobby } = require('./presence');
 const AR = globalThis.AR;
@@ -32,7 +33,8 @@ const DETAIL_LABEL = {
   tank: '击杀',
   bomber: '击杀',
   shmup: '击杀',
-  ludo: '到家'
+  ludo: '到家',
+  undercover: '正确票'
 };
 
 function roomJson(room) {
@@ -62,6 +64,7 @@ function roomJson(room) {
     bots: room.botCount || 0,
     level: room.level || 'normal',
     planes: room.planes || 1,
+    rounds: room.rounds || 6,
     players: players
   };
 }
@@ -71,6 +74,7 @@ function addBot(room, level) {
   if (!room) return { ok: false, msg: '你不在房间里' };
   if (room.phase !== 'lobby') return { ok: false, msg: '开局后不能加人机' };
   if (room.gameId === 'draw') return { ok: false, msg: '你画我猜不支持人机' };
+  if (room.gameId === 'undercover') return { ok: false, msg: '谁是卧底不支持人机' };
 
   const info = AR.getInfo(room.gameId);
   if (room.players.size >= info.max) return { ok: false, msg: '房间已经满了' };
@@ -140,6 +144,7 @@ function createRoom(conn, gameId) {
     game: null,
     level: 'normal',
     planes: 1,
+    rounds: 6,
     chat: [],
     startedAt: 0,
     acc: 0,
@@ -254,12 +259,17 @@ function startRound(room) {
   room.startedAt = Date.now();
   const level = room.level || 'normal';
   const pool = (WORDS[level] && WORDS[level].length) ? WORDS[level] : WORDS.normal;
-  room.game = g.create(players, {
+  const opts = {
     seed: (Date.now() ^ (room.round * 2654435761)) >>> 0,
     level: level,
     planes: room.planes || 1,
     words: pool
-  });
+  };
+  if (room.gameId === 'undercover') {
+    opts.pairs = UNDERCOVER_PAIRS;
+    opts.rounds = room.rounds || 6;
+  }
+  room.game = g.create(players, opts);
 
   const meta = (g.meta && g.meta(room.game)) || null;
   broadcast(room, {
@@ -280,6 +290,7 @@ function finishRound(room) {
   const g = AR.games[room.gameId];
   if (!g || !room.game) return;
 
+  const winner = room.game.winner || null;
   const raw = g.results(room.game);
   const list = [];
   const matchPlayers = [];
@@ -313,6 +324,9 @@ function finishRound(room) {
       place: place,
       delta: delta,
       draw: isDraw,
+      role: r.role || '',
+      win: !!r.win,
+      survived: !!r.survived,
       total: 0,
       streak: 0,
       bot: isBot
@@ -360,6 +374,7 @@ function finishRound(room) {
   broadcast(room, {
     t: 'over',
     gameId: room.gameId,
+    winner: winner,
     results: list,
     players: roomJson(room).players
   });

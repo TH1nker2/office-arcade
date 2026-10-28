@@ -30,6 +30,7 @@
   var APP = AR.App;
 
   var UI = AR.UI = {};
+  UI.toast = function (msg, ms) { toast(msg, ms); };
 
   /* ---------------- 通用 UI ---------------- */
   var toastTimer = 0;
@@ -125,6 +126,7 @@
       showScreen: showScreen, hideOver: hideOver, showOver: showOver,
       renderLobby: renderLobby, renderRoom: renderRoom, resetHud: resetHud
     });
+    UndercoverUI.init();
     /* 登录 / 注册 */
     var tabs = document.querySelectorAll('.tab');
     for (var i = 0; i < tabs.length; i++) {
@@ -237,6 +239,10 @@
       Net.send({ t: 'setting', key: 'level', value: btn.getAttribute('data-level') });
     });
 
+    $('rounds-select').addEventListener('change', function (e) {
+      Net.send({ t: 'setting', key: 'rounds', value: e.target.value });
+    });
+
     $('btn-add-bot').addEventListener('click', function () {
       Net.send({ t: 'botAdd' });
     });
@@ -345,6 +351,7 @@
     root.addEventListener('keydown', function (e) {
       if (e.code !== 'Enter') return;
       if (APP.screen !== 'play') return;
+      if (APP.game && APP.game.id === 'undercover') return;
       var t = e.target;
       var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
       e.preventDefault();
@@ -567,6 +574,8 @@
   var onOver = GameSession.onOver;
   var backToRoom = GameSession.backToRoom;
 
+  var UndercoverUI = AR.UndercoverUI;
+
   /* ============================================================
    * 个人资料
    * ============================================================ */
@@ -641,8 +650,24 @@
     }
     if (APP.screen !== 'play' || !APP.snap) {
       if (AR.GameUI && AR.GameUI.hideGomokuActions) AR.GameUI.hideGomokuActions();
+      AR.UndercoverUI.hide();
       return;
     }
+
+    if (APP.game && APP.game.id === 'undercover') {
+      $('hud-board').classList.add('hidden');
+      var u = APP.snap;
+      var uLeft = u.ended ? '—' : (Math.max(0, Math.ceil(u.tl || 0)) + 's');
+      var uTimer = $('hud-timer');
+      if (uTimer.textContent !== uLeft) uTimer.textContent = uLeft;
+      var uRound = '第 ' + (u.rd || 1) + ' / ' + (u.mx || 6) + ' 轮';
+      if ($('hud-round').textContent !== uRound) $('hud-round').textContent = uRound;
+      if (APP.over) AR.UndercoverUI.hide();
+      else AR.UndercoverUI.update(u);
+      return;
+    }
+    $('hud-board').classList.remove('hidden');
+    AR.UndercoverUI.hide();
 
     if (APP.game && APP.game.id === 'gomoku') AR.GameUI.updateGomokuActions(APP.snap);
 

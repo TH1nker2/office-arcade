@@ -1,0 +1,398 @@
+/* ============================================================
+   谁是卧底：对局面板 / 玩家列表 / 描述流 / 投票
+   ============================================================ */
+.undercover-panel {
+  position: absolute;
+  left: 50%;
+  top: 58px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(1000px, calc(100vw - 230px));
+  height: min(640px, calc(100vh - 118px));
+  overflow: hidden;
+  pointer-events: auto;
+  border: 1px solid rgba(120, 180, 245, 0.24);
+  border-radius: 18px;
+  background:
+    radial-gradient(720px 380px at 50% -12%, rgba(34, 211, 238, 0.12), transparent 68%),
+    linear-gradient(180deg, rgba(13, 20, 34, 0.96), rgba(6, 10, 18, 0.97));
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.uc-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(120, 180, 245, 0.14);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.uc-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.uc-label {
+  font-size: 10px;
+  letter-spacing: .16em;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+#uc-role {
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  color: rgba(200, 220, 240, 0.55);
+  white-space: nowrap;
+}
+#uc-role.is-civilian { color: #8ee7ff; text-shadow: 0 0 20px rgba(34, 211, 238, 0.35); }
+#uc-role.is-undercover { color: #ff7c9c; text-shadow: 0 0 20px rgba(255, 46, 99, 0.45); }
+
+.uc-word {
+  min-width: 120px;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.08);
+  color: #ffe7a8;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+.uc-round {
+  font-size: 11.5px;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+.uc-round b { color: var(--txt); font-size: 13px; }
+
+.uc-phase {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 94px;
+  justify-content: flex-end;
+}
+#uc-phase {
+  font-size: 12px;
+  color: var(--cyan);
+  letter-spacing: .12em;
+}
+#uc-timer {
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+  text-align: right;
+}
+
+.uc-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 268px;
+  gap: 16px;
+  padding: 14px 20px 16px;
+  min-height: 0;
+  flex: 1;
+}
+
+.uc-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.uc-turn {
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: #f1f8ff;
+  padding: 2px 2px 3px;
+}
+.uc-turn::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 19px;
+  margin-right: 9px;
+  border-radius: 3px;
+  vertical-align: -2px;
+  background: linear-gradient(180deg, var(--cyan), #6366f1);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.5);
+}
+
+.uc-hint {
+  min-height: 18px;
+  padding: 0 2px 8px 15px;
+  font-size: 11.5px;
+  color: var(--dim);
+}
+
+.uc-desc {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 12px;
+  border: 1px solid rgba(120, 180, 245, 0.13);
+  border-radius: 12px;
+  background: rgba(3, 7, 14, 0.5);
+  scroll-behavior: smooth;
+}
+
+.uc-desc-empty {
+  margin: auto;
+  font-size: 12.5px;
+  color: rgba(142, 163, 192, 0.65);
+  letter-spacing: .06em;
+}
+
+.uc-line {
+  display: grid;
+  grid-template-columns: 20px 82px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.028);
+  border-left: 2px solid transparent;
+}
+.uc-line.me {
+  background: rgba(34, 211, 238, 0.075);
+  border-left-color: rgba(34, 211, 238, 0.65);
+}
+.uc-line.timeout { opacity: .56; }
+.uc-line-no {
+  font-size: 10px;
+  color: rgba(142, 163, 192, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+.uc-line-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #b8cae0;
+  font-size: 12px;
+}
+.uc-line-text {
+  color: #eef7ff;
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.uc-input {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.uc-input input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 13px;
+  font-size: 14px;
+}
+.uc-input .btn { flex: 0 0 auto; padding: 10px 22px; }
+
+.uc-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid rgba(120, 180, 245, 0.13);
+  border-radius: 13px;
+  background: rgba(3, 7, 14, 0.44);
+  padding: 11px;
+}
+
+.uc-side-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 1px 2px 9px;
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+#uc-alive-count { font-size: 10px; letter-spacing: .04em; color: rgba(142, 163, 192, 0.8); }
+
+.uc-players {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.uc-player {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  text-align: left;
+  border: 1px solid rgba(120, 165, 225, 0.13);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.uc-player:disabled { cursor: default; opacity: 1; }
+.uc-player.votable {
+  cursor: pointer;
+  border-color: rgba(34, 211, 238, 0.28);
+}
+.uc-player.votable:hover {
+  border-color: rgba(34, 211, 238, 0.75);
+  background: rgba(34, 211, 238, 0.1);
+  transform: translateX(2px);
+}
+.uc-player.me { background: rgba(34, 211, 238, 0.07); }
+.uc-player.current {
+  border-color: rgba(251, 191, 36, 0.65);
+  background: rgba(251, 191, 36, 0.09);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.12) inset;
+}
+.uc-player.pending {
+  border-color: rgba(34, 211, 238, 0.95);
+  background: rgba(34, 211, 238, 0.16);
+}
+.uc-player.dead { opacity: .42; }
+.uc-player.dead .uc-avatar { filter: grayscale(1); }
+
+.uc-avatar {
+  flex: 0 0 auto;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  color: #041018;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 27px;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+.uc-player-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.uc-player-main b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: #e9f2ff;
+}
+.uc-player-main em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+  font-style: normal;
+  font-size: 10px;
+  color: var(--dim);
+}
+.uc-player.votable .uc-player-main em { color: rgba(127, 231, 255, 0.9); }
+.uc-check {
+  flex: 0 0 auto;
+  color: #7dffb0;
+  font-size: 12px;
+  font-weight: 900;
+}
+.uc-role-mini {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 9.5px;
+}
+.uc-role-mini.undercover { color: #ff9fb2; background: rgba(255, 46, 99, 0.14); }
+.uc-role-mini.civilian { color: #9ae9ff; background: rgba(34, 211, 238, 0.13); }
+
+.uc-vote-status {
+  padding: 9px 2px 1px;
+  min-height: 28px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: rgba(142, 163, 192, 0.82);
+}
+
+.uc-last-out {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 20px;
+  border-top: 1px solid rgba(120, 180, 245, 0.16);
+  background: rgba(251, 191, 36, 0.055);
+}
+.uc-lo-title { font-size: 15px; color: #ffe7a8; }
+.uc-lo-sub { font-size: 11.5px; color: var(--dim); }
+.uc-role-tag {
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-style: normal;
+}
+.uc-role-tag.undercover { color: #ff9fb2; background: rgba(255, 46, 99, 0.16); }
+.uc-role-tag.civilian { color: #9ae9ff; background: rgba(34, 211, 238, 0.14); }
+
+.uc-tally { display: flex; gap: 6px; flex-wrap: wrap; }
+.uc-tally-item {
+  padding: 1px 7px;
+  border-radius: 99px;
+  border: 1px solid rgba(120, 165, 225, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 10px;
+  color: var(--dim);
+}
+.uc-tally-item b { color: #e9f2ff; }
+
+/* 房间里的轮数选择 */
+.rounds-select {
+  padding: 5px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: rgba(6, 11, 20, 0.9);
+  color: var(--txt);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.rounds-select:focus { border-color: var(--line-2); }
+.rounds-select:disabled { opacity: .55; }
+
+/* 结算里的卧底身份标记 */
+.uc-role-badge.undercover { color: #ff9fb2; background: rgba(255, 46, 99, 0.14); border-color: rgba(255, 46, 99, 0.4); }
+.uc-role-badge.civilian { color: #9ae9ff; background: rgba(34, 211, 238, 0.12); border-color: rgba(34, 211, 238, 0.34); }
+
+@media (max-width: 1100px) {
+  .undercover-panel { width: calc(100vw - 32px); }
+  .uc-body { grid-template-columns: minmax(0, 1fr) 230px; }
+}
+
+@media (max-width: 760px) {
+  .undercover-panel { top: 52px; height: calc(100vh - 84px); }
+  .uc-body { grid-template-columns: 1fr; overflow-y: auto; }
+  .uc-side { max-height: 220px; }
+  .uc-word { max-width: 160px; }
+}

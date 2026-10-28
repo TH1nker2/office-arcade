@@ -2,7 +2,7 @@
   "name": "office-arcade",
   "version": "3.5.0",
   "private": true,
-  "description": "摸鱼游戏厅 — 内网联机小游戏平台：注册登录、在线状态、房间与人机、9 款游戏、管理后台、SQLite 战绩",
+  "description": "摸鱼游戏厅 — 内网联机小游戏平台：注册登录、在线状态、房间与人机、10 款游戏、管理后台、SQLite 战绩",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -19,7 +19,7 @@
     "test:hardening": "node tools/hardening-test.js",
     "test:regression": "node tools/regression-test.js",
     "test:perf": "node tools/perf-test.js",
-    "test:ui": "node tools/ui-v2-test.js && node tools/ui-v3-test.js && node tools/ui-v4-test.js && node tools/ui-v5-test.js && node tools/ui-v6-test.js && node tools/ui-v7-test.js && node tools/ui-v8-test.js",
+    "test:ui": "node tools/ui-v2-test.js && node tools/ui-v3-test.js && node tools/ui-v4-test.js && node tools/ui-v5-test.js && node tools/ui-v6-test.js && node tools/ui-v7-test.js && node tools/ui-v8-test.js && node tools/ui-v9-test.js",
     "bump": "node tools/bump-version.js",
     "version:show": "node tools/bump-version.js --show",
     "test:admin": "node tools/admin-test.js && node tools/admin-words-ui-test.js",

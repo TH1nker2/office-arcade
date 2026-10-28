@@ -6,13 +6,13 @@
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
 > **版本**：3.5.0（2026-10-28）· Gitee 发行版已发布
 > **基线**：`main` 分支，`18c87e4`（版本 3.4.1）→ `0e9c86a`（2026-10-28 优化）→ 3.5.0
-> **当前状态（最后同步时）**：合作弹幕 v2、画布工具栏、五子棋操作与蛇球修复均已合并到 `main`；v3.5.0 三平台包已发布。
+> **当前状态（最后同步时）**：v3.5.0 三平台包已发布；`feature/undercover` 分支正在开发新游戏「谁是卧底」，未合并 `main`、未提交、未推送。
 
 ---
 
 ## 1. 文档位置（项目知识以此为准）
 
-项目架构、业务流程、九款游戏、存储、接口、测试、部署等细节**不在这里重复**，按需要读：
+项目架构、业务流程、十款游戏、存储、接口、测试、部署等细节**不在这里重复**，按需要读：
 
 | 文档 | 内容 |
 | --- | --- |
@@ -43,6 +43,7 @@
 - `feature/shmup-v2` 的合作弹幕 v2 已合并并推送到 `main`；最终分支/提交以 `git log` 为准。
 - `feature/draw-tools` 的你画我猜画布工具栏（画布外侧、8 色、C 快捷键）已合并并推送到 `main`。
 - `feature/gomoku-snake-fixes` 的五子棋悔棋/和棋/认输与蛇球长蛇碰撞/渲染修复已合并并推送到 `main`。
+- `feature/undercover` 的第十款游戏「谁是卧底」已完成开发与测试，**尚未合并/提交/推送**；用户确认后再合并 main 并决定版本号。
 - 当前 `main` 版本为 `3.5.0`；服务重启后页面和启动横幅显示新版本。
 - **正式发行版**：https://gitee.com/th1nker/office-arcade/releases/tag/v3.5.0
   - tag `v3.5.0` → `b8d250e`
@@ -51,7 +52,7 @@
   - 本机无 Python，Unix 包用 `tar.exe` 打包；解压后 `start.sh` 会自愈执行权限，必要时手动 `chmod +x runtime/node start.sh`
 - 本地额外文件：`runtime/`（Node 运行时）、`admins.json`（测试管理员）、`vendor/_cache`（运行时下载缓存），均被 `.gitignore` 排除。
 - UI 测试会改写 `shots/*.png`；跑完应 `git checkout -- shots/` 还原，除非明确要更新截图。
-- 本轮验证：`tools/test-all.js --with-ui` 19 个脚本全部通过（约 180s）；`bot-test` 连跑 10 次通过；首屏 gzip 后约 103 KB，snake/tank/shmup headless RAF p95 16.7ms。
+- 本轮验证：`tools/test-all.js --with-ui` **21 个脚本全部通过（238.0s）**；`perf-test` 通过（首屏 gzip 后 117.7 KB，snake/tank/shmup headless RAF p95 16.7ms）；`ui-v9` 四浏览器覆盖谁是卧底完整流程；截图 `shots/89-undercover-room.png` ~ `94-undercover-over.png` 保留，未改动的旧截图已还原。
 - 未获用户明确要求不要 commit/push。
 
 ---
@@ -95,6 +96,17 @@
 - 蛇球：collision 从抽点改为线段 + 40px 空间网格，修复长蛇后段穿越，并降低长蛇同屏的 O(n²) 开销；渲染去掉每蛇 shadowBlur，改为半透明外圈光晕。
 - 验证：`game-test` 新增 gomoku 操作与长蛇穿越断言；`ui-v3` 覆盖人机和棋；新增 `ui-v8` 双浏览器覆盖同意/拒绝/平局/认输；全量 `test-all --with-ui` 20 个脚本通过（约 207s）。
 - 发布：v3.5.0 三平台包已上传 Gitee 发行版；构建脚本修复了 Windows 下 Git tar 抢占和 Store Python 占位误判。
+
+### 2026-10-28 · 谁是卧底（feature/undercover，待确认）
+
+- 新第十款游戏，4-10 人；4-5 人 1 卧底、6-8 人 2 个、9-10 人 3 个；卧底互不知道队友。
+- 规则：发词 5s → 每人描述 15s（40 字内，不能含自己的词，超时自动跳过）→ **全员说完立刻投票** 25s（匿名、不能投自己、超时弃票）→ 公布 5s；平票无人出局。
+- 胜负：卧底全出局平民胜；卧底人数 >= 平民，或到房主设置的最大轮数（4-12）时卧底仍存活则卧底胜。
+- 个人计分：获胜阵营 100 + 存活 10 + 每正确投出卧底 10；结算按个人得分排名，显示身份/胜负/正确票。
+- 对局内关闭自由聊天（服务端拒绝并回系统提示），普通聊天面板隐藏；不支持人机。
+- 词库 `shared/undercover-words.json` 120 对全局唯一；`server/undercover-words.js` 校验并兜底；私有消息只下发自己的身份和词，公开快照不泄露。
+- 前端：`js/ui/undercover.js`、`js/render/undercover.js`、`css/undercover.css`，HUD 隐藏玩家榜、显示轮次/倒计时；房间增加最大轮数下拉。
+- 测试：`game-test` 覆盖身份/描述/平票/胜负/个人分；`ui-v9` 四浏览器覆盖轮数同步、身份私密、真实输入、禁聊、点击投票、结算；全量 21 脚本 + perf 通过。**未合并 main、未提交、未推送。**
 
 ### P3 可访问性/安全
 - 新增 `js/ui/a11y.js`：覆盖层 ARIA、打开聚焦、Tab 陷阱、关闭归还焦点；玩家行支持键盘打开菜单，菜单支持方向键/Home/End/Enter；全局 `:focus-visible`、减少动效 CSS。

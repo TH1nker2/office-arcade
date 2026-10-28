@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 全盘审计测试：存储、接口、房间生命周期、聊天上限、九个游戏的不变量
+/* 全盘审计测试：存储、接口、房间生命周期、聊天上限、十个游戏的不变量
  *
  * 用法：node tools/audit-test.js
  */
@@ -138,20 +138,20 @@ async function main() {
   await sleep(400);
   ok('离开房间', A.some((m) => m.t === 'leftRoom'));
 
-  /* ================= 四、九个游戏的不变量 ================= */
+  /* ================= 四、十个游戏的不变量 ================= */
   console.log('\n=== 游戏不变量 ===');
   const AR = (() => {
     global.window = undefined;
     const core = require(path.join(ROOT, 'shared/core.js'));
     require(path.join(ROOT, 'shared/registry.js'));
     require(path.join(ROOT, 'shared/games/constants.js'));
-    for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'racing', 'gomoku', 'ludo']) {
+    for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'racing', 'gomoku', 'ludo', 'undercover']) {
       require(path.join(ROOT, 'shared/games/' + g + '.js'));
     }
     return globalThis.AR;
   })();
 
-  ok('注册表 9 款游戏', AR.GAME_INFO.length === 9, AR.GAME_INFO.map((g) => g.id).join(','));
+  ok('注册表 10 款游戏', AR.GAME_INFO.length === 10, AR.GAME_INFO.map((g) => g.id).join(','));
 
   for (const info of AR.GAME_INFO) {
     const g = AR.games[info.id];

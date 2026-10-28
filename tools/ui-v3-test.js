@@ -36,7 +36,7 @@ async function main() {
   check('注册后进入大厅', (await B.ev('AR.App.screen')) === 'lobby');
 
   const cards = await B.ev('document.querySelectorAll("#lobby-games .game-card").length');
-  check('大厅有 9 个游戏', cards === 9, 'cards=' + cards);
+  check('大厅有 10 个游戏', cards === 10, 'cards=' + cards);
   await B.shot('41-lobby-8games');
 
   console.log('\n[1] 蛇球 + 3 个人机');
