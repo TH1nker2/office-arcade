@@ -160,7 +160,47 @@ async function main() {
   await B.ev('document.getElementById("btn-leave-room").click()');
   await sleep(600);
 
-  console.log('\n[5] 控制台');
+  console.log('\n[5] 弹幕 v2 渲染');
+  const v2 = JSON.parse(await B.ev(`(function(){
+    try {
+      var c = document.createElement('canvas');
+      c.width = 1000; c.height = 1000;
+      var ctx = c.getContext('2d');
+      var bosses = [
+        { k: 'fortress', nm: '铁幕堡垒', c: '#ff5d7d', ac: '#8b1e3f', r: 70 },
+        { k: 'hive', nm: '蜂巢母舰', c: '#a3e635', ac: '#365314', r: 66 },
+        { k: 'prism', nm: '棱镜核心', c: '#c084fc', ac: '#4c1d95', r: 58 }
+      ];
+      var counts = [];
+      for (var i = 0; i < bosses.length; i++) {
+        var bs = bosses[i];
+        var snap = {
+          w: 1000, h: 1000, t: 1, d: 120, sc: 0,
+          p: [{ i: 'p1', x: 500, y: 880, hp: 2, mh: 3, sh: 1, rt: 1, st: 1, al: 1, iv: 0, s: 12 }],
+          e: [[500, 300, 'grunt', 1, 2]], pb: [[500, 700]], eb: [[500, 600]],
+          u: [[600, 500, 'heal'], [650, 520, 'shield'], [700, 540, 'rapid'], [750, 560, 'spread'], [800, 580, 'purge']],
+          b: { x: 500, y: 200, hp: 200, mx: 300, r: bs.r, iv: 0, f: 0, k: bs.k, nm: bs.nm, c: bs.c, ac: bs.ac },
+          ev: []
+        };
+        AR.View.init('shmup');
+        AR.Render.render(ctx, 1000, 1000, 'shmup', snap, 1 / 60, {
+          me: 'p1', players: [{ id: 'p1', name: '测试', color: '#22d3ee' }], meta: null
+        });
+        var img = ctx.getImageData(0, 0, 1000, 1000).data;
+        var n = 0;
+        for (var p = 0; p < img.length; p += 4) if (img[p + 3] > 0) n++;
+        counts.push(n);
+      }
+      return JSON.stringify({ ok: true, counts: counts });
+    } catch (e) {
+      return JSON.stringify({ ok: false, error: String(e && e.message || e) });
+    }
+  })()`));
+  check('弹幕 v2 三种 BOSS + 增益渲染无异常', v2.ok === true, v2.error || '');
+  check('弹幕 v2 渲染出非空画面', v2.ok && v2.counts.every((n) => n > 0),
+    JSON.stringify(v2.counts));
+
+  console.log('\n[6] 控制台');
   console.log('  错误:', B.errors.length ? B.errors.slice(0, 3) : '无');
   check('无控制台错误', B.errors.length === 0);
 

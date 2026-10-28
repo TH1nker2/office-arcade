@@ -363,5 +363,118 @@ for (const [id, n, secs, cap] of cases) {
   console.log('');
 })();
 
+/* ============================================================
+ * 合作弹幕 v2：不复活、增益、随机 BOSS
+ * ============================================================ */
+(function shmupV2Test() {
+  console.log('=== 合作弹幕 v2 ===');
+  const sg = AR.games.shmup;
+  const meta = AR.GameConstants.SHMUP;
+
+  const st = sg.create(players(2), { seed: 901 });
+  const p0 = st.players.p0, p1 = st.players.p1;
+  p0.inv = 0; p0.hp = 1;
+  st.ebullets.push({ x: p0.x, y: p0.y, vx: 0, vy: 0 });
+  sg.tick(st, 1 / 60);
+  ok('shmup 被击毁后不复活', !p0.alive && p0.hp === 0, 'alive=' + p0.alive);
+  for (let i = 0; i < 180; i++) sg.tick(st, 1 / 60);
+  ok('shmup 3 秒后仍未复活', !p0.alive, 'alive=' + p0.alive);
+  p1.inv = 0; p1.hp = 1;
+  st.ebullets.push({ x: p1.x, y: p1.y, vx: 0, vy: 0 });
+  sg.tick(st, 1 / 60);
+  ok('shmup 全员被击毁后结束', !p1.alive && st.ended === true,
+    'p1=' + p1.alive + ' ended=' + st.ended);
+
+  const bs = sg.create(players(1), { seed: 902 });
+  bs.rnd = function () { return 0; };
+  const bp = bs.players.p0;
+  bp.cool = 9999;
+  bs.enemies.push({
+    id: 'e1', type: 'grunt', x: bp.x, y: bp.y - 200,
+    hp: 1, maxHp: 2, r: 18, vx: 0, vy: 0,
+    fireTimer: 99, phase: 0, t: 0, score: 10
+  });
+  bs.pbullets.push({ x: bp.x, y: bp.y - 200, vx: 0, vy: -980, owner: 'p0', color: '#fff' });
+  sg.tick(bs, 1 / 60);
+  ok('shmup 击毁敌机掉落增益', bs.powerups.length === 1, 'drops=' + bs.powerups.length);
+  const drop = bs.powerups[0];
+  ok('shmup 掉落类型合法', !!drop && meta.BUFFS.some((b) => b.id === drop.type),
+    drop && drop.type);
+  const dropY = drop ? drop.y : 0;
+  for (let i = 0; i < 30; i++) sg.tick(bs, 1 / 60);
+  ok('shmup 增益向下快速漂移', !!drop && drop.y > dropY + 40,
+    drop ? (dropY + ' -> ' + drop.y.toFixed(0)) : 'no drop');
+
+  const us = sg.create(players(1), { seed: 903 });
+  const up = us.players.p0;
+  up.inv = 99;
+  sg.input(us, 'p0', { dx: 0, dy: -1 });
+  for (let i = 0; i < 120; i++) sg.tick(us, 1 / 60);
+  ok('shmup 战机可以飞到上半区', up.y < 420, 'y=' + up.y.toFixed(0));
+
+  bp.hp = 2;
+  bs.powerups = [{ x: bp.x, y: bp.y, type: 'heal', life: 12, vy: 0 }];
+  sg.tick(bs, 1 / 60);
+  ok('shmup 修护恢复 1 点耐久', bp.hp === 3 && bs.powerups.length === 0, 'hp=' + bp.hp);
+
+  bp.shield = 0;
+  bs.powerups = [{ x: bp.x, y: bp.y, type: 'shield', life: 12, vy: 0 }];
+  sg.tick(bs, 1 / 60);
+  ok('shmup 护盾可叠加', bp.shield === 1, 'shield=' + bp.shield);
+
+  bp.rapidT = 0;
+  bs.powerups = [{ x: bp.x, y: bp.y, type: 'rapid', life: 12, vy: 0 }];
+  sg.tick(bs, 1 / 60);
+  ok('shmup 连发增益生效', bp.rapidT > 0, 'rapid=' + bp.rapidT.toFixed(1));
+
+  bp.spreadT = 0;
+  bs.powerups = [{ x: bp.x, y: bp.y, type: 'spread', life: 12, vy: 0 }];
+  sg.tick(bs, 1 / 60);
+  ok('shmup 散射增益生效', bp.spreadT > 0, 'spread=' + bp.spreadT.toFixed(1));
+
+  bp.inv = 0;
+  bs.ebullets = [{ x: 0, y: 0, vx: 0, vy: 0 }];
+  bs.powerups = [{ x: bp.x, y: bp.y, type: 'purge', life: 12, vy: 0 }];
+  sg.tick(bs, 1 / 60);
+  ok('shmup 净化清弹并短暂无敌', bs.ebullets.length === 0 && bp.inv > 0,
+    'bullets=' + bs.ebullets.length + ' inv=' + bp.inv.toFixed(2));
+
+  ok('shmup 至少三种 BOSS', meta.BOSSES.length >= 3, 'bosses=' + meta.BOSSES.length);
+  meta.BOSSES.forEach(function (bossMeta, idx) {
+    const gs = sg.create(players(2), { seed: 700 + idx });
+    gs.rnd = function () { return (idx + 0.1) / meta.BOSSES.length; };
+    for (const id in gs.players) {
+      gs.players[id].cool = 9999;
+      gs.players[id].hp = 999;
+      gs.players[id].maxHp = 999;
+    }
+    gs.time = 70;
+    sg.tick(gs, 1 / 60);
+    ok('shmup BOSS 类型可选中：' + bossMeta.id,
+      !!gs.boss && gs.boss.type === bossMeta.id, gs.boss && gs.boss.type);
+    let maxJump = 0;
+    let lastX = gs.boss ? gs.boss.x : 0;
+    let lastY = gs.boss ? gs.boss.y : 0;
+    for (let i = 0; i < 480 && gs.boss; i++) {
+      sg.tick(gs, 1 / 60);
+      if (!gs.boss) break;
+      const jump = Math.hypot(gs.boss.x - lastX, gs.boss.y - lastY);
+      if (jump > maxJump) maxJump = jump;
+      lastX = gs.boss.x;
+      lastY = gs.boss.y;
+    }
+    ok('shmup BOSS ' + bossMeta.id + ' 入场无位置跳变', maxJump < 20,
+      'max jump=' + maxJump.toFixed(1));
+    ok('shmup BOSS ' + bossMeta.id + ' 会开火', gs.ebullets.length > 0,
+      'bullets=' + gs.ebullets.length);
+    const snap = sg.snapshot(gs);
+    ok('shmup BOSS 快照带类型/名称',
+      !!snap.b && snap.b.k === bossMeta.id && snap.b.nm === bossMeta.name,
+      snap.b ? snap.b.k + '/' + snap.b.nm : 'null');
+  });
+
+  console.log('');
+})();
+
 console.log(fails === 0 ? '全部通过' : fails + ' 项失败');
 process.exit(fails === 0 ? 0 : 1);
