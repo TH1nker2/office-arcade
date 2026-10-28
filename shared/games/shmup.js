@@ -1,6 +1,11 @@
 /* ============================================================
- * 合作弹幕 · CO-OP SHMUP（服务端权威）
- * 1000 x 1000 战场，全队共享分数，全部阵亡即结束
+ * 合作弹幕 v2 · CO-OP SHMUP V2（服务端权威）
+ * 1000 x 1000 战场，全队共享分数，全部战机被击毁即结束
+ *
+ * v2 变更：
+ *   - 战机被击毁后不再复活；全员被击毁立即结束
+ *   - 击毁敌机概率掉落增益光球（修护/护盾/连发/散射/净化）
+ *   - 关底从三种 BOSS 中随机一种，每种有独立外形与弹幕
  * ============================================================ */
 (function (root) {
   'use strict';
@@ -9,6 +14,16 @@
   var W = 1000, H = 1000;
   var DURATION = 120;
   var BOSS_AT = 70;
+
+  var SHMUP_META = AR.GameConstants.SHMUP;
+  var BUFF_DEFS = SHMUP_META.BUFFS;
+  var BOSS_META = SHMUP_META.BOSSES;
+
+  var BUFF_LIFE = 12;
+  var BUFF_MAX = 6;
+  var BUFF_VY = 120;
+  var BUFF_RADIUS = 30;
+  var BUFF_CHANCE = { grunt: 0.12, zig: 0.18, tank: 0.35 };
 
   /* 人机水平：影响躲弹半径与瞄准抖动 */
   var BOT_SKILL = { easy: 0.3, normal: 0.6, hard: 0.82, insane: 0.97 };
@@ -20,13 +35,13 @@
   };
 
   function makePlayer(p, i) {
-    var n = 4;
     return {
       id: p.id, name: p.name, color: p.color,
       x: 150 + (i % 4) * 180 + 40,
       y: 880,
-      hp: 3, maxHp: 3, lives: 3,
-      alive: true, respawn: 0, cool: 0, inv: 1.5,
+      hp: 3, maxHp: 3,
+      alive: true, inv: 1.5, cool: 0,
+      shield: 0, rapidT: 0, spreadT: 0,
       kills: 0, score: 0,
       input: {}
     };
@@ -55,6 +70,138 @@
     var list = [];
     for (var id in state.players) if (state.players[id].alive) list.push(state.players[id]);
     return list;
+  }
+
+  function pickTarget(state) {
+    var list = alivePlayers(state);
+    return list.length ? list[Math.floor(state.rnd() * list.length)] : null;
+  }
+
+  function pushBullet(state, x, y, vx, vy) {
+    state.ebullets.push({ x: x, y: y, vx: vx, vy: vy });
+  }
+
+  function aimedFan(state, boss, target, count, spread, speed) {
+    if (!target) return;
+    var base = Math.atan2(target.y - boss.y, target.x - boss.x);
+    for (var i = 0; i < count; i++) {
+      var a = base + (i - (count - 1) / 2) * spread;
+      pushBullet(state, boss.x, boss.y, Math.cos(a) * speed, Math.sin(a) * speed);
+    }
+  }
+
+  /* ---------- 三种 BOSS：独立移动与弹幕 ---------- */
+  var BOSS_DEFS = {
+    fortress: {
+      hp: 320, r: 70, score: 300, entryY: 190, entrySpeed: 70, baseInterval: 0.95,
+      move: function (state, boss, dt, ease) {
+        var tx = W / 2 + Math.sin(boss.t * 0.45) * (W / 2 - 170);
+        /* 入场结束后的目标点可能离画面中央很远，平滑靠近，避免瞬移闪烁 */
+        boss.x += (tx - boss.x) * Math.min(1, dt * 2.4) * ease;
+      },
+      fire: function (state, boss, mode) {
+        var target = pickTarget(state);
+        if (mode === 0) {
+          aimedFan(state, boss, target, 3, 0.18, 260);
+        } else if (mode === 1) {
+          var spin = boss.t * 0.5;
+          for (var k = 0; k < 12; k++) {
+            var a = (k / 12) * AR.TAU + spin;
+            pushBullet(state, boss.x, boss.y, Math.cos(a) * 200, Math.sin(a) * 200);
+          }
+        } else {
+          for (var q = 0; q < 5; q++) {
+            pushBullet(state, boss.x - 60 + q * 30, boss.y + 40, (q - 2) * 45, 260);
+          }
+        }
+        if (mode !== 2) {
+          /* 两侧炮塔补一轮下压弹 */
+          pushBullet(state, boss.x - 78, boss.y + 18, -60, 230);
+          pushBullet(state, boss.x + 78, boss.y + 18, 60, 230);
+        }
+      }
+    },
+    hive: {
+      hp: 280, r: 66, score: 350, entryY: 175, entrySpeed: 60, baseInterval: 1.0,
+      move: function (state, boss, dt, ease) {
+        var tx = W / 2 + Math.sin(boss.t * 0.35) * (W / 2 - 190);
+        var ty = 175 + Math.sin(boss.t * 0.8) * 16;
+        var k = Math.min(1, dt * 2.2) * ease;
+        boss.x += (tx - boss.x) * k;
+        boss.y += (ty - boss.y) * k;
+      },
+      fire: function (state, boss, mode) {
+        var target = pickTarget(state);
+        if (mode === 0) {
+          var spin = boss.t * 0.7;
+          for (var k = 0; k < 16; k++) {
+            var a = (k / 16) * AR.TAU + spin;
+            pushBullet(state, boss.x, boss.y, Math.cos(a) * 190, Math.sin(a) * 190);
+          }
+        } else if (mode === 1) {
+          if (state.enemies.length < 22) {
+            enemy(state, 'grunt', boss.x - 70, boss.y + 20);
+            enemy(state, 'grunt', boss.x + 70, boss.y + 20);
+          }
+          aimedFan(state, boss, target, 3, 0.2, 250);
+        } else {
+          aimedFan(state, boss, target, 5, 0.14, 285);
+        }
+      }
+    },
+    prism: {
+      hp: 240, r: 58, score: 400, entryY: 165, entrySpeed: 85, baseInterval: 0.55,
+      move: function (state, boss, dt, ease) {
+        var tx = W / 2 + Math.sin(boss.t * 0.85) * (W / 2 - 160);
+        var ty = 165 + Math.sin(boss.t * 1.3) * 24;
+        var k = Math.min(1, dt * 3.0) * ease;
+        boss.x += (tx - boss.x) * k;
+        boss.y += (ty - boss.y) * k;
+      },
+      fire: function (state, boss, mode) {
+        var target = pickTarget(state);
+        if (mode === 0) {
+          var base = boss.t * 2.6;
+          for (var k = 0; k < 3; k++) {
+            var a = base + k * AR.TAU / 3;
+            pushBullet(state, boss.x, boss.y, Math.cos(a) * 210, Math.sin(a) * 210);
+          }
+        } else if (mode === 1) {
+          aimedFan(state, boss, target, 5, 0.12, 330);
+        } else {
+          var off = boss.t * 0.3;
+          for (var q = 0; q < 8; q++) {
+            var a2 = off + q * AR.TAU / 8;
+            pushBullet(state, boss.x, boss.y, Math.cos(a2) * 240, Math.sin(a2) * 240);
+          }
+        }
+      }
+    }
+  };
+
+  function bossDef(boss) {
+    return BOSS_DEFS[boss.type] || BOSS_DEFS.fortress;
+  }
+
+  function spawnBoss(state) {
+    var meta = BOSS_META[Math.floor(state.rnd() * BOSS_META.length) % BOSS_META.length];
+    var def = BOSS_DEFS[meta.id] || BOSS_DEFS.fortress;
+    state.boss = {
+      type: meta.id,
+      name: meta.name,
+      color: meta.color,
+      accent: meta.accent,
+      x: W / 2, y: -120,
+      hp: def.hp, maxHp: def.hp,
+      r: def.r,
+      t: 0,
+      fireTimer: 1.2,
+      phase: 0,
+      moveT: 0,
+      inv: true,
+      flash: 0,
+      score: def.score
+    };
   }
 
   function enemyShoot(state, e, target) {
@@ -89,17 +236,69 @@
     state.waveTimer = Math.max(0.75, 1.6 - t * 0.006);
   }
 
-  function spawnBoss(state) {
-    state.boss = {
-      x: W / 2, y: -120,
-      hp: 260, maxHp: 260,
-      r: 70,
-      t: 0,
-      fireTimer: 1.2,
-      phase: 0,
-      inv: true,          /* 登场后、开火前无敌 */
-      score: 300
-    };
+  function maybeDrop(state, e) {
+    if (state.powerups.length >= BUFF_MAX) return;
+    var chance = BUFF_CHANCE[e.type] || 0.12;
+    if (state.rnd() > chance) return;
+    var def = BUFF_DEFS[Math.floor(state.rnd() * BUFF_DEFS.length) % BUFF_DEFS.length];
+    state.powerups.push({
+      x: e.x, y: e.y,
+      type: def.id,
+      life: BUFF_LIFE,
+      vy: BUFF_VY
+    });
+  }
+
+  function applyBuff(state, p, buff) {
+    if (buff.type === 'heal') p.hp = Math.min(p.maxHp, p.hp + 1);
+    else if (buff.type === 'shield') p.shield = Math.min(2, p.shield + 1);
+    else if (buff.type === 'rapid') p.rapidT = Math.max(p.rapidT, 8);
+    else if (buff.type === 'spread') p.spreadT = Math.max(p.spreadT, 8);
+    else if (buff.type === 'purge') {
+      state.ebullets.length = 0;
+      p.inv = Math.max(p.inv, 1.2);
+    }
+    state.events.push({
+      t: 'buffget', kind: buff.type,
+      x: Math.round(p.x), y: Math.round(p.y), c: p.color
+    });
+  }
+
+  function updatePowerups(state, dt) {
+    for (var i = state.powerups.length - 1; i >= 0; i--) {
+      var u = state.powerups[i];
+      u.life -= dt;
+      u.y += u.vy * dt;
+      if (u.life <= 0 || u.y > H + 40) {
+        state.powerups.splice(i, 1);
+        continue;
+      }
+      for (var id in state.players) {
+        var p = state.players[id];
+        if (!p.alive) continue;
+        if (AR.dist2(p.x, p.y, u.x, u.y) < BUFF_RADIUS * BUFF_RADIUS) {
+          applyBuff(state, p, u);
+          state.powerups.splice(i, 1);
+          break;
+        }
+      }
+    }
+  }
+
+  function firePlayer(state, p, id) {
+    var shots = p.spreadT > 0
+      ? [[-14, -170], [0, 0], [14, 170]]
+      : [[-9, 0], [9, 0]];
+    for (var i = 0; i < shots.length; i++) {
+      state.pbullets.push({
+        x: p.x + shots[i][0],
+        y: p.y - 22,
+        vx: shots[i][1],
+        vy: -980,
+        owner: id,
+        color: p.color
+      });
+    }
   }
 
   AR.games.shmup = {
@@ -116,6 +315,7 @@
         enemies: [],
         pbullets: [],
         ebullets: [],
+        powerups: [],
         boss: null,
         bossSpawned: false,
         waveTimer: 1.2,
@@ -142,31 +342,18 @@
     /* 推进一帧，dt 固定为 1/60 秒。这里只能改 state，不要读时间/文件/网络。 */
     tick: function (state, dt) {
       state.time += dt;
-      state.rnd = state.rnd || Math.random;
       var id, i, p;
 
       if (!state.bossSpawned && state.time >= BOSS_AT) {
         state.bossSpawned = true;
         spawnBoss(state);
-        state.events.push({ t: 'boss' });
+        state.events.push({ t: 'boss', kind: state.boss.type, name: state.boss.name });
       }
 
       /* 玩家 */
       for (id in state.players) {
         p = state.players[id];
-        if (!p.alive) {
-          if (p.lives > 0) {
-            p.respawn -= dt;
-            if (p.respawn <= 0) {
-              p.alive = true;
-              p.hp = p.maxHp;
-              p.inv = 1.8;
-              p.x = AR.clamp(p.x, 60, W - 60);
-              p.y = 880;
-            }
-          }
-          continue;
-        }
+        if (!p.alive) continue;
         var inp = p.input || {};
         var dx = Number(inp.dx) || 0;
         var dy = Number(inp.dy) || 0;
@@ -174,15 +361,16 @@
         if (len > 0.01) {
           dx /= len; dy /= len;
           p.x = AR.clamp(p.x + dx * 330 * dt, 40, W - 40);
-          p.y = AR.clamp(p.y + dy * 330 * dt, 420, H - 50);
+          /* 允许飞到上半区，别在画面中段设空气墙 */
+          p.y = AR.clamp(p.y + dy * 330 * dt, 80, H - 50);
         }
         p.inv = Math.max(0, p.inv - dt);
+        p.rapidT = Math.max(0, p.rapidT - dt);
+        p.spreadT = Math.max(0, p.spreadT - dt);
         p.cool -= dt;
-        /* 默认自动开火，不再需要按键 */
         if (p.cool <= 0) {
-          p.cool = 0.115;
-          state.pbullets.push({ x: p.x - 9, y: p.y - 22, vx: 0, vy: -980, owner: id, color: p.color });
-          state.pbullets.push({ x: p.x + 9, y: p.y - 22, vx: 0, vy: -980, owner: id, color: p.color });
+          p.cool = 0.115 * (p.rapidT > 0 ? 0.55 : 1);
+          firePlayer(state, p, id);
         }
       }
 
@@ -216,39 +404,24 @@
         if (e.y > H + 60) state.enemies.splice(i, 1);
       }
 
-      /* Boss */
+      /* BOSS */
       var boss = state.boss;
       if (boss) {
         boss.t += dt;
         boss.phase = Math.min(3, Math.floor(boss.t / 12));
-        if (boss.y < 190) boss.y += 70 * dt;
-        else boss.x = W / 2 + Math.sin(boss.t * 0.55) * (W / 2 - 120);
+        if (boss.flash > 0) boss.flash = Math.max(0, boss.flash - dt);
+        var def = bossDef(boss);
+        if (boss.y < def.entryY) {
+          boss.y = Math.min(def.entryY, boss.y + def.entrySpeed * dt);
+        } else {
+          boss.moveT += dt;
+          def.move(state, boss, dt, Math.min(1, boss.moveT / 1.2));
+        }
         boss.fireTimer -= dt;
-        if (boss.fireTimer <= 0 && boss.y >= 180) {
-          boss.inv = false;            /* 开始攻击 = 可以被打了 */
-          boss.fireTimer = Math.max(0.45, 1.1 - boss.phase * 0.2);
-          var mode = Math.floor(boss.t / 6) % 3;
-          if (mode === 0) {
-            for (var k = 0; k < 12; k++) {
-              var ang = (k / 12) * AR.TAU + boss.t;
-              state.ebullets.push({ x: boss.x, y: boss.y, vx: Math.cos(ang) * 190, vy: Math.sin(ang) * 190 });
-            }
-          } else if (mode === 1) {
-            var tgt = alivePlayers(state)[0];
-            if (tgt) {
-              for (var m = -2; m <= 2; m++) {
-                var a2 = Math.atan2(tgt.y - boss.y, tgt.x - boss.x) + m * 0.16;
-                state.ebullets.push({ x: boss.x, y: boss.y, vx: Math.cos(a2) * 300, vy: Math.sin(a2) * 300 });
-              }
-            }
-          } else {
-            for (var q = 0; q < 5; q++) {
-              state.ebullets.push({
-                x: boss.x - 50 + q * 25, y: boss.y + 40,
-                vx: (q - 2) * 40, vy: 280
-              });
-            }
-          }
+        if (boss.fireTimer <= 0 && boss.y >= def.entryY - 20) {
+          boss.inv = false;
+          def.fire(state, boss, Math.floor(boss.t / 6) % 3);
+          boss.fireTimer = Math.max(0.4, def.baseInterval - boss.phase * 0.1);
         }
       }
 
@@ -257,10 +430,14 @@
         var pb = state.pbullets[i];
         pb.x += pb.vx * dt;
         pb.y += pb.vy * dt;
-        if (pb.y < -20) { state.pbullets.splice(i, 1); continue; }
+        if (pb.y < -20 || pb.x < -20 || pb.x > W + 20) {
+          state.pbullets.splice(i, 1);
+          continue;
+        }
         var hit = false;
 
-        if (boss && boss.y > 0 && !boss.inv && AR.dist2(pb.x, pb.y, boss.x, boss.y) < boss.r * boss.r) {
+        if (boss && boss.y > 0 && !boss.inv &&
+          AR.dist2(pb.x, pb.y, boss.x, boss.y) < boss.r * boss.r) {
           boss.hp -= 1;
           boss.flash = 0.08;
           if (state.players[pb.owner]) state.players[pb.owner].score += 1;
@@ -269,7 +446,7 @@
           if (boss.hp <= 0) {
             if (state.players[pb.owner]) state.players[pb.owner].score += boss.score;
             else state.score += boss.score;
-            state.events.push({ t: 'bossdie', x: boss.x, y: boss.y });
+            state.events.push({ t: 'bossdie', x: boss.x, y: boss.y, kind: boss.type });
             state.boss = null;
             state.ended = true;
             state.win = true;
@@ -287,9 +464,12 @@
                 if (shooter) {
                   shooter.score += en.score;
                   shooter.kills++;
-                  state.events.push({ t: 'kill', by: shooter.id, name: shooter.name, color: shooter.color,
-                    kind: en.type, x: en.x, y: en.y });
+                  state.events.push({
+                    t: 'kill', by: shooter.id, name: shooter.name, color: shooter.color,
+                    kind: en.type, x: en.x, y: en.y
+                  });
                 }
+                maybeDrop(state, en);
                 state.events.push({ t: 'explode', x: en.x, y: en.y, r: en.r });
                 state.enemies.splice(j, 1);
               }
@@ -300,6 +480,9 @@
         }
         if (hit) state.pbullets.splice(i, 1);
       }
+
+      /* 增益光球：缓慢下落，碰到战机即拾取 */
+      updatePowerups(state, dt);
 
       /* 敌弹 */
       for (i = state.ebullets.length - 1; i >= 0; i--) {
@@ -314,32 +497,40 @@
           p = state.players[id];
           if (!p.alive || p.inv > 0) continue;
           if (AR.dist2(eb.x, eb.y, p.x, p.y) < 17 * 17) {
-            p.hp--;
-            p.inv = 0.9;
             state.ebullets.splice(i, 1);
             state.events.push({ t: 'hurt', x: p.x, y: p.y });
-            if (p.hp <= 0) {
-              p.lives--;
-              p.alive = false;
-              p.respawn = 1.8;
-              state.events.push({ t: 'playerdead', x: p.x, y: p.y, c: p.color });
+            if (p.shield > 0) {
+              p.shield--;
+              p.inv = 0.5;
+              state.events.push({ t: 'shield', x: p.x, y: p.y, c: p.color });
+            } else {
+              p.hp--;
+              p.inv = 0.9;
+              if (p.hp <= 0) {
+                p.hp = 0;
+                p.alive = false;
+                p.shield = 0;
+                p.rapidT = 0;
+                p.spreadT = 0;
+                state.events.push({ t: 'playerdead', x: p.x, y: p.y, c: p.color });
+              }
             }
             break;
           }
         }
       }
 
-      /* 清理越界子弹 */
+      /* 清理越界对象 */
       if (state.ebullets.length > 260) state.ebullets.splice(0, state.ebullets.length - 260);
       if (state.pbullets.length > 80) state.pbullets.splice(0, state.pbullets.length - 80);
       if (state.enemies.length > 40) state.enemies.splice(0, state.enemies.length - 40);
 
-      /* 全员阵亡 */
-      var anyLeft = false;
+      /* 全员被击毁：不再复活，立即结束 */
+      var anyAlive = false;
       for (id in state.players) {
-        if (state.players[id].lives > 0 || state.players[id].alive) { anyLeft = true; break; }
+        if (state.players[id].alive) { anyAlive = true; break; }
       }
-      if (!anyLeft) state.ended = true;
+      if (!anyAlive) state.ended = true;
     },
 
     /* 服务端每帧问一次。返回 true 时这一局结束，会调 results() 结算。 */
@@ -409,7 +600,14 @@
         if (score < bd) { bd = score; best = e; }
       }
 
-      if (best) {
+      /* BOSS 出现后优先对 BOSS 站位，否则人机会一直清小怪不打关底 */
+      var boss = state.boss;
+      if (boss && boss.y > 0) {
+        var bossX = boss.x + wobble * 0.25;
+        var bossY = Math.min(H - 90, Math.max(620, boss.y + 300));
+        ax += (bossX > p.x ? 1 : -1) * 0.9;
+        ay += (bossY > p.y ? 1 : -1) * 0.35;
+      } else if (best) {
         var wantX = best.x * 0.7 + (lane + wobble) * 0.3;
         var wantY = Math.min(H - 90, Math.max(560, best.y + 260));
         ax += (wantX > p.x ? 1 : -1) * 0.85;
@@ -453,7 +651,9 @@
         var p = state.players[id];
         ps.push({
           i: p.id, x: Math.round(p.x), y: Math.round(p.y),
-          hp: p.hp, lv: p.lives, al: p.alive ? 1 : 0,
+          hp: p.hp, mh: p.maxHp, sh: p.shield,
+          rt: p.rapidT > 0 ? 1 : 0, st: p.spreadT > 0 ? 1 : 0,
+          al: p.alive ? 1 : 0,
           iv: p.inv > 0 ? 1 : 0, s: p.score + p.kills * 5
         });
       }
@@ -465,6 +665,8 @@
       state.pbullets.forEach(function (b) { pb.push([b.x | 0, b.y | 0]); });
       var eb = [];
       state.ebullets.forEach(function (b) { eb.push([b.x | 0, b.y | 0]); });
+      var pu = [];
+      state.powerups.forEach(function (u) { pu.push([u.x | 0, u.y | 0, u.type]); });
       var ev = state.events;
       state.events = [];
       return {
@@ -472,12 +674,17 @@
         t: Math.round(state.time * 10) / 10,
         d: state.duration,
         sc: state.score,
-        p: ps, e: en, pb: pb, eb: eb,
+        p: ps, e: en, pb: pb, eb: eb, u: pu,
         b: state.boss ? {
           x: state.boss.x | 0, y: state.boss.y | 0,
           hp: state.boss.hp, mx: state.boss.maxHp,
+          r: state.boss.r,
           iv: state.boss.inv ? 1 : 0,
-          f: state.boss.flash > 0 ? 1 : 0
+          f: state.boss.flash > 0 ? 1 : 0,
+          k: state.boss.type,
+          nm: state.boss.name,
+          c: state.boss.color,
+          ac: state.boss.accent
         } : null,
         ev: ev
       };

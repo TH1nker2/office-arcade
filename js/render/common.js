@@ -170,6 +170,9 @@
       } else if (kind === 'shmup') {
         if (e.t === 'explode') { addBurst(list, e.x, e.y, '#ffb020', 14, 170); sfx('boom'); }
         else if (e.t === 'playerdead') { addBurst(list, e.x, e.y, e.c || '#ff2e63', 26, 220); sfx('die'); }
+        else if (e.t === 'buffget') { addBurst(list, e.x, e.y, e.c || '#4ade80', 10, 120); sfx('pop'); }
+        else if (e.t === 'shield') { addBurst(list, e.x, e.y, '#38bdf8', 10, 100); sfx('pop'); }
+        else if (e.t === 'bossdie') { addBurst(list, e.x, e.y, '#ffb020', 40, 260); sfx('boom'); }
         else if (e.t === 'boss') sfx('die');
       }
     }
@@ -193,6 +196,13 @@
       ['B', '#ff2e63', '炸弹数', '能同时放更多炸弹'],
       ['R', '#fbbf24', '爆炸范围', '火焰喷得更远'],
       ['S', '#22d3ee', '移动速度', '跑得更快']
+    ],
+    shmup: [
+      ['✚', '#4ade80', '修护', '回 1 点耐久'],
+      ['🛡', '#38bdf8', '护盾', '挡 1 次伤害'],
+      ['⚡', '#fbbf24', '连发', '射速 +8 秒'],
+      ['🔱', '#c084fc', '散射', '三向射击 8 秒'],
+      ['💥', '#ff2e63', '净化', '清弹 + 短暂无敌']
     ]
   };
 

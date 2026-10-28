@@ -31,10 +31,10 @@
       keys: ['← →：移动', '↑：旋转', '↓：软降', '空格：直落']
     },
     {
-      id: 'shmup', name: '合作弹幕', sub: 'CO-OP SHMUP', tag: '合作', icon: '🚀',
+      id: 'shmup', name: '合作弹幕', sub: 'CO-OP SHMUP V2', tag: '合作', icon: '🚀',
       time: 120, min: 1, max: 4,
-      desc: '全队并肩迎战敌机和 BOSS，击落越多得分越高；全员被击落时结束。',
-      keys: ['WASD：移动', '自动开火，不用按键']
+      desc: '全队迎战敌机与随机 BOSS；击毁敌机掉落增益，全员被击毁时结束。',
+      keys: ['WASD：移动', '自动开火，不用按键', '拾取光球：获得随机增益']
     },
     {
       id: 'draw', name: '你画我猜', sub: 'DRAW & GUESS', tag: '社交', icon: '🎨',

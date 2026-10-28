@@ -627,11 +627,18 @@
       var sc = 0;
       var scCls = '';
       var rank = 0;
+      var dead = false;
+      var sortSc = 0;
       if (APP.game.id === 'draw' && s.sc) sc = s.sc[p.id] || 0;
       else if (APP.game.id === 'shmup') {
-        /* 每人独立分数，取自己那一项 */
+        /* 每人独立分数，取自己那一项；被击毁后不再复活 */
         sc = 0;
-        for (var sp = 0; sp < (s.p || []).length; sp++) if (s.p[sp].i === p.id) sc = s.p[sp].s;
+        for (var sp = 0; sp < (s.p || []).length; sp++) {
+          if (s.p[sp].i !== p.id) continue;
+          sc = s.p[sp].s;
+          sortSc = sc;
+          dead = !s.p[sp].al;
+        }
       }
       else if (APP.game.id === 'racing') {
         for (var r = 0; r < s.c.length; r++) {
@@ -658,10 +665,12 @@
       } else if (APP.game.id === 'tank') {
         for (var n = 0; n < s.p.length; n++) if (s.p[n].i === p.id) sc = s.p[n].s;
       }
-      list.push({ p: p, sc: sc, scCls: scCls, rank: rank });
+      list.push({ p: p, sc: sc, scCls: scCls, rank: rank, dead: dead, sortSc: sortSc });
     }
     if (APP.game.id === 'racing') {
       list.sort(function (a, b) { return a.rank - b.rank; });
+    } else if (APP.game.id === 'shmup') {
+      list.sort(function (a, b) { return b.sortSc - a.sortSc; });
     } else if (APP.game.id !== 'gomoku') {
       list.sort(function (a, b) { return b.sc - a.sc; });
     }
@@ -670,7 +679,8 @@
       html += '<div class="hud-row' + (it.p.id === (APP.me && APP.me.id) ? ' me' : '') + '">' +
         '<span class="dotc" style="background:' + it.p.color + '"></span>' +
         '<span class="nm">' + esc(it.p.name) + '</span>' +
-        '<span class="sc' + it.scCls + '">' + it.sc + '</span></div>';
+        '<span class="sc' + it.scCls + (it.dead ? ' dead' : '') + '">' +
+        (it.dead ? '阵亡' : it.sc) + '</span></div>';
     });
     if (html !== lastHudKey) {
       lastHudKey = html;
