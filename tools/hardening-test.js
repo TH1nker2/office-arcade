@@ -163,7 +163,7 @@ async function main() {
   console.log('\n=== 聊天与注入 ===');
   wsA.send(JSON.stringify({ t: 'leaveRoom' }));
   await sleep(300);
-  wsA.send(JSON.stringify({ t: 'createRoom', gameId: 'snake' }));
+  wsA.send(JSON.stringify({ t: 'createRoom', gameId: 'tank' }));
   await sleep(400);
   const room2 = A.filter((m) => m.t === 'room').pop();
   wsA.send(JSON.stringify({ t: 'chat', text: '<img src=x onerror=alert(1)>' }));

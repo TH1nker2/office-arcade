@@ -53,7 +53,7 @@
   }
 
   /* 光晕 sprite 缓存：同颜色同半径只做一次径向渐变。
-     蛇球 110 个光点、弹幕数百发子弹都在 60Hz 下调这里，
+     弹幕数百发子弹、坦克爆炸粒子都在 60Hz 下调这里，
      每帧 createRadialGradient 是之前最大的 Canvas 分配来源。 */
   var glowCache = {};
 
@@ -162,11 +162,6 @@
         if (e.t === 'boom') { addBurst(list, e.x, e.y, e.c || '#fbbf24', 18, 190); sfx('boom'); }
         else if (e.t === 'brk') { addBurst(list, e.x, e.y, '#c08457', 8, 120); sfx('pop'); }
         else if (e.t === 'hit') addBurst(list, e.x, e.y, '#ffe08a', 5, 90);
-      } else if (kind === 'snake') {
-        if (e.t === 'die') { addBurst(list, e.x, e.y, e.c || '#ff2e63', 24, 180); sfx('die'); }
-      } else if (kind === 'bomber') {
-        if (e.t === 'boom') { addBurst(list, (e.cx + 0.5) * 48, (e.cy + 0.5) * 48, '#ffb020', 16, 190); sfx('boom'); }
-        else if (e.t === 'pick') sfx('pop');
       } else if (kind === 'shmup') {
         if (e.t === 'explode') { addBurst(list, e.x, e.y, '#ffb020', 14, 170); sfx('boom'); }
         else if (e.t === 'playerdead') { addBurst(list, e.x, e.y, e.c || '#ff2e63', 26, 220); sfx('die'); }
@@ -183,7 +178,7 @@
     return (info && info.id === G.me) ? '#7dffb0' : 'rgba(230,245,255,0.8)';
   }
   /* ============================================================
-   * 道具图例（坦克 / 炸弹人）画在左侧
+   * 道具图例（坦克 / 弹幕）画在左侧
    * ============================================================ */
   var LEGENDS = {
     tank: [
@@ -191,11 +186,6 @@
       ['🔥', '#f97316', '连发', '射击间隔 x0.55，8 秒'],
       ['🛡', '#38bdf8', '护盾', '挡 1 次伤害'],
       ['✚', '#4ade80', '修护', '回 2 点耐久']
-    ],
-    bomber: [
-      ['B', '#ff2e63', '炸弹数', '能同时放更多炸弹'],
-      ['R', '#fbbf24', '爆炸范围', '火焰喷得更远'],
-      ['S', '#22d3ee', '移动速度', '跑得更快']
     ],
     shmup: [
       ['✚', '#4ade80', '修护', '回 1 点耐久'],
@@ -227,28 +217,13 @@
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
       var ry = y + 34 + i * rowH + 10;
-      if (kind === 'bomber') {
-        /* 和场上道具一样：深色圆底 + 彩色描边 + 字母 */
-        var ix = x + 24;
-        ctx.fillStyle = '#0b111c';
-        ctx.beginPath();
-        ctx.arc(ix, ry, 11, 0, TAU);
-        ctx.fill();
-        ctx.strokeStyle = row[1];
-        ctx.lineWidth = 2.2;
-        ctx.stroke();
-        label(ctx, row[0], ix, ry + 1, row[1], 12);
-        label(ctx, row[2], x + 44, ry, row[1], 12.5, 'left');
-        label(ctx, row[3], x + 96, ry, 'rgba(190,210,235,0.72)', 11, 'left');
-      } else {
-        ctx.font = '15px system-ui, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = row[1];
-        ctx.fillText(row[0], x + 16, ry);
-        label(ctx, row[2], x + 42, ry, row[1], 12.5, 'left');
-        label(ctx, row[3], x + 90, ry, 'rgba(190,210,235,0.72)', 11, 'left');
-      }
+      ctx.font = '15px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = row[1];
+      ctx.fillText(row[0], x + 16, ry);
+      label(ctx, row[2], x + 42, ry, row[1], 12.5, 'left');
+      label(ctx, row[3], x + 90, ry, 'rgba(190,210,235,0.72)', 11, 'left');
     }
     ctx.restore();
   }

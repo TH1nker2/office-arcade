@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 浏览器性能基线：首屏资源传输量 + 三款高帧率游戏的 RAF 帧时间
+/* 浏览器性能基线：首屏资源传输量 + 三款游戏的 RAF 帧时间
  *
  * 用法：node tools/perf-test.js
  * 说明：headless 的数字不能代表真实显卡，但同一台机器前后对比足够定位回归。
@@ -114,7 +114,7 @@ async function main() {
 
   console.log('RAF 帧时间（3 人机 + 自己，headless Edge）：');
   const results = {};
-  for (const id of ['snake', 'tank', 'shmup']) {
+  for (const id of ['tank', 'tetris', 'shmup']) {
     results[id] = await playGame(B, id, 6);
   }
 

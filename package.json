@@ -1,8 +1,8 @@
 {
   "name": "office-arcade",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "private": true,
-  "description": "摸鱼游戏厅 — 内网联机小游戏平台：注册登录、在线状态、房间与人机、10 款游戏、管理后台、SQLite 战绩",
+  "description": "摸鱼游戏厅 — 内网联机小游戏平台：注册登录、在线状态、房间与人机、6 款游戏、管理后台、SQLite 战绩",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

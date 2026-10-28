@@ -4,7 +4,7 @@
 
 const path = require('path');
 for (const f of ['core', 'registry', 'games/constants']) require(path.join(__dirname, '..', 'shared', f + '.js'));
-for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'ludo', 'gomoku', 'undercover']) {
+for (const g of ['tank', 'tetris', 'shmup', 'draw', 'gomoku', 'undercover']) {
   require(path.join(__dirname, '..', 'shared', 'games', g + '.js'));
 }
 const AR = globalThis.AR;
@@ -74,10 +74,6 @@ function sim(id, n, seconds, inputFn, capSeconds) {
 function inputFor(id) {
   return (t, p, st) => {
     const sec = t / 60;
-    if (id === 'snake') {
-      const a = sec * 1.7 + (p.id.charCodeAt(1) - 48) * 1.9;
-      return { ax: 800 + Math.cos(a) * 700, ay: 600 + Math.sin(a * 1.3) * 520 };
-    }
     if (id === 'tank') {
       const a = sec * 0.9 + (p.id.charCodeAt(1) - 48);
       return {
@@ -86,13 +82,6 @@ function inputFor(id) {
         ax: 800 + Math.cos(a * 2) * 700,
         ay: 600 + Math.sin(a * 2) * 500,
         f: true
-      };
-    }
-    if (id === 'bomber') {
-      return {
-        dx: Math.sin(sec * 1.1 + p.id.charCodeAt(1)) > 0 ? 1 : -1,
-        dy: Math.cos(sec * 0.8 + p.id.charCodeAt(1)) > 0 ? 1 : -1,
-        bomb: t % 150 === 0
       };
     }
     if (id === 'shmup') {
@@ -111,12 +100,10 @@ function inputFor(id) {
   };
 }
 
-console.log('=== 六个游戏逻辑模拟 ===');
+console.log('=== 动作/对战游戏逻辑模拟 ===');
 
 const cases = [
-  ['snake', 4, 90, 90],
   ['tank', 4, 150, 150],
-  ['bomber', 4, 120, 120],
   ['tetris', 4, 180, 180],
   ['shmup', 4, 120, 120]
 ];
@@ -170,34 +157,6 @@ for (const [id, n, secs, cap] of cases) {
   ok('draw 阶段流转', phases.has('draw') && phases.has('reveal'), [...phases].join('/'));
   ok('draw 结果完整', res.length === 5, res.map((x) => x.name + ':' + x.score).join(' '));
   console.log('  轮次进度: ' + (st.turn + 1) + '/' + st.order.length + '，阶段 ' + st.phase);
-  /* 蛇：撞自己不再死亡 */
-  const sg3 = AR.games.snake;
-  const ss3 = sg3.create(players(1), { seed: 21 });
-  const sn3 = ss3.snakes.p0;
-  sn3.alive = true;
-  sn3.len = 30;
-  sn3.trail = [];
-  for (let k = 0; k < 30; k++) {
-    sn3.trail.push({ x: sn3.x + Math.cos(k * 0.4) * 60, y: sn3.y + Math.sin(k * 0.4) * 60 });
-  }
-  sn3.x = sn3.trail[20].x;
-  sn3.y = sn3.trail[20].y;
-  const aliveBefore = sn3.alive;
-  for (let i = 0; i < 20; i++) sg3.tick(ss3, 1 / 60);
-  ok('蛇撞自己不再死亡', aliveBefore && sn3.alive === true, 'alive=' + sn3.alive);
-
-  /* 蛇：转向要跟手（8 rad/s -> 90 度大约 0.2 秒） */
-  const ss4 = sg3.create(players(1), { seed: 22 });
-  const sn4 = ss4.snakes.p0;
-  sn4.a = 0;
-  sn4.x = ss4.w / 2;
-  sn4.y = ss4.h / 2;
-  for (let i = 0; i < 12; i++) {           /* 12 帧 = 0.2s */
-    sg3.input(ss4, 'p0', { ax: sn4.x, ay: sn4.y + 400 });
-    sg3.tick(ss4, 1 / 60);
-  }
-  const turned = Math.abs(AR.wrap(sn4.a - Math.PI / 2));
-  ok('蛇转向足够快（0.2 秒转过 90 度）', turned < 0.5, '偏差 ' + turned.toFixed(2) + ' rad');
 
   /* 你画我猜：10 秒不选词就随机选 */
   const dg = AR.games.draw;
@@ -260,58 +219,6 @@ for (const [id, n, secs, cap] of cases) {
   ok('tetris 四行消除', tp.lines >= 4, 'lines=' + tp.lines + ' score=' + tp.score);
   ok('tetris 给对手塞垃圾', ts.players.p1.pending > 0, 'pending=' + ts.players.p1.pending);
 
-  const bg = AR.games.bomber;
-  const bs = bg.create(players(2), { seed: 2 });
-  const b0 = bs.players.p0, b1 = bs.players.p1;
-  b0.cx = 1; b0.cy = 1; b0.fromX = 1; b0.fromY = 1; b0.moveT = 1;
-  b1.cx = 2; b1.cy = 1; b1.fromX = 2; b1.fromY = 1; b1.moveT = 1;
-  bg.input(bs, 'p0', { bomb: true });
-  ok('bomber 放弹', bs.bombs.length === 1, 'bombs=' + bs.bombs.length);
-  for (let i = 0; i < 170; i++) bg.tick(bs, 1 / 60);
-  ok('bomber 爆炸击杀', b1.alive === false, 'p1.alive=' + b1.alive);
-
-  /* 同帧连锁爆炸：explode 会一次删掉多颗炸弹，倒序循环不能读越界 */
-  const bc = bg.create(players(2), { seed: 55 });
-  bc.map.fill(0);
-  bc.flames = [];
-  bc.powerups = [];
-  bc.players.p0.cx = 1; bc.players.p0.cy = 1;
-  bc.players.p1.cx = 10; bc.players.p1.cy = 10;
-  bc.bombs = [
-    { cx: 1, cy: 1, timer: 0.001, range: 2, owner: 'p0', color: '#ff2e63' },
-    { cx: 2, cy: 1, timer: 0.001, range: 2, owner: 'p0', color: '#ff2e63' }
-  ];
-  let chainErr = null;
-  try { bg.tick(bc, 1 / 60); } catch (e) { chainErr = e; }
-  ok('bomber 同帧连锁爆炸不崩溃', !chainErr && bc.bombs.length === 0 && bc.flames.length > 0,
-    chainErr ? chainErr.message : ('bombs=' + bc.bombs.length + ' flames=' + bc.flames.length));
-
-  /* 飞行棋：玩家中途退出后，剩余玩家的绝对格不能跟着重排 */
-  const lg = AR.games.ludo;
-  const lplayers = players(4);
-  const ls = lg.create(lplayers, { seed: 77, planes: 2 });
-  lplayers.forEach((p, i) => { ls.players[p.id].planes[0] = 5 + i * 2; });
-  ls.turn = 2;                       /* p2 当前回合，退出的是 p1（下标更小） */
-  const absPos = (snap, id) => {
-    for (let i = 0; i < snap.pl.length; i++) {
-      if (snap.pl[i][0] !== id) continue;
-      return snap.pl[i][1] < 0 ? null : (snap.st[i] + snap.pl[i][1]) % 40;
-    }
-    return null;
-  };
-  const lsBefore = lg.snapshot(ls);
-  const ludoBefore = {};
-  lplayers.forEach((p) => { ludoBefore[p.id] = absPos(lsBefore, p.id); });
-  lg.removePlayer(ls, 'p1');
-  const lsAfter = lg.snapshot(ls);
-  ['p0', 'p2', 'p3'].forEach((id) => {
-    ok('飞行棋退场后 ' + id + ' 位置不漂移',
-      absPos(lsAfter, id) === ludoBefore[id], ludoBefore[id] + ' -> ' + absPos(lsAfter, id));
-  });
-  ok('飞行棋退场后仍轮到原当前玩家', lsAfter.c === 'p2', 'current=' + lsAfter.c);
-  ok('飞行棋快照带冻结起跑格', Array.isArray(lsAfter.st) && lsAfter.st.length === 3,
-    JSON.stringify(lsAfter.st));
-
   const kg = AR.games.tank;
   const ks = kg.create(players(2), { seed: 4 });
   const k0 = ks.tanks.p0;
@@ -328,51 +235,6 @@ for (const [id, n, secs, cap] of cases) {
   for (let i = 0; i < 30; i++) kg.tick(ks, 1 / 60);
   ok('tank 射击破砖', before === 2 && ks.map[row * 40 + 5] !== 2,
     'before=' + before + ' after=' + ks.map[row * 40 + 5]);
-
-  const sg = AR.games.snake;
-  const ss = sg.create(players(1), { seed: 9 });
-  const snake = ss.snakes.p0;
-  const len0 = snake.len;
-  ss.orbs = [{ x: snake.x + 10, y: snake.y }];
-  sg.input(ss, 'p0', { ax: snake.x + 100, ay: snake.y });
-  for (let i = 0; i < 6; i++) sg.tick(ss, 1 / 60);
-  ok('snake 吃光点增长', snake.len > len0, len0 + ' -> ' + snake.len);
-
-  /* 鼠标转向：把光标放在蛇头正右方，蛇头应转到 0 弧度 */
-  const sg2 = AR.games.snake;
-  const ss2 = sg2.create(players(1), { seed: 11 });
-  const sn2 = ss2.snakes.p0;
-  sn2.a = Math.PI;
-  sn2.x = ss2.w / 2;
-  sn2.y = ss2.h / 2;
-  for (let i = 0; i < 70; i++) {
-    sg2.input(ss2, 'p0', { ax: sn2.x + 300, ay: sn2.y });
-    sg2.tick(ss2, 1 / 60);
-  }
-  const da = Math.abs(AR.wrap(sn2.a));
-  ok('snake 会朝鼠标方向转', da < 0.4, '偏差 ' + da.toFixed(2) + ' 弧度');
-
-  /* 反方向也要灵 */
-  for (let i = 0; i < 70; i++) {
-    sg2.input(ss2, 'p0', { ax: sn2.x - 300, ay: sn2.y });
-    sg2.tick(ss2, 1 / 60);
-  }
-  const da2 = Math.abs(Math.abs(AR.wrap(sn2.a)) - Math.PI);
-  ok('snake 反向也能转', da2 < 0.4, '偏差 ' + da2.toFixed(2) + ' 弧度');
-
-  /* 长蛇后段：头落在两个 trail 采样点之间，旧的点采样会漏判 */
-  const ss5 = AR.games.snake.create(players(2), { seed: 123 });
-  const sa = ss5.snakes.p0;
-  const sb = ss5.snakes.p1;
-  sa.x = 220; sa.y = 100; sa.a = 0; sa.len = 30; sa.alive = true;
-  sa.trail = [{ x: 220, y: 100 }];
-  sb.x = 280; sb.y = 100; sb.a = 0; sb.len = 100; sb.alive = true;
-  sb.trail = [
-    { x: 280, y: 100 }, { x: 240, y: 100 },
-    { x: 200, y: 100 }, { x: 160, y: 100 }
-  ];
-  AR.games.snake.tick(ss5, 1 / 60);
-  ok('snake 头部撞长蛇后段能判定死亡', sa.alive === false, 'alive=' + sa.alive);
 
   console.log('');
 })();

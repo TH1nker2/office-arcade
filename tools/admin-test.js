@@ -81,6 +81,19 @@ async function main() {
   const badLevel = await request('GET', '/api/admin/words?level=nightmare', null, adminCookie);
   ok('非法难度返回 400', badLevel.status === 400);
 
+  const ucNoAuth = await request('GET', '/api/admin/undercover-words');
+  ok('未登录不能看卧底词库', ucNoAuth.status === 401);
+  const ucWords = await request('GET', '/api/admin/undercover-words', null, adminCookie);
+  ok('卧底词库可读', ucWords.status === 200 && ucWords.body.total === 120,
+    'status=' + ucWords.status + ' total=' + (ucWords.body && ucWords.body.total));
+  ok('卧底词对返回 120 条', (ucWords.body.pairs || []).length === 120);
+  ok('卧底词条字段完整', (ucWords.body.pairs || []).every((p) =>
+    p.a && p.b && p.category && p.a !== p.b));
+  ok('卧底分类汇总正确', (ucWords.body.categories || []).length === 10 &&
+    (ucWords.body.categories || []).reduce((n, c) => n + c.count, 0) === 120,
+    JSON.stringify(ucWords.body.categories));
+  ok('卧底词库来源正确', ucWords.body.source === 'shared/undercover-words.json', ucWords.body.source);
+
   console.log('\n=== 封禁 ===');
   const ws1 = new WebSocket('ws://127.0.0.1:' + PORT + '/ws?token=' + userCookie.split('=')[1]);
   let kickedMsg = null;

@@ -30,7 +30,7 @@
  *   leaveRoom                           离开房间
  *   invite      { toId }                邀请某人（对方在线且不在房间）
  *   inviteReply { inviteId, accept }    接受 / 拒绝邀请
- *   setting     { key, value }          房主改设置（draw 的 level、ludo 的 planes、undercover 的 rounds）
+ *   setting     { key, value }          房主改设置（draw 的 level、undercover 的 rounds）
  *   botAdd / botRemove { id }           加 / 删人机（固定普通难度）
  *   start                               房主开局（仅 lobby 阶段）
  *   input       { i }                   对局输入，i 的内容由各游戏自己约定
@@ -59,14 +59,10 @@
 require('./shared/core.js');
 require('./shared/registry.js');
 require('./shared/games/constants.js');
-require('./shared/games/snake.js');
 require('./shared/games/tank.js');
-require('./shared/games/bomber.js');
 require('./shared/games/tetris.js');
 require('./shared/games/shmup.js');
 require('./shared/games/draw.js');
-require('./shared/games/racing.js');
-require('./shared/games/ludo.js');
 require('./shared/games/gomoku.js');
 require('./shared/games/undercover.js');
 
@@ -110,7 +106,8 @@ const handleAdmin = require('./shared/admin-api')({
   scheduleLobby: presence.scheduleLobby,
   leaveRoom: rooms.leaveRoom,
   kickUser: rooms.kickUser,
-  WORDS: WORDS
+  WORDS: WORDS,
+  UNDERCOVER_PAIRS: UNDERCOVER_PAIRS
 });
 
 /* ---------- HTTP / WebSocket ---------- */

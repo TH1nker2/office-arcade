@@ -106,20 +106,6 @@
     var v = I.vec();
     var w;
 
-    if (gameId === 'snake') {
-      w = I.world();
-      /* 按住左键 = 加速；服务端会校验分数，扣到 0 自动断 */
-      return { ax: Math.round(w.x), ay: Math.round(w.y), boost: !!I.down };
-    }
-
-    if (gameId === 'ludo') {
-      return I.take('USE') ? { roll: 1 } : null;
-    }
-
-    if (gameId === 'racing') {
-      return { t: v.y === 0 ? 0 : -v.y, s: v.x };
-    }
-
     if (gameId === 'tank') {
       w = I.world();
       return {
@@ -127,10 +113,6 @@
         ax: Math.round(w.x), ay: Math.round(w.y),
         f: I.down || !!I.keys.Space
       };
-    }
-
-    if (gameId === 'bomber') {
-      return { dx: v.x, dy: v.y, bomb: I.take('USE') };
     }
 
     if (gameId === 'shmup') {

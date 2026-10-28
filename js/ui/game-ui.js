@@ -166,7 +166,6 @@
       Sfx.click();
     });
 
-    /* 飞行棋：点棋盘掷骰 / 点飞机选择 */
     /* 坦克：记录鼠标位置，供自绘准心用；离开画布就恢复系统箭头 */
     canvas.addEventListener('mousemove', function (e) {
       var rect = canvas.getBoundingClientRect();
@@ -176,25 +175,6 @@
     });
     canvas.addEventListener('mouseleave', function () {
       AR.Render.cursor.on = false;
-    });
-
-    canvas.addEventListener('mousedown', function (e) {
-      if (e.button !== 0) return;
-      if (!APP.game || APP.game.id !== 'ludo' || !APP.snap) return;
-      if (APP.snap.c !== APP.me.id) return;
-      if (APP.snap.ph === 'roll') {
-        Net.send({ t: 'input', i: { roll: 1 } });
-        Sfx.click();
-        return;
-      }
-      if (APP.snap.ph === 'move') {
-        var r = canvas.getBoundingClientRect();
-        var idx = AR.Render.ludoHitTest(e.clientX - r.left, e.clientY - r.top, APP.snap);
-        if (idx >= 0) {
-          Net.send({ t: 'input', i: { plane: idx } });
-          Sfx.click();
-        }
-      }
     });
   }
 

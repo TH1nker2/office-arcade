@@ -42,7 +42,7 @@ async function main() {
   store.sessionCreate(tokenA, alice.id, Date.now() + 86400000);
   store.sessionCreate(tokenB, bob.id, Date.now() + 86400000);
   store.matchAdd({
-    game: 'snake',
+    game: 'tank',
     roomCode: 'TEST',
     startedAt: Date.now() - 30000,
     endedAt: Date.now(),
@@ -85,7 +85,7 @@ async function main() {
   const history = r.body.history || [];
   ok('返回最近 1 局', history.length === 1, 'len=' + history.length);
   if (history[0]) {
-    ok('战绩字段完整', history[0].game === 'snake' && history[0].gameName === '蛇球大作战' &&
+    ok('战绩字段完整', history[0].game === 'tank' && history[0].gameName === '坦克竞技场' &&
       history[0].place === 1 && history[0].score === 12 && history[0].delta === 5,
       JSON.stringify(history[0]));
   }

@@ -232,20 +232,6 @@
       }
     }
 
-    /* 飞行棋：每人飞机数 */
-    var planesBox = $('planes-box');
-    var showPlanes = room.gameId === 'ludo';
-    planesBox.classList.toggle('hidden', !showPlanes);
-    if (showPlanes) {
-      var pc = room.planes || 1;
-      var pbtns = $('planes-seg').querySelectorAll('.seg-btn');
-      for (var pi = 0; pi < pbtns.length; pi++) {
-        var pb = pbtns[pi];
-        pb.classList.toggle('on', Number(pb.getAttribute('data-planes')) === pc);
-        pb.disabled = !(isHost && room.phase === 'lobby');
-      }
-    }
-
     /* 谁是卧底：最大轮数 */
     var roundsBox = $('rounds-box');
     var showRounds = room.gameId === 'undercover';

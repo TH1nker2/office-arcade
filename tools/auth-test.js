@@ -161,12 +161,12 @@ async function main() {
 
   console.log('\n=== 房间 ===');
   wsA.drain(); wsB.drain(); wsC.drain();
-  wsA.send({ t: 'createRoom', gameId: 'snake' });
+  wsA.send({ t: 'createRoom', gameId: 'tank' });
   const roomA = await wsA.next('room');
   const code = roomA.code;
-  ok('创建房间', !!code && roomA.gameId === 'snake' && roomA.players.length === 1, 'code=' + code);
+  ok('创建房间', !!code && roomA.gameId === 'tank' && roomA.players.length === 1, 'code=' + code);
 
-  const roomList = await request('GET', '/api/rooms?game=snake', null, cookieB);
+  const roomList = await request('GET', '/api/rooms?game=tank', null, cookieB);
   ok('房间列表可查', roomList.body.rooms.length === 1 && roomList.body.rooms[0].code === code);
 
   wsB.send({ t: 'joinRoom', code: code });
@@ -177,7 +177,7 @@ async function main() {
     m.users.some((u) => u.username === 'alice' && u.status === 'waiting'));
   const aliceRow = lobbyGame.users.filter((u) => u.username === 'alice')[0];
   ok('大厅显示“等待中”状态',
-    aliceRow.status === 'waiting' && aliceRow.gameName === '蛇球大作战' &&
+    aliceRow.status === 'waiting' && aliceRow.gameName === '坦克竞技场' &&
     aliceRow.roomCount === 2 && aliceRow.roomMax === 8,
     aliceRow.status + ' ' + aliceRow.roomCount + '/' + aliceRow.roomMax);
 
@@ -199,7 +199,7 @@ async function main() {
   ok('发出邀请', sent.ok === true, sent.msg);
 
   const inv = await wsC.next('invite', 4000);
-  ok('被邀请方收到邀请', inv.roomCode === code && inv.gameName === '蛇球大作战', inv.from.nickname);
+  ok('被邀请方收到邀请', inv.roomCode === code && inv.gameName === '坦克竞技场', inv.from.nickname);
 
   wsC.send({ t: 'inviteReply', inviteId: inv.inviteId, accept: true });
   const roomC = await wsC.next('room', 4000);
@@ -211,12 +211,12 @@ async function main() {
   wsA.drain(); wsB.drain(); wsC.drain();
   wsA.send({ t: 'start' });
   const g = await wsB.next('game', 4000);
-  ok('开局广播', g.id === 'snake' && g.players.length === 3, 'players=' + g.players.length);
+  ok('开局广播', g.id === 'tank' && g.players.length === 3, 'players=' + g.players.length);
 
   const st1 = await wsC.next('state', 4000);
-  ok('收到快照', !!(st1.s && st1.s.s), 'snakes=' + (st1.s.s || []).length);
+  ok('收到快照', !!(st1.s && st1.s.p), 'tanks=' + (st1.s.p || []).length);
 
-  wsB.send({ t: 'input', i: { ax: 800, ay: 600 } });
+  wsB.send({ t: 'input', i: { dx: 0, dy: 0, ax: 800, ay: 600 } });
   await sleep(300);
   const st2 = await wsC.next('state', 4000);
   ok('输入后继续收到快照', !!(st2.s && st2.s.t !== undefined));
@@ -233,7 +233,7 @@ async function main() {
   await wsC.next('room', 4000, (m) => m.players.length === 1);
   wsC.send({ t: 'leaveRoom' });
   await sleep(400);
-  const roomsLeft = await request('GET', '/api/rooms?game=snake', null, cookieA);
+  const roomsLeft = await request('GET', '/api/rooms?game=tank', null, cookieA);
   ok('最后一个真人离开后房间销毁', roomsLeft.body.rooms.length === 0,
     'rooms=' + roomsLeft.body.rooms.length);
 

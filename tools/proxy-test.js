@@ -123,9 +123,9 @@ async function main() {
       if (m.t === 'room') { clearTimeout(timer); resolve(m); }
     };
   });
-  ws.send(JSON.stringify({ t: 'createRoom', gameId: 'snake' }));
+  ws.send(JSON.stringify({ t: 'createRoom', gameId: 'tank' }));
   const room = await roomPromise;
-  ok('经代理建房', !!room.code && room.gameId === 'snake', 'code=' + room.code);
+  ok('经代理建房', !!room.code && room.gameId === 'tank', 'code=' + room.code);
 
   /* 静态资源也经代理 */
   const page = await new Promise((resolve, reject) => {

@@ -29,11 +29,8 @@ function makeCode() {
 
 /* 结算里 detail 这一列在各游戏里的叫法 */
 const DETAIL_LABEL = {
-  snake: '击杀',
   tank: '击杀',
-  bomber: '击杀',
   shmup: '击杀',
-  ludo: '到家',
   undercover: '正确票'
 };
 
@@ -63,7 +60,6 @@ function roomJson(room) {
     min: AR.getInfo(room.gameId).min,
     bots: room.botCount || 0,
     level: room.level || 'normal',
-    planes: room.planes || 1,
     rounds: room.rounds || 6,
     players: players
   };
@@ -143,7 +139,6 @@ function createRoom(conn, gameId) {
     round: 0,
     game: null,
     level: 'normal',
-    planes: 1,
     rounds: 6,
     chat: [],
     startedAt: 0,
@@ -262,7 +257,6 @@ function startRound(room) {
   const opts = {
     seed: (Date.now() ^ (room.round * 2654435761)) >>> 0,
     level: level,
-    planes: room.planes || 1,
     words: pool
   };
   if (room.gameId === 'undercover') {

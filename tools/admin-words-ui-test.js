@@ -26,6 +26,15 @@ async function wordInfo(B) {
     '})'));
 }
 
+async function ucInfo(B) {
+  return JSON.parse(await B.ev('JSON.stringify({' +
+    'hint:document.getElementById("uc-hint").textContent,' +
+    'rows:document.querySelectorAll("#uc-table .uc-word-row:not(.head)").length,' +
+    'options:document.querySelectorAll("#uc-category option").length,' +
+    'first:document.querySelectorAll("#uc-table .uc-word-row:not(.head)")[0] ? document.querySelectorAll("#uc-table .uc-word-row:not(.head)")[0].textContent : ""' +
+    '})'));
+}
+
 async function main() {
   if (!EDGE) { console.log('找不到 Edge/Chrome，跳过'); process.exit(0); }
   const server = await startServer({ root: ROOT, port: PORT, data: DATA, waitMs: 1400 });
@@ -75,7 +84,30 @@ async function main() {
   const hardText = await B.ev('document.getElementById("word-table").textContent');
   check('搜索结果是画蛇添足', hardText.indexOf('画蛇添足') >= 0, hardText.slice(0, 40));
 
-  console.log('\n[4] 管理弹窗焦点');
+  console.log('\n[4] 谁是卧底词库');
+  await B.ev('document.querySelector(\'#admin-tabs [data-view="undercover"]\').click()');
+  await sleep(900);
+  let uc = await ucInfo(B);
+  check('卧底词库渲染 120 对', uc.rows === 120, 'rows=' + uc.rows);
+  check('卧底词库提示与来源', uc.hint.indexOf('120') >= 0 && uc.hint.indexOf('随机分配') >= 0,
+    uc.hint);
+  check('分类下拉含全部 + 10 类', uc.options === 11, 'options=' + uc.options);
+  check('词对展示两个词和分类', uc.first.indexOf('可乐') >= 0 && uc.first.indexOf('雪碧') >= 0 &&
+    uc.first.indexOf('饮食') >= 0, uc.first);
+  await B.shot('82b-admin-undercover');
+
+  await B.ev('var s=document.getElementById("uc-category"); s.value="饮食"; s.dispatchEvent(new Event("change",{bubbles:true}))');
+  await sleep(300);
+  uc = await ucInfo(B);
+  check('按分类筛选卧底词对', uc.rows === 12 && uc.hint.indexOf('饮食') >= 0, 'rows=' + uc.rows);
+
+  await B.ev('var i=document.getElementById("uc-search"); i.value="雪碧"; i.dispatchEvent(new Event("input",{bubbles:true}))');
+  await sleep(300);
+  uc = await ucInfo(B);
+  check('卧底词库搜索命中', uc.rows === 1 && uc.first.indexOf('雪碧') >= 0, uc.first);
+  check('搜索提示显示匹配数', uc.hint.indexOf('匹配 1 / 120') >= 0, uc.hint);
+
+  console.log('\n[5] 管理弹窗焦点');
   await B.ev('fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},' +
     'body:JSON.stringify({username:"dlguser",password:"123456",nickname:"弹窗测试"})}).then(function(r){return r.json()})');
   await sleep(400);
@@ -108,7 +140,7 @@ async function main() {
   check('Esc 关闭管理弹窗',
     await B.ev('document.getElementById("dialog").classList.contains("hidden")'));
 
-  console.log('\n[5] 控制台');
+  console.log('\n[6] 控制台');
   console.log('  错误:', B.errors.length ? B.errors.slice(0, 3) : '无');
   check('无控制台错误', B.errors.length === 0);
 

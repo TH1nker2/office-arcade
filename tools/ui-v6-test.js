@@ -148,7 +148,7 @@ async function main() {
     (await menuInfo(A)).hidden === true && (await profileInfo(A)).hidden === true);
 
   console.log('\n[3] 等待中 / 游戏中状态');
-  await B.ev('document.querySelector(\'[data-game="snake"]\').click()');
+  await B.ev('document.querySelector(\'[data-game="tank"]\').click()');
   await sleep(500);
   await B.ev('document.getElementById("btn-create-room").click()');
   await sleep(800);

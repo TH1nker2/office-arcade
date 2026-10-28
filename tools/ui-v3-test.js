@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 人机 + 赛车 + 五子棋：浏览器端到端 */
+/* 人机 + 俄罗斯方块 + 五子棋：浏览器端到端 */
 'use strict';
 
 const path = require('path');
@@ -36,11 +36,11 @@ async function main() {
   check('注册后进入大厅', (await B.ev('AR.App.screen')) === 'lobby');
 
   const cards = await B.ev('document.querySelectorAll("#lobby-games .game-card").length');
-  check('大厅有 10 个游戏', cards === 10, 'cards=' + cards);
-  await B.shot('41-lobby-8games');
+  check('大厅有 6 个游戏', cards === 6, 'cards=' + cards);
+  await B.shot('41-lobby-6games');
 
-  console.log('\n[1] 蛇球 + 3 个人机');
-  await B.ev('document.querySelector(\'[data-game="snake"]\').click()');
+  console.log('\n[1] 坦克 + 3 个人机');
+  await B.ev('document.querySelector(\'[data-game="tank"]\').click()');
   await sleep(600);
   await B.ev('document.getElementById("btn-create-room").click()');
   await sleep(900);
@@ -54,26 +54,22 @@ async function main() {
   await B.shot('42-room-bots');
 
   await B.ev('document.getElementById("btn-start").click()');
-  await sleep(3500);
-  const playing = JSON.parse(await B.ev('JSON.stringify({screen: AR.App.screen, snakes: AR.App.snap && AR.App.snap.s ? AR.App.snap.s.length : 0})'));
-  check('人机局正常开局', playing.screen === 'play' && playing.snakes === 4, 'snakes=' + playing.snakes);
-  await B.shot('43-snake-bots');
+  await sleep(2500);
+  const playing = JSON.parse(await B.ev('JSON.stringify({screen: AR.App.screen, game: AR.App.game && AR.App.game.id, tanks: AR.App.snap && AR.App.snap.p ? AR.App.snap.p.length : 0, rows: document.querySelectorAll("#hud-board .hud-row").length})'));
+  check('坦克人机局正常开局', playing.screen === 'play' && playing.game === 'tank' && playing.tanks === 4,
+    'game=' + playing.game + ' tanks=' + playing.tanks);
+  check('HUD 显示四名玩家', playing.rows === 4, 'rows=' + playing.rows);
+  await B.shot('43-tank-bots');
 
-  await sleep(2000);
-  const moved = await B.ev('AR.App.snap.s.filter(function(x){return x.s > 0;}).length');
-  check('人机在动（吃到光点）', moved >= 0, '有分的人机=' + moved);
-
-  /* 回房间 */
+  /* 回大厅 */
   await B.ev('AR.App.screen === "play" && document.getElementById("hud-back").click()');
   await sleep(600);
   await B.ev('document.getElementById("btn-leave-room").click()');
   await sleep(800);
   check('退出后直接回到大厅', (await B.ev('AR.App.screen')) === 'lobby');
 
-  console.log('\n[2] 赛车 + 3 个人机');
-  await B.ev('document.getElementById("hub-back").click()');
-  await sleep(500);
-  await B.ev('document.querySelector(\'[data-game="racing"]\').click()');
+  console.log('\n[2] 俄罗斯方块 + 3 个人机');
+  await B.ev('document.querySelector(\'[data-game="tetris"]\').click()');
   await sleep(600);
   await B.ev('document.getElementById("btn-create-room").click()');
   await sleep(800);
@@ -82,26 +78,18 @@ async function main() {
     await sleep(300);
   }
   await B.ev('document.getElementById("btn-start").click()');
-  await sleep(4000);
-  const race = JSON.parse(await B.ev('JSON.stringify({screen: AR.App.screen, game: AR.App.game && AR.App.game.id, cars: AR.App.snap && AR.App.snap.c ? AR.App.snap.c.length : 0, meta: !!(AR.App.game && AR.App.game.meta && AR.App.game.meta.points)})'));
-  check('赛车开局', race.screen === 'play' && race.game === 'racing', 'game=' + race.game);
-  check('4 辆车都在', race.cars === 4, 'cars=' + race.cars);
-  check('赛道数据下发', race.meta === true);
-  await B.shot('44-racing');
-
-  await sleep(6000);
-  const speed = await B.ev('AR.App.snap.c.map(function(c){return c[4];}).join(",")');
-  console.log('    车速:', speed);
-  check('车在跑', speed.split(',').some((v) => Number(v) > 40), 'speeds=' + speed);
-  const hud = await B.ev('document.getElementById("hud-board").textContent');
-  check('HUD 显示圈数', hud.indexOf('圈') >= 0, hud.slice(0, 40));
-  await B.shot('45-racing-running');
+  await sleep(2500);
+  const tetris = JSON.parse(await B.ev('JSON.stringify({screen: AR.App.screen, game: AR.App.game && AR.App.game.id, players: AR.App.snap && AR.App.snap.p ? AR.App.snap.p.length : 0, rows: document.querySelectorAll("#hud-board .hud-row").length})'));
+  check('俄罗斯方块人机局开局', tetris.screen === 'play' && tetris.game === 'tetris', tetris.game);
+  check('四人棋盘同步', tetris.players === 4 && tetris.rows === 4,
+    'players=' + tetris.players + ' rows=' + tetris.rows);
+  await B.shot('44-tetris-bots');
 
   await B.ev('document.getElementById("hud-back").click()');
   await sleep(600);
   await B.ev('document.getElementById("btn-leave-room").click()');
   await sleep(800);
-  check('退出赛车后回到大厅', (await B.ev('AR.App.screen')) === 'lobby');
+  check('退出方块后回到大厅', (await B.ev('AR.App.screen')) === 'lobby');
 
   console.log('\n[3] 五子棋执棋颜色');
   await B.ev('document.querySelector(\'[data-game="gomoku"]\').click()');
@@ -161,32 +149,7 @@ async function main() {
   await B.ev('document.getElementById("btn-leave-room").click()');
   await sleep(600);
 
-  console.log('\n[4] 飞行棋启动格快照');
-  await B.ev('document.querySelector(\'[data-game="ludo"]\').click()');
-  await sleep(600);
-  await B.ev('document.getElementById("btn-create-room").click()');
-  await sleep(900);
-  await B.ev('document.getElementById("btn-add-bot").click()');
-  await sleep(400);
-  await B.ev('document.getElementById("btn-start").click()');
-  await sleep(1800);
-  const ludo = JSON.parse(await B.ev('JSON.stringify({' +
-    'screen: AR.App.screen, game: AR.App.game && AR.App.game.id,' +
-    'st: AR.App.snap && AR.App.snap.st,' +
-    'planes: AR.App.snap && AR.App.snap.planes,' +
-    'hud: document.getElementById("hud-board").textContent' +
-    '})'));
-  check('飞行棋人机局开局', ludo.screen === 'play' && ludo.game === 'ludo', ludo.game);
-  check('快照带两名玩家的启动格', Array.isArray(ludo.st) && ludo.st.length === 2 && ludo.st[0] === 0 && ludo.st[1] === 20,
-    JSON.stringify(ludo.st));
-  check('HUD 显示回家进度', ludo.hud.indexOf('/1') >= 0, ludo.hud.slice(0, 40));
-
-  await B.ev('document.getElementById("hud-back").click()');
-  await sleep(600);
-  await B.ev('document.getElementById("btn-leave-room").click()');
-  await sleep(600);
-
-  console.log('\n[5] 弹幕 v2 渲染');
+  console.log('\n[4] 弹幕 v2 渲染');
   const v2 = JSON.parse(await B.ev(`(function(){
     try {
       var c = document.createElement('canvas');
@@ -226,7 +189,7 @@ async function main() {
   check('弹幕 v2 渲染出非空画面', v2.ok && v2.counts.every((n) => n > 0),
     JSON.stringify(v2.counts));
 
-  console.log('\n[6] 控制台');
+  console.log('\n[5] 控制台');
   console.log('  错误:', B.errors.length ? B.errors.slice(0, 3) : '无');
   check('无控制台错误', B.errors.length === 0);
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* v4：方向盘修复回归 / 退出确认 / 大厅聊天 / 对局聊天 / 一键加入 */
+/* v4：一键加入 / 退出确认 / 大厅聊天 / 对局聊天 */
 'use strict';
 
 const path = require('path');
@@ -66,8 +66,8 @@ async function main() {
   check('点表情能插入输入框', withEmoji.length > 0, 'value=' + withEmoji);
   await A.shot('51-lobby-emoji');
 
-  console.log('\n[3] 建房 → 加人机 → 开局，验证鼠标能控蛇');
-  await B.ev('document.querySelector(\'[data-game="snake"]\').click()');
+  console.log('\n[3] 建房 → 加人机 → 开局，验证一键加入与对局');
+  await B.ev('document.querySelector(\'[data-game="tank"]\').click()');
   await sleep(500);
   await B.ev('document.getElementById("btn-create-room").click()');
   await sleep(800);
@@ -89,33 +89,6 @@ async function main() {
   await B.ev('document.getElementById("btn-start").click()');
   await sleep(2500);
   check('A 进入游戏画面', (await A.ev('AR.App.screen')) === 'play');
-
-  /* 把鼠标放到蛇头右前方，看蛇是否转向 */
-  const head = await A.ev(`(function(){
-    var me = AR.App.me.id;
-    var s = null;
-    for (var i = 0; i < AR.App.snap.s.length; i++) if (AR.App.snap.s[i].i === me) s = AR.App.snap.s[i];
-    var tf = AR.View.tf;
-    return { sx: tf.ox + s.x * tf.s, sy: tf.oy + s.y * tf.s, a: s.a, wx: s.x, wy: s.y };
-  })()`);
-  await A.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: head.sx + 260, y: head.sy, button: 'none' });
-  await sleep(900);
-  const after = await A.ev(`(function(){
-    var me = AR.App.me.id;
-    for (var i = 0; i < AR.App.snap.s.length; i++) if (AR.App.snap.s[i].i === me) return AR.App.snap.s[i].a;
-    return 99;
-  })()`);
-  const target = await A.ev(`(function(){
-    var me = AR.App.me.id, s = null;
-    for (var i = 0; i < AR.App.snap.s.length; i++) if (AR.App.snap.s[i].i === me) s = AR.App.snap.s[i];
-    var tf = AR.View.tf;
-    var wx = (${head.sx + 260} - tf.ox) / tf.s, wy = (${head.sy} - tf.oy) / tf.s;
-    return Math.atan2(wy - s.y, wx - s.x);
-  })()`);
-  const diff = Math.abs(Math.atan2(Math.sin(after - target), Math.cos(after - target)));
-  check('鼠标能把蛇转向目标方向', diff < 0.45,
-    '偏差 ' + diff.toFixed(2) + ' rad（' + head.a.toFixed(2) + ' → ' + after.toFixed(2) + '）');
-  await A.shot('53-snake-mouse');
 
   console.log('\n[4] 对局聊天（回车开 → 回车发）');
   await A.ev('document.body.dispatchEvent(new KeyboardEvent("keydown",{code:"Enter",bubbles:true}))');

@@ -112,7 +112,7 @@ async function main() {
   wsA.onmessage = (e) => A.push(JSON.parse(e.data));
   await new Promise((r) => { wsA.onopen = r; });
   await sleep(200);
-  wsA.send(JSON.stringify({ t: 'createRoom', gameId: 'snake' }));
+  wsA.send(JSON.stringify({ t: 'createRoom', gameId: 'tank' }));
   await sleep(400);
   const room = A.filter((m) => m.t === 'room').pop();
   ok('建房成功', !!room, room && room.code);
@@ -138,20 +138,20 @@ async function main() {
   await sleep(400);
   ok('离开房间', A.some((m) => m.t === 'leftRoom'));
 
-  /* ================= 四、十个游戏的不变量 ================= */
+  /* ================= 四、六个游戏的不变量 ================= */
   console.log('\n=== 游戏不变量 ===');
   const AR = (() => {
     global.window = undefined;
     const core = require(path.join(ROOT, 'shared/core.js'));
     require(path.join(ROOT, 'shared/registry.js'));
     require(path.join(ROOT, 'shared/games/constants.js'));
-    for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'racing', 'gomoku', 'ludo', 'undercover']) {
+    for (const g of ['tank', 'tetris', 'shmup', 'draw', 'gomoku', 'undercover']) {
       require(path.join(ROOT, 'shared/games/' + g + '.js'));
     }
     return globalThis.AR;
   })();
 
-  ok('注册表 10 款游戏', AR.GAME_INFO.length === 10, AR.GAME_INFO.map((g) => g.id).join(','));
+  ok('注册表 6 款游戏', AR.GAME_INFO.length === 6, AR.GAME_INFO.map((g) => g.id).join(','));
 
   for (const info of AR.GAME_INFO) {
     const g = AR.games[info.id];
@@ -184,7 +184,7 @@ async function main() {
   const r1 = A.filter((m) => m.t === 'room').pop();
   wsA.send(JSON.stringify({ t: 'leaveRoom' }));
   await sleep(300);
-  wsA.send(JSON.stringify({ t: 'createRoom', gameId: 'bomber' }));
+  wsA.send(JSON.stringify({ t: 'createRoom', gameId: 'shmup' }));
   await sleep(300);
   const r2 = A.filter((m) => m.t === 'room').pop();
   ok('离开后能再建新房', !!r2 && r2.code !== (r1 && r1.code));

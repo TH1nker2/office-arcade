@@ -227,12 +227,6 @@
       clearCanvas();
     });
 
-    $('planes-seg').addEventListener('click', function (e) {
-      var btn = e.target.closest('.seg-btn');
-      if (!btn || btn.disabled) return;
-      Net.send({ t: 'setting', key: 'planes', value: btn.getAttribute('data-planes') });
-    });
-
     $('level-seg').addEventListener('click', function (e) {
       var btn = e.target.closest('.seg-btn');
       if (!btn || btn.disabled) return;
@@ -680,7 +674,7 @@
     if (APP.game && APP.game.id === 'draw') {
       left = s.tl;
     } else if (!s.d) {
-      /* 不限时的游戏（飞行棋/五子棋）：显示已经打了多久 */
+      /* 不限时游戏（五子棋）：显示已经打了多久 */
       left = s.t || 0;
     } else {
       left = Math.max(0, s.d - (s.t || 0));
@@ -701,7 +695,6 @@
       var p = APP.game.players[i];
       var sc = 0;
       var scCls = '';
-      var rank = 0;
       var dead = false;
       var sortSc = 0;
       if (APP.game.id === 'draw' && s.sc) sc = s.sc[p.id] || 0;
@@ -715,24 +708,8 @@
           dead = !s.p[sp].al;
         }
       }
-      else if (APP.game.id === 'racing') {
-        for (var r = 0; r < s.c.length; r++) {
-          if (s.c[r][0] === p.id) {
-            rank = s.c[r][6];
-            sc = s.c[r][7] ? '完赛' : ('第' + Math.max(1, s.c[r][5] + 1) + '圈');
-          }
-        }
-      } else if (APP.game.id === 'tetris') {
+      else if (APP.game.id === 'tetris') {
         for (var k = 0; k < s.p.length; k++) if (s.p[k].i === p.id) sc = s.p[k].s;
-      } else if (APP.game.id === 'snake') {
-        for (var m = 0; m < s.s.length; m++) if (s.s[m].i === p.id) sc = s.s[m].s;
-      } else if (APP.game.id === 'ludo') {
-        for (var lr = 0; lr < s.pl.length; lr++) {
-          if (s.pl[lr][0] !== p.id) continue;
-          var home = 0;
-          for (var lz = 1; lz < s.pl[lr].length; lz++) if (s.pl[lr][lz] === 44) home++;
-          sc = home + '/' + (s.pl[lr].length - 1);
-        }
       } else if (APP.game.id === 'gomoku') {
         var side = s.sd && s.sd[p.id];
         sc = side === 1 ? '执黑' : (side === 2 ? '执白' : '');
@@ -740,11 +717,9 @@
       } else if (APP.game.id === 'tank') {
         for (var n = 0; n < s.p.length; n++) if (s.p[n].i === p.id) sc = s.p[n].s;
       }
-      list.push({ p: p, sc: sc, scCls: scCls, rank: rank, dead: dead, sortSc: sortSc });
+      list.push({ p: p, sc: sc, scCls: scCls, dead: dead, sortSc: sortSc });
     }
-    if (APP.game.id === 'racing') {
-      list.sort(function (a, b) { return a.rank - b.rank; });
-    } else if (APP.game.id === 'shmup') {
+    if (APP.game.id === 'shmup') {
       list.sort(function (a, b) { return b.sortSc - a.sortSc; });
     } else if (APP.game.id !== 'gomoku') {
       list.sort(function (a, b) { return b.sc - a.sc; });

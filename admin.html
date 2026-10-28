@@ -48,6 +48,7 @@
       <nav class="admin-tabs" id="admin-tabs">
         <button class="admin-tab on" data-view="users">玩家管理</button>
         <button class="admin-tab" data-view="words">你画我猜词库</button>
+        <button class="admin-tab" data-view="undercover">谁是卧底词库</button>
       </nav>
 
       <div class="admin-view" id="view-users">
@@ -73,6 +74,18 @@
           <span class="admin-hint" id="word-hint">词库加载中…</span>
         </div>
         <div class="admin-table" id="word-table"></div>
+      </div>
+
+      <div class="admin-view hidden" id="view-undercover">
+        <div class="admin-toolbar">
+          <select id="uc-category" class="admin-select" aria-label="按分类筛选">
+            <option value="">全部分类</option>
+          </select>
+          <input id="uc-search" placeholder="搜索词 A / 词 B / 分类" autocomplete="off">
+          <div class="spacer"></div>
+          <span class="admin-hint" id="uc-hint">词库加载中…</span>
+        </div>
+        <div class="admin-table" id="uc-table"></div>
       </div>
     </div>
   </section>

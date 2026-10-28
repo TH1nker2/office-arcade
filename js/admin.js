@@ -19,7 +19,10 @@
     view: 'users',
     wordLevel: 'easy',
     wordQ: '',
-    wordCache: {}
+    wordCache: {},
+    ucCategory: '',
+    ucQ: '',
+    ucCache: null
   };
 
   var toastTimer = 0;
@@ -81,6 +84,8 @@
   var updateWordCounts = AdminWords.updateWordCounts;
   var loadWordLevel = AdminWords.loadWordLevel;
   var renderWords = AdminWords.renderWords;
+  var loadUndercover = AdminWords.loadUndercover;
+  var renderUndercover = AdminWords.renderUndercover;
 
   function statusOf(u) {
     if (u.banned) return { cls: 'banned', text: '已封禁' };
@@ -223,6 +228,9 @@
       api('POST', '/api/admin/logout').catch(function () { /* ignore */ }).then(function () {
         App.admin = null;
         App.wordCache = {};
+        App.ucCache = null;
+        App.ucCategory = '';
+        App.ucQ = '';
         if (App.timer) clearInterval(App.timer);
         showLogin('已退出登录');
       });
@@ -232,6 +240,9 @@
       if (App.view === 'words') {
         App.wordCache = {};
         loadWordLevel(App.wordLevel);
+      } else if (App.view === 'undercover') {
+        App.ucCache = null;
+        loadUndercover();
       } else {
         loadUsers();
       }
@@ -253,6 +264,17 @@
       App.wordQ = e.target.value;
       clearTimeout(App._wordTimer);
       App._wordTimer = setTimeout(renderWords, 120);
+    });
+
+    $('uc-category').addEventListener('change', function (e) {
+      App.ucCategory = e.target.value;
+      renderUndercover();
+    });
+
+    $('uc-search').addEventListener('input', function (e) {
+      App.ucQ = e.target.value;
+      clearTimeout(App._ucTimer);
+      App._ucTimer = setTimeout(renderUndercover, 120);
     });
 
     $('search').addEventListener('input', function (e) {

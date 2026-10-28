@@ -15,7 +15,7 @@ process.env.ARCADE_DATA = DATA;
 ['core', 'registry', 'games/constants'].forEach((f) => {
   require(path.join(ROOT, 'shared', f + '.js'));
 });
-['snake'].forEach((g) => {
+['tank'].forEach((g) => {
   require(path.join(ROOT, 'shared', 'games', g + '.js'));
 });
 
@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
 function room(phase) {
   return {
     code: 'TEST',
-    gameId: 'snake',
+    gameId: 'tank',
     hostId: 'u1',
     players: new Map([
       ['u1', { id: 'u1', name: '甲', color: '#22d3ee', bot: null }],
@@ -41,7 +41,6 @@ function room(phase) {
     round: 1,
     game: null,
     level: 'normal',
-    planes: 1,
     chat: [],
     startedAt: 0,
     acc: 0,

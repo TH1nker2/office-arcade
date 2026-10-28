@@ -15,7 +15,7 @@
     V.t += dt;
     var fn = R[gameId];
     if (fn) fn(ctx, w, h, snap, Math.min(dt, 0.05), G || {});
-    if (gameId === 'tank' || gameId === 'bomber' || gameId === 'shmup') {
+    if (gameId === 'tank' || gameId === 'shmup') {
       drawItemLegend(ctx, w, h, gameId);
     }
     if (gameId === 'tank' && R.cursor.on) {

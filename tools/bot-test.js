@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 人机与赛车：无头模拟，检查人机真的会玩、赛车能跑完 */
+/* 人机：无头模拟，检查剩余游戏的人机真的会玩 */
 'use strict';
 
 const path = require('path');
@@ -7,7 +7,7 @@ const ROOT = path.resolve(__dirname, '..');
 require(path.join(ROOT, 'shared/core.js'));
 require(path.join(ROOT, 'shared/registry.js'));
 require(path.join(ROOT, 'shared/games/constants.js'));
-['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'racing', 'ludo', 'gomoku', 'undercover'].forEach((id) => {
+['tank', 'tetris', 'shmup', 'draw', 'gomoku', 'undercover'].forEach((id) => {
   require(path.join(ROOT, 'shared/games/' + id + '.js'));
 });
 const AR = globalThis.AR;
@@ -27,7 +27,6 @@ function run(gameId, n, level, maxSeconds) {
   const state = g.create(players, { seed: 20251025 });
   let t = 0;
   let maxBullets = 0;
-  let maxBombs = 0;
   let maxPackets = 0;
   while (t < maxSeconds && !g.isOver(state)) {
     for (let i = 0; i < players.length; i++) {
@@ -37,19 +36,9 @@ function run(gameId, n, level, maxSeconds) {
     g.tick(state, 1 / 60);
     t += 1 / 60;
     if (state.bullets) maxBullets = Math.max(maxBullets, state.bullets.length);
-    if (state.bombs) maxBombs = Math.max(maxBombs, state.bombs.length);
     if (state.ebullets) maxPackets = Math.max(maxPackets, state.ebullets.length);
   }
-  return { state, t, maxBullets, maxBombs, maxPackets, results: g.results(state) };
-}
-
-console.log('=== 蛇球：人机会吃光点、会躲 ===');
-{
-  const r = run('snake', 4, 'normal', 90);
-  const scores = r.results.map((x) => x.score);
-  ok('跑完整局未抛异常', true, r.t.toFixed(1) + 's');
-  ok('人机能吃到光点', scores.some((s) => s > 0), 'scores=' + scores.join(','));
-  ok('人机不会原地不动', scores.reduce((a, b) => a + b, 0) > 5, 'total=' + scores.reduce((a, b) => a + b, 0));
+  return { state, t, maxBullets, maxPackets, results: g.results(state) };
 }
 
 console.log('\n=== 坦克：人机会开火 ===');
@@ -59,14 +48,6 @@ console.log('\n=== 坦克：人机会开火 ===');
   ok('有人被击毁', r.results.some((x) => x.deaths > 0 || x.kills > 0),
     r.results.map((x) => x.name + ':' + x.kills + '/' + x.deaths).join(' '));
   ok('分数有限', r.results.every((x) => isFinite(x.score)));
-}
-
-console.log('\n=== 炸弹人：人机会放炸弹 ===');
-{
-  const r = run('bomber', 4, 'normal', 120);
-  ok('放过炸弹', r.maxBombs > 0, 'maxBombs=' + r.maxBombs);
-  ok('有人得分或阵亡', r.results.some((x) => x.score > 0 || x.alive === 0),
-    r.results.map((x) => x.name + ':' + x.score + (x.alive ? '' : '(死)')).join(' '));
 }
 
 console.log('\n=== 俄罗斯方块：人机会消行 ===');
@@ -156,93 +137,6 @@ console.log('\n=== 弹幕：人机不扎堆 ===');
   ok('四个人机分散在不同横向位置', best > 55, '最大横向标准差 ' + best.toFixed(0) + 'px');
 }
 
-console.log('\n=== 赛车：人机能跑完 ===');
-{
-  const g = AR.games.racing;
-  const players = ['a', 'b', 'c', 'd', 'e', 'f'].map((id, i) => ({
-    id: id, name: '车手' + i, color: AR.PLAYER_COLORS[i]
-  }));
-  const state = g.create(players, { seed: 7 });
-  let t = 0;
-  while (t < 160 && !g.isOver(state)) {
-    for (const p of players) {
-      const inp = g.bot(state, p.id, 1 / 60, 'normal');
-      if (inp) g.input(state, p.id, inp);
-    }
-    g.tick(state, 1 / 60);
-    t += 1 / 60;
-  }
-  const res = g.results(state);
-  const fin = res.filter((x) => x.finished).length;
-  ok('比赛能结束', g.isOver(state), t.toFixed(1) + 's');
-  ok('有人跑完全程', fin > 0, '完赛 ' + fin + '/' + res.length);
-  ok('名次分数合理', res.every((x) => isFinite(x.score) && x.score >= 0),
-    res.map((x) => x.name + ':' + x.score).join(' '));
-
-  const snap = g.snapshot(state);
-  ok('快照体积可控', JSON.stringify(snap).length < 2600, (JSON.stringify(snap).length / 1024).toFixed(1) + ' KB');
-  const meta = g.meta(state);
-  ok('赛道点数充足', meta.points.length > 60, 'points=' + meta.points.length);
-
-  /* 赛道不能自交 */
-  const pts = meta.points;
-  let cross = 0;
-  function seg(a, b, c, d) {
-    function ccw(p, q, r) { return (r[1] - p[1]) * (q[0] - p[0]) > (q[1] - p[1]) * (r[0] - p[0]); }
-    return ccw(a, c, d) !== ccw(b, c, d) && ccw(a, b, c) !== ccw(a, b, d);
-  }
-  for (let i = 0; i < pts.length; i++) {
-    for (let j = i + 2; j < pts.length; j++) {
-      if (i === 0 && j === pts.length - 1) continue;
-      if (seg(pts[i], pts[(i + 1) % pts.length], pts[j], pts[(j + 1) % pts.length])) cross++;
-    }
-  }
-  ok('赛道中心线不自交', cross === 0, '交点=' + cross);
-
-  for (const level of ['easy', 'normal', 'hard', 'insane']) {
-    const st2 = g.create(players.slice(0, 2), { seed: 3 });
-    let tt = 0;
-    while (tt < 60 && !g.isOver(st2)) {
-      for (const p of players.slice(0, 2)) {
-        const inp = g.bot(st2, p.id, 1 / 60, level);
-        if (inp) g.input(st2, p.id, inp);
-      }
-      g.tick(st2, 1 / 60);
-      tt += 1 / 60;
-    }
-    const laps = st2.cars[players[0].id].laps;
-    ok('难度 ' + level + ' 能前进', laps >= 0, '60s 内 laps=' + laps);
-  }
-}
-
-console.log('\n=== 飞行棋：人机能打完 ===');
-{
-  const lg = AR.games.ludo;
-  for (const n of [2, 4]) {
-    const ps = [];
-    for (let i = 0; i < n; i++) ps.push({ id: 'L' + i, name: '棋' + i, color: AR.PLAYER_COLORS[i] });
-    const st = lg.create(ps, { seed: 31 + n });
-    let t = 0;
-    let bad = false;
-    while (t < 310 && !lg.isOver(st)) {
-      for (const p of ps) {
-        const inp = lg.bot(st, p.id, 1 / 60, 'normal');
-        if (inp) lg.input(st, p.id, inp);
-      }
-      lg.tick(st, 1 / 60);
-      t += 1 / 60;
-      const snap = lg.snapshot(st);
-      if (snap.pl.some((row) => row[1] > 44 || row[2] > 44)) bad = true;
-    }
-    const res = lg.results(st);
-    ok(n + ' 人飞行棋能结束', lg.isOver(st), t.toFixed(1) + 's');
-    ok(n + ' 人飞行棋有赢家', !!st.winnerId, String(st.winnerId));
-    ok(n + ' 人飞行棋位置合法', !bad);
-    ok(n + ' 人飞行棋结果完整', res.length === n && res.every((r) => isFinite(r.score)),
-      res.map((r) => r.name + ':' + r.done).join(' '));
-  }
-}
-
 console.log('\n=== 五子棋：快照带执棋颜色 ===');
 {
   const gg = AR.games.gomoku;
@@ -258,7 +152,7 @@ console.log('\n=== 五子棋：快照带执棋颜色 ===');
 
 console.log('\n=== 注册与元信息 ===');
 {
-  ok('游戏数量为 10', AR.GAME_INFO.length === 10, AR.GAME_INFO.map((g) => g.name).join(' / '));
+  ok('游戏数量为 6', AR.GAME_INFO.length === 6, AR.GAME_INFO.map((g) => g.name).join(' / '));
   ok('你画我猜最低 2 人', AR.getInfo('draw').min === 2, 'min=' + AR.getInfo('draw').min);
   ok('每个游戏都有人机（画猜/卧底除外）', AR.GAME_INFO.every((g) => g.id === 'draw' || g.id === 'undercover' || typeof AR.games[g.id].bot === 'function'),
     AR.GAME_INFO.filter((g) => g.id !== 'draw' && g.id !== 'undercover' && typeof AR.games[g.id].bot !== 'function').map((g) => g.id).join(','));

@@ -219,18 +219,11 @@ function handle(conn, msg) {
     }
 
     case 'setting': {
-      /* 房主在房间里改游戏设置（目前只有你画我猜的难度） */
+      /* 房主在房间里改游戏设置（画猜难度 / 卧底轮数） */
       const room = conn.room;
       if (!room) return;
       if (room.phase !== 'lobby') { conn.send({ t: 'error', msg: '开局后不能改设置' }); return; }
       if (room.hostId !== conn.user.id) { conn.send({ t: 'error', msg: '只有房主能改设置' }); return; }
-      if (msg.key === 'planes' && room.gameId === 'ludo') {
-        var pn = parseInt(msg.value, 10);
-        if (!(pn >= 1 && pn <= 4)) return;
-        room.planes = pn;
-        broadcastRoom(room);
-        break;
-      }
       if (msg.key === 'level' && room.gameId === 'draw') {
         const lv = String(msg.value || '');
         if (['easy', 'normal', 'hard'].indexOf(lv) < 0) return;

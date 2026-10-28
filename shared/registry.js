@@ -7,22 +7,10 @@
 
   AR.GAME_INFO = [
     {
-      id: 'snake', name: '蛇球大作战', sub: 'SNAKE ARENA', tag: '动作', icon: '🐍',
-      time: 90, min: 2, max: 8,
-      desc: '吞下光点不断变长，撞上其他蛇身会暂时退场，随后复活。',
-      keys: ['鼠标：控制方向', '按住左键：加速（每 0.2 秒扣 1 分）']
-    },
-    {
       id: 'tank', name: '坦克竞技场', sub: 'TANK ARENA', tag: '射击', icon: '🎯',
       time: 150, min: 2, max: 8,
       desc: '俯视角坦克对战，砖墙能被轰开，击败对手次数最多者获胜。',
       keys: ['WASD：移动', '鼠标：瞄准', '左键：开火']
-    },
-    {
-      id: 'bomber', name: '炸弹人', sub: 'BOMBER', tag: '派对', icon: '💣',
-      time: 120, min: 2, max: 4,
-      desc: '放置炸弹炸开砖块、收集道具，坚持到最后的人获胜。',
-      keys: ['WASD / 方向键：移动', '空格：放炸弹']
     },
     {
       id: 'tetris', name: '俄罗斯方块对战', sub: 'TETRIS VS', tag: '益智', icon: '🧱',
@@ -43,22 +31,10 @@
       keys: ['鼠标：画画', '回车：发送答案', '右侧工具栏：颜色 / 清空（C）']
     },
     {
-      id: 'racing', name: '极速环线', sub: 'NEON RACING', tag: '竞速', icon: '🏎️',
-      time: 150, min: 2, max: 8,
-      desc: '俯视角漂移竞速，四条赛道各跑两圈，率先冲线者获胜。',
-      keys: ['↑ / W：油门', '↓ / S：刹车倒车', '← → / A D：转向']
-    },
-    {
       id: 'gomoku', name: '五子棋', sub: 'GOMOKU', tag: '棋类', icon: '⚫',
       time: 0, min: 2, max: 2,
       desc: '15×15 经典棋盘，不限时轮流落子，率先连成五子者获胜。',
       keys: ['点击棋盘：落子', '悔棋 / 和棋：需对方同意', '认输：立即结束']
-    },
-    {
-      id: 'ludo', name: '飞行棋', sub: 'AERO CHESS', tag: '派对', icon: '✈️',
-      time: 0, min: 2, max: 4,
-      desc: '掷骰子起飞，落到对手格就把对方送回起点；率先让全部飞机到家者获胜。',
-      keys: ['点击棋盘 / 空格：掷骰子', '点击自己的飞机：选择走哪一架']
     },
     {
       id: 'undercover', name: '谁是卧底', sub: 'WHO IS SPY', tag: '推理', icon: '🕵️',

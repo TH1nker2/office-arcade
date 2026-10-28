@@ -102,7 +102,7 @@ function ok(name, cond, extra) {
   })()`);
   await sleep(2000);
   await evalJs(`(function(){
-    var g = document.querySelector('[data-game="snake"]');
+    var g = document.querySelector('[data-game="tank"]');
     if (g) g.click();
   })()`);
   await sleep(600);

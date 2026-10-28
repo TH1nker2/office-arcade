@@ -11,7 +11,7 @@ module.exports = function install(ctx) {
     json, readJson, store, presence, rooms, AR,
     ADMINS, adminSessions, ADMIN_TTL, adminFrom,
     hashPassword, newToken, setPresence, scheduleLobby,
-    leaveRoom, kickUser, WORDS,
+    leaveRoom, kickUser, WORDS, UNDERCOVER_PAIRS,
     loginBlocked, loginFailed, loginSuccess, safeEqual
   } = ctx;
 
@@ -122,6 +122,22 @@ module.exports = function install(ctx) {
         levels: levels,
         source: 'shared/words.json',
         words: WORDS[level] || []
+      }, { 'Cache-Control': 'no-store' });
+    }
+
+    /* ---------- 谁是卧底词库 ---------- */
+    if (urlPath === '/api/admin/undercover-words' && method === 'GET') {
+      const counts = new Map();
+      const pairs = (UNDERCOVER_PAIRS || []).map((p) => {
+        const category = p.category || '未分类';
+        counts.set(category, (counts.get(category) || 0) + 1);
+        return { a: p.a, b: p.b, category: category };
+      });
+      return json(res, 200, {
+        total: pairs.length,
+        categories: Array.from(counts, ([name, count]) => ({ name: name, count: count })),
+        source: 'shared/undercover-words.json',
+        pairs: pairs
       }, { 'Cache-Control': 'no-store' });
     }
 
