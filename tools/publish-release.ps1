@@ -21,6 +21,9 @@ $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $root
 
 function Read-Utf8($path) { [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8) }
+function Write-Utf8($path, $text) {
+    [IO.File]::WriteAllText($path, $text, (New-Object Text.UTF8Encoding($false)))
+}
 
 $ver = (Read-Utf8 (Join-Path $root 'version.json') | ConvertFrom-Json).version
 $tag = "v$ver"
