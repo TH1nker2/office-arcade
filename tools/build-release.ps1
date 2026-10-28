@@ -48,8 +48,12 @@ foreach ($c in @($env:PYTHON, 'python', 'python3', 'py')) {
     if (-not $c) { continue }
     $cmd = Get-Command $c -ErrorAction SilentlyContinue
     if (-not $cmd) { continue }
-    $probe = & $cmd.Source -c "print('PYOK')" 2>$null
-    if ($probe -match 'PYOK') { $python = $cmd.Source; break }
+    try {
+        $probe = & $cmd.Source -c "print('PYOK')" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $probe -match 'PYOK') { $python = $cmd.Source; break }
+    } catch {
+        # Windows Store 的 python 占位程序会直接报错，继续尝试下一个
+    }
 }
 if (-not $python) { Write-Host "  提示：没找到 python，tar.gz 用 tar.exe 打包，解压后需要 chmod +x" -ForegroundColor Yellow }
 
