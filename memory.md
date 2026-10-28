@@ -5,7 +5,7 @@
 > **仓库**：https://gitee.com/th1nker/office-arcade.git
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
 > **基线**：`main` 分支，`18c87e4`（版本 3.4.1）→ `0e9c86a`（2026-10-28 优化）
-> **当前状态（最后同步时）**：优化已在 `main`；合作弹幕 v2 已在 `feature/shmup-v2` 完成并通过全量测试，准备合并到 `main`（分支状态以 `git log` 为准）。
+> **当前状态（最后同步时）**：合作弹幕 v2 已完成、全量测试通过，并合并推送到 `main`（合并提交 `674e42f`；最终提交以 `git log` 为准）。
 
 ---
 
@@ -39,7 +39,7 @@
 ## 3. 当前工作区状态（会话记忆）
 
 - 基线 `18c87e4`（v3.4.1）之上是一轮已推送优化 `0e9c86a`，涉及服务端、前端、测试、文档和发版脚本。
-- `feature/shmup-v2` 包含合作弹幕 v2；全量测试通过后合并到 `main`，最终分支/提交以 `git log` 为准。
+- `feature/shmup-v2` 的合作弹幕 v2 已合并并推送到 `main`；最终分支/提交以 `git log` 为准。
 - 本地额外文件：`runtime/`（Node 运行时）、`admins.json`（测试管理员）、`vendor/_cache`（运行时下载缓存），均被 `.gitignore` 排除。
 - UI 测试会改写 `shots/*.png`；跑完应 `git checkout -- shots/` 还原，除非明确要更新截图。
 - 本轮验证：`tools/test-all.js --with-ui` 19 个脚本全部通过（约 180s）；`bot-test` 连跑 10 次通过；首屏 gzip 后约 103 KB，snake/tank/shmup headless RAF p95 16.7ms。
@@ -73,7 +73,7 @@
 - 根据试玩反馈修复：光球下落过慢、战机无法飞到上半区（原 Y 下限 420）、BOSS 入场结束后瞬移闪烁（改为平滑靠近巡逻点）。
 - 关底从 3 种 BOSS 随机：铁幕堡垒（瞄准齐射/弹环/侧炮）、蜂巢母舰（旋转弹环/召唤小敌机/扇形弹）、棱镜核心（螺旋/高速瞄准/星芒）。
 - 渲染器增加光球、护盾/HP、BOSS 外形；HUD 被击毁显示“阵亡”；人机 BOSS 出现后会优先站位对 BOSS 输出。
-- 验证：`game-test` 扩充 v2 断言（含快速下落、上半区移动、BOSS 入场无跳变）、`bot-test`、`audit-test`、`perf-test`、`ui-v3`（含三 BOSS/增益渲染）通过；全量 `test-all --with-ui` 19 个脚本通过。合并状态以 `git log` 为准。
+- 验证：`game-test` 扩充 v2 断言（含快速下落、上半区移动、BOSS 入场无跳变）、`bot-test`、`audit-test`、`perf-test`、`ui-v3`（含三 BOSS/增益渲染）通过；全量 `test-all --with-ui` 19 个脚本通过。已合并推送。
 
 ### P3 可访问性/安全
 - 新增 `js/ui/a11y.js`：覆盖层 ARIA、打开聚焦、Tab 陷阱、关闭归还焦点；玩家行支持键盘打开菜单，菜单支持方向键/Home/End/Enter；全局 `:focus-visible`、减少动效 CSS。
