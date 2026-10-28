@@ -130,7 +130,33 @@ async function main() {
   check('右侧不再显示手数', gomoku.text.indexOf('手') < 0, gomoku.text);
   await B.shot('46-gomoku-sides');
 
-  await B.ev('document.getElementById("hud-back").click()');
+  const gomokuActions = JSON.parse(await B.ev(`(function(){
+    return JSON.stringify({
+      visible: !document.getElementById('gomoku-actions').classList.contains('hidden'),
+      undoDisabled: document.getElementById('gomoku-undo').disabled,
+      drawDisabled: document.getElementById('gomoku-draw').disabled,
+      undoCount: document.getElementById('gomoku-undo-count').textContent,
+      drawCount: document.getElementById('gomoku-draw-count').textContent
+    });
+  })()`));
+  check('五子棋操作栏可见', gomokuActions.visible === true);
+  check('无棋可悔时悔棋禁用', gomokuActions.undoDisabled === true);
+  check('和棋按钮可用且次数为 3',
+    gomokuActions.drawDisabled === false && gomokuActions.drawCount === '3',
+    'disabled=' + gomokuActions.drawDisabled + ' count=' + gomokuActions.drawCount);
+
+  await B.ev('document.getElementById("gomoku-draw").click()');
+  await sleep(1500);
+  const drawOver = JSON.parse(await B.ev(`JSON.stringify({
+    visible: !document.getElementById('over-overlay').classList.contains('hidden'),
+    title: document.getElementById('over-title').textContent,
+    table: document.getElementById('over-table').textContent
+  })`));
+  check('人机自动同意和棋', drawOver.visible === true, drawOver.title);
+  check('结算标题显示平局', drawOver.title === '平局', drawOver.title);
+  check('结算表显示平局行', drawOver.table.indexOf('平') >= 0, drawOver.table.slice(0, 40));
+
+  await B.ev('document.getElementById("over-back").click()');
   await sleep(600);
   await B.ev('document.getElementById("btn-leave-room").click()');
   await sleep(600);

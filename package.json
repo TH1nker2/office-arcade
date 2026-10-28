@@ -19,7 +19,7 @@
     "test:hardening": "node tools/hardening-test.js",
     "test:regression": "node tools/regression-test.js",
     "test:perf": "node tools/perf-test.js",
-    "test:ui": "node tools/ui-v2-test.js && node tools/ui-v3-test.js && node tools/ui-v4-test.js && node tools/ui-v5-test.js && node tools/ui-v6-test.js && node tools/ui-v7-test.js",
+    "test:ui": "node tools/ui-v2-test.js && node tools/ui-v3-test.js && node tools/ui-v4-test.js && node tools/ui-v5-test.js && node tools/ui-v6-test.js && node tools/ui-v7-test.js && node tools/ui-v8-test.js",
     "bump": "node tools/bump-version.js",
     "version:show": "node tools/bump-version.js --show",
     "test:admin": "node tools/admin-test.js && node tools/admin-words-ui-test.js",

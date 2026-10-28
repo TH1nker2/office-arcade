@@ -19,6 +19,11 @@
       <div class="hud-timer" id="hud-timer">--</div>
       <div class="hud-round" id="hud-round">第 1 局</div>
       <div class="hud-spacer"></div>
+      <div class="gomoku-actions hidden" id="gomoku-actions">
+        <button class="hud-btn" id="gomoku-undo" type="button">悔棋 <span class="ga-count" id="gomoku-undo-count">3</span></button>
+        <button class="hud-btn" id="gomoku-draw" type="button">和棋 <span class="ga-count" id="gomoku-draw-count">3</span></button>
+        <button class="hud-btn warn" id="gomoku-resign" type="button">认输</button>
+      </div>
       <button class="hud-btn" id="hud-back">退出游戏 (Esc)</button>
     </header>
 
@@ -380,6 +385,30 @@
       <div class="panel-actions">
         <button class="btn primary" id="confirm-ok">确认退出</button>
         <button class="btn ghost" id="confirm-cancel">继续玩</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 五子棋：对方请求 ================= -->
+  <div class="overlay hidden" id="request-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="request-title">
+    <div class="panel narrow">
+      <h2 class="panel-title" id="request-title">对方请求悔棋</h2>
+      <p class="panel-sub" id="request-text">同意后将撤销最近一手。</p>
+      <div class="panel-actions">
+        <button class="btn primary" id="request-accept">同意</button>
+        <button class="btn ghost" id="request-decline">拒绝</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 五子棋：认输确认 ================= -->
+  <div class="overlay hidden" id="resign-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="resign-title">
+    <div class="panel narrow">
+      <h2 class="panel-title" id="resign-title">确认认输？</h2>
+      <p class="panel-sub">认输后本局立即结束，对手获胜。</p>
+      <div class="panel-actions">
+        <button class="btn primary" id="resign-ok">确认认输</button>
+        <button class="btn ghost" id="resign-cancel">继续下棋</button>
       </div>
     </div>
   </div>

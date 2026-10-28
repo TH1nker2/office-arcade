@@ -51,6 +51,21 @@
   background: rgba(6, 11, 20, 0.6);
 }
 .hud-btn:hover { color: var(--txt); border-color: var(--line-2); }
+.hud-btn:disabled { opacity: .4; cursor: default; }
+.gomoku-actions { display: flex; gap: 6px; }
+.gomoku-actions.hidden { display: none; }
+.gomoku-actions .ga-count {
+  display: inline-block;
+  min-width: 15px;
+  margin-left: 3px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: rgba(34, 211, 238, 0.14);
+  color: #9ae9ff;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+}
 
 .hud-board {
   position: absolute;

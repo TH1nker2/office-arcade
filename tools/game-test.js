@@ -4,7 +4,7 @@
 
 const path = require('path');
 for (const f of ['core', 'registry', 'games/constants']) require(path.join(__dirname, '..', 'shared', f + '.js'));
-for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'ludo']) {
+for (const g of ['snake', 'tank', 'bomber', 'tetris', 'shmup', 'draw', 'ludo', 'gomoku']) {
   require(path.join(__dirname, '..', 'shared', 'games', g + '.js'));
 }
 const AR = globalThis.AR;
@@ -360,6 +360,20 @@ for (const [id, n, secs, cap] of cases) {
   const da2 = Math.abs(Math.abs(AR.wrap(sn2.a)) - Math.PI);
   ok('snake 反向也能转', da2 < 0.4, '偏差 ' + da2.toFixed(2) + ' 弧度');
 
+  /* 长蛇后段：头落在两个 trail 采样点之间，旧的点采样会漏判 */
+  const ss5 = AR.games.snake.create(players(2), { seed: 123 });
+  const sa = ss5.snakes.p0;
+  const sb = ss5.snakes.p1;
+  sa.x = 220; sa.y = 100; sa.a = 0; sa.len = 30; sa.alive = true;
+  sa.trail = [{ x: 220, y: 100 }];
+  sb.x = 280; sb.y = 100; sb.a = 0; sb.len = 100; sb.alive = true;
+  sb.trail = [
+    { x: 280, y: 100 }, { x: 240, y: 100 },
+    { x: 200, y: 100 }, { x: 160, y: 100 }
+  ];
+  AR.games.snake.tick(ss5, 1 / 60);
+  ok('snake 头部撞长蛇后段能判定死亡', sa.alive === false, 'alive=' + sa.alive);
+
   console.log('');
 })();
 
@@ -472,6 +486,60 @@ for (const [id, n, secs, cap] of cases) {
       !!snap.b && snap.b.k === bossMeta.id && snap.b.nm === bossMeta.name,
       snap.b ? snap.b.k + '/' + snap.b.nm : 'null');
   });
+
+  console.log('');
+})();
+
+/* ============================================================
+ * 五子棋：悔棋 / 和棋 / 认输
+ * ============================================================ */
+(function gomokuActionsTest() {
+  console.log('=== 五子棋操作 ===');
+  const g = AR.games.gomoku;
+  const st = g.create(players(2), { seed: 33 });
+  g.input(st, 'p0', { x: 7, y: 7 });
+  g.input(st, 'p1', { x: 8, y: 8 });
+  ok('gomoku 落子写入历史', st.history.length === 2 && st.moves === 2,
+    'history=' + st.history.length);
+
+  g.input(st, 'p0', { act: 'undo' });
+  ok('gomoku 悔棋请求挂起', !!st.pending && st.pending.type === 'undo' && st.req.undo === 1,
+    JSON.stringify(st.pending));
+  g.input(st, 'p1', { x: 9, y: 9 });
+  ok('gomoku 等待同意时不能落子', st.board[9 * 15 + 9] === 0 && st.moves === 2,
+    'moves=' + st.moves);
+  g.input(st, 'p1', { act: 'reply', accept: true });
+  ok('gomoku 同意悔棋撤销最近一手',
+    st.history.length === 1 && st.moves === 1 && st.board[8 * 15 + 8] === 0,
+    'history=' + st.history.length + ' moves=' + st.moves);
+  ok('gomoku 悔棋后轮到被撤销方', st.order[st.turn % st.order.length] === 'p1',
+    'current=' + st.order[st.turn % st.order.length]);
+
+  g.input(st, 'p1', { act: 'draw' });
+  ok('gomoku 和棋请求挂起', !!st.pending && st.pending.type === 'draw' && st.req.draw === 1,
+    JSON.stringify(st.pending));
+  g.input(st, 'p0', { act: 'reply', accept: true });
+  const drawRes = g.results(st);
+  ok('gomoku 同意和棋结束本局', st.ended === true && st.draw === true);
+  ok('gomoku 和棋结果双方都是平局',
+    drawRes.length === 2 && drawRes.every((r) => r.draw && r.score === 50),
+    drawRes.map((r) => r.name + ':' + r.score + '/' + r.draw).join(' '));
+
+  const st2 = g.create(players(2), { seed: 34 });
+  for (let i = 0; i < 3; i++) {
+    g.input(st2, 'p0', { act: 'draw' });
+    g.input(st2, 'p1', { act: 'reply', accept: false });
+  }
+  g.input(st2, 'p0', { act: 'draw' });
+  ok('gomoku 每局最多发起 3 次和棋', st2.req.draw === 3 && !st2.pending,
+    'draw=' + st2.req.draw);
+
+  const st3 = g.create(players(2), { seed: 35 });
+  g.input(st3, 'p0', { x: 7, y: 7 });
+  g.input(st3, 'p1', { act: 'resign' });
+  const resignRes = g.results(st3);
+  ok('gomoku 认输立即结束', st3.ended === true && st3.winnerId === 'p0');
+  ok('gomoku 认输后胜者是对方', resignRes[0] && resignRes[0].id === 'p0');
 
   console.log('');
 })();

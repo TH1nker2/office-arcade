@@ -90,24 +90,24 @@
 
       if (tr.length < 2) continue;
 
-      /* 身体：两层描边 */
+      /* 身体：一条路径分三层描边。长蛇身上每帧 shadowBlur 很贵，
+         改用半透明外圈模拟光晕，8 条长蛇同屏也不会拖垮渲染。 */
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.shadowColor = AR.rgba(info.color, 0.55);
-      ctx.shadowBlur = 14;
-      ctx.strokeStyle = AR.shade(info.color, -0.35);
-      ctx.lineWidth = 15;
       ctx.beginPath();
       ctx.moveTo(tr[0].x, tr[0].y);
       for (var p1 = 1; p1 < tr.length; p1++) ctx.lineTo(tr[p1].x, tr[p1].y);
+
+      ctx.strokeStyle = AR.rgba(info.color, 0.18);
+      ctx.lineWidth = 24;
       ctx.stroke();
-      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = AR.shade(info.color, -0.35);
+      ctx.lineWidth = 15;
+      ctx.stroke();
 
       ctx.strokeStyle = info.color;
       ctx.lineWidth = 10;
-      ctx.beginPath();
-      ctx.moveTo(tr[0].x, tr[0].y);
-      for (var p2 = 1; p2 < tr.length; p2++) ctx.lineTo(tr[p2].x, tr[p2].y);
       ctx.stroke();
 
       /* 头 */
