@@ -4,9 +4,9 @@
 > **最后同步**：2026-10-28
 > **仓库**：https://gitee.com/th1nker/office-arcade.git
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
-> **版本**：3.5.0（2026-10-28）
+> **版本**：3.5.0（2026-10-28）· Gitee 发行版已发布
 > **基线**：`main` 分支，`18c87e4`（版本 3.4.1）→ `0e9c86a`（2026-10-28 优化）→ 3.5.0
-> **当前状态（最后同步时）**：合作弹幕 v2、画布工具栏、五子棋操作与蛇球修复均已合并到 `main`，版本 3.5.0。
+> **当前状态（最后同步时）**：合作弹幕 v2、画布工具栏、五子棋操作与蛇球修复均已合并到 `main`；v3.5.0 三平台包已发布。
 
 ---
 
@@ -44,6 +44,11 @@
 - `feature/draw-tools` 的你画我猜画布工具栏（画布外侧、8 色、C 快捷键）已合并并推送到 `main`。
 - `feature/gomoku-snake-fixes` 的五子棋悔棋/和棋/认输与蛇球长蛇碰撞/渲染修复已合并并推送到 `main`。
 - 当前 `main` 版本为 `3.5.0`；服务重启后页面和启动横幅显示新版本。
+- **正式发行版**：https://gitee.com/th1nker/office-arcade/releases/tag/v3.5.0
+  - tag `v3.5.0` → `b8d250e`
+  - 附件：win-x64.zip、linux-x64.tar.gz、darwin-arm64.tar.gz（另有 Gitee 自动源码归档）
+  - 远端 Windows 包 SHA256 已与本地 `dist/SHA256SUMS.txt` 校验一致
+  - 本机无 Python，Unix 包用 `tar.exe` 打包；解压后 `start.sh` 会自愈执行权限，必要时手动 `chmod +x runtime/node start.sh`
 - 本地额外文件：`runtime/`（Node 运行时）、`admins.json`（测试管理员）、`vendor/_cache`（运行时下载缓存），均被 `.gitignore` 排除。
 - UI 测试会改写 `shots/*.png`；跑完应 `git checkout -- shots/` 还原，除非明确要更新截图。
 - 本轮验证：`tools/test-all.js --with-ui` 19 个脚本全部通过（约 180s）；`bot-test` 连跑 10 次通过；首屏 gzip 后约 103 KB，snake/tank/shmup headless RAF p95 16.7ms。
@@ -88,7 +93,8 @@
 - 五子棋：新增悔棋/和棋/认输。悔棋撤销最近一手并由落子方重下；悔棋/和棋需对方同意；每局全桌每种最多发起 3 次；认输立即结束。
 - 和棋双方各 +2 分、不计胜场；结算/战绩显示平局。人机自动同意请求。
 - 蛇球：collision 从抽点改为线段 + 40px 空间网格，修复长蛇后段穿越，并降低长蛇同屏的 O(n²) 开销；渲染去掉每蛇 shadowBlur，改为半透明外圈光晕。
-- 验证：`game-test` 新增 gomoku 操作与长蛇穿越断言；`ui-v3` 覆盖人机和棋；新增 `ui-v8` 双浏览器覆盖同意/拒绝/平局/认输；全量 `test-all --with-ui` 20 个脚本通过（约 204s）。
+- 验证：`game-test` 新增 gomoku 操作与长蛇穿越断言；`ui-v3` 覆盖人机和棋；新增 `ui-v8` 双浏览器覆盖同意/拒绝/平局/认输；全量 `test-all --with-ui` 20 个脚本通过（约 207s）。
+- 发布：v3.5.0 三平台包已上传 Gitee 发行版；构建脚本修复了 Windows 下 Git tar 抢占和 Store Python 占位误判。
 
 ### P3 可访问性/安全
 - 新增 `js/ui/a11y.js`：覆盖层 ARIA、打开聚焦、Tab 陷阱、关闭归还焦点；玩家行支持键盘打开菜单，菜单支持方向键/Home/End/Enter；全局 `:focus-visible`、减少动效 CSS。
