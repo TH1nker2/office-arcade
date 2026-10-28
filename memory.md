@@ -4,8 +4,9 @@
 > **最后同步**：2026-10-28
 > **仓库**：https://gitee.com/th1nker/office-arcade.git
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
-> **基线**：`main` 分支，`18c87e4`（版本 3.4.1）→ `0e9c86a`（2026-10-28 优化）
-> **当前状态（最后同步时）**：合作弹幕 v2 与画布工具栏已合并到 `main`；五子棋操作 + 蛇球长蛇修复在 `feature/gomoku-snake-fixes` 完成并通过全量测试，合并状态以 `git log` 为准。
+> **版本**：3.5.0（2026-10-28）
+> **基线**：`main` 分支，`18c87e4`（版本 3.4.1）→ `0e9c86a`（2026-10-28 优化）→ 3.5.0
+> **当前状态（最后同步时）**：合作弹幕 v2、画布工具栏、五子棋操作与蛇球修复均已合并到 `main`，版本 3.5.0。
 
 ---
 
@@ -41,7 +42,8 @@
 - 基线 `18c87e4`（v3.4.1）之上是一轮已推送优化 `0e9c86a`，涉及服务端、前端、测试、文档和发版脚本。
 - `feature/shmup-v2` 的合作弹幕 v2 已合并并推送到 `main`；最终分支/提交以 `git log` 为准。
 - `feature/draw-tools` 的你画我猜画布工具栏（画布外侧、8 色、C 快捷键）已合并并推送到 `main`。
-- `feature/gomoku-snake-fixes` 的五子棋悔棋/和棋/认输与蛇球长蛇碰撞/渲染修复已通过全量测试；合并状态以 `git log` 为准。
+- `feature/gomoku-snake-fixes` 的五子棋悔棋/和棋/认输与蛇球长蛇碰撞/渲染修复已合并并推送到 `main`。
+- 当前 `main` 版本为 `3.5.0`；服务重启后页面和启动横幅显示新版本。
 - 本地额外文件：`runtime/`（Node 运行时）、`admins.json`（测试管理员）、`vendor/_cache`（运行时下载缓存），均被 `.gitignore` 排除。
 - UI 测试会改写 `shots/*.png`；跑完应 `git checkout -- shots/` 还原，除非明确要更新截图。
 - 本轮验证：`tools/test-all.js --with-ui` 19 个脚本全部通过（约 180s）；`bot-test` 连跑 10 次通过；首屏 gzip 后约 103 KB，snake/tank/shmup headless RAF p95 16.7ms。
