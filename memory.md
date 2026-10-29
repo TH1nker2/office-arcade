@@ -33,10 +33,13 @@
 4. 验证命令见 README 的“测试”章节；本机基线为 `tools/check.js`、`tools/test-all.js --with-ui`、`tools/perf-test.js` 通过。
 5. 检查 `git log -1` 与本文基线是否一致；未提交的移除改动按 `git status` 判断。
 
+> GitHub 私有镜像：`git remote add github https://github.com/TH1nker2/office-arcade.git`（凭据用本机 GitHub PAT / 凭据管理器，勿写入 remote URL）。日常推送 `git push github main`，发版后 `git push github --tags`。
+
 ---
 
 ## 3. 当前工作区状态（会话记忆）
 
+- 已配置 `github` 远程指向私有镜像；本地 `main` 上游仍为 `origin/main`（Gitee）。
 - `main` 的 3.6.0 发布提交为 `4c08b56`，tag `v3.6.0`；之后有一个文档提交 `fc4531d`。
 - 功能分支 `feature/undercover-fixed-config` 已完成固定配置与输入法修复，并合并到 `main`。
 - 谁是卧底人数上限从 10 调整为 12；轮数和卧底数固定：4 人 2 轮 1 卧底，5-7 人 3 轮 1 卧底，8-10 人 4 轮 2 卧底，11 人 4 轮 3 卧底，12 人 5 轮 3 卧底。
@@ -65,6 +68,7 @@
   - 附件：win-x64.zip、linux-x64.tar.gz、darwin-arm64.tar.gz + Gitee 自动源码归档
   - 发布说明由 `version.json` 生成；旧版发行版页面保留，未清理
 - v3.5.0 历史发行版：https://gitee.com/th1nker/office-arcade/releases/tag/v3.5.0（tag `v3.5.0` → `b8d250e`，十款版本）
+- GitHub 私有镜像：https://github.com/TH1nker2/office-arcade（main + 17 tags 已同步；仅代码与 tag，无发行包）
 - `157e72b`（谁是卧底）已合并 main；3.6.0 发布提交其后，包含四款游戏移除和后台卧底词库。
 - 本机无 Python，Unix 包用 `tar.exe` 打包；解压后 `start.sh` 会自愈执行权限，必要时手动 `chmod +x runtime/node start.sh`。
 
@@ -74,6 +78,7 @@
 
 - **推送前硬性门禁（最高优先级）**：任何代码改动在 `git push` 前必须完成全量测试（`tools/check.js` + `tools/test-all.js --with-ui`，涉及渲染/性能再加 `tools/perf-test.js`），并同步 README / `docs/*.md` / `memory.md` 与对应记忆条目；UI 测试后还原或有意更新 `shots/`。未完成测试和文档同步不得推送。
 - 仅文档/记忆改动可以跳过全量测试，但仍需同步 `memory.md`，并说明“本次无代码改动”。
+- 推送到 GitHub 镜像同样受本门禁约束；Gitee 是发行源，GitHub 只做代码镜像。
 - 中文交流；非平凡改动先给分阶段方案，由用户选择范围后再执行。
 - 严格保持现有功能：允许修 bug、性能/交付/可访问性/安全加固；不改玩法、数值、时长、计分、交互、视觉风格，不破坏零依赖/零构建/离线。
 - 重视实际测试与量化结果；未获明确要求不要 commit/push，不擅自改共享配置或删用户文件。

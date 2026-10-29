@@ -49,9 +49,11 @@ node server.js                        # 有系统 Node 时也行（≥ 22.5 才�
 
 `data/`（玩家数据库）同样不入库；换机器时把旧的 `data/arcade.sqlite` 拷过来即可。
 
+> 有权限的开发者也可以从 GitHub 私有镜像克隆：`git clone https://github.com/TH1nker2/office-arcade.git`。
+
 ### C. 发版
 
-发版是**六步**，顺序不能乱（尤其第 4 步要在第 5 步之前，否则 tag 会指到旧提交）：
+发版是**七步**，顺序不能乱（尤其第 4 步要在第 5 步之前，否则 tag 会指到旧提交）：
 
 > 详细版（含改哪里、验证、各种翻车抢救）见 **[docs/发版流程.md](docs/发版流程.md)**。
 
@@ -76,9 +78,16 @@ powershell -ExecutionPolicy Bypass -File tools\publish-release.ps1
 
 # 6) 把发行版自动创建的 tag 同步到本地
 git fetch --tags
+
+# 7) 同步 GitHub 私有镜像（代码 + 本次 tag）
+git push github main
+git push github --tags
 ```
 
 `publish-release.ps1` 内置保护：如果 `HEAD` 和 `origin/main` 不一致会直接报错，避免发行版的 tag 打在旧提交上。
+
+GitHub 只是**私有代码镜像**（`https://github.com/TH1nker2/office-arcade.git`），发行包仍然只发 Gitee。
+日常代码推送也要同步镜像：`git push` 之后再 `git push github main`；发版后再补 `git push github --tags`。
 
 首次发版前需要一次性准备（约 230 MB 下载）：
 
