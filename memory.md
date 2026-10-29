@@ -67,9 +67,12 @@
 ## 5. 已知发布状态
 
 - **v3.6.0 三平台发行版已发布**：https://gitee.com/th1nker/office-arcade/releases/tag/v3.6.0
-  - tag `v3.6.0` → `4c08b56`（release id 1251446，remote main 后续 `fc4531d`）
+  - tag `v3.6.0` → `4c08b56`（重排后 release id 1254255；旧 id 1251446）
   - 附件：win-x64.zip、linux-x64.tar.gz、darwin-arm64.tar.gz + Gitee 自动源码归档
   - 发布说明由 `version.json` 生成；旧版发行版页面保留，未清理
+- 2026-10-29 按版本从旧到新重建 Gitee 17 个发行版页面，修复“顺序反了”：现在页面顺序为 v3.6.0 → v3.5.0 → v3.4.1 → … → v2.6.0，`/releases/latest` 返回 v3.6.0。
+  - 重排后 release id：v3.4.1 = 1254233，v3.5.0 = 1254243，v3.6.0 = 1254255
+  - 说明正文、tag 指向和安装包均已校验一致
 - v3.5.0 历史发行版：https://gitee.com/th1nker/office-arcade/releases/tag/v3.5.0（tag `v3.5.0` → `b8d250e`，十款版本）
 - GitHub 私有镜像：https://github.com/TH1nker2/office-arcade（main + 17 tags；Releases 17 个、66 个安装包资产，约 2.57 GB）
 - 本地完整备份：`C:\Users\Administrator\Desktop\workspace\arcade-release-backup`（原始包 + 重建包 + `SHA256SUMS.txt` / `manifest.json`）
