@@ -1,11 +1,11 @@
 # OFFICE ARCADE · MEMORY
 
 > Qoder 项目记忆快照，用于换机/丢失工作区后快速恢复上下文。
-> **最后同步**：2026-10-28
+> **最后同步**：2026-10-29
 > **仓库**：https://gitee.com/th1nker/office-arcade.git
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
 > **版本**：3.6.0（2026-10-29）
-> **当前分支**：`main`，HEAD `157e72b`（已合并「谁是卧底」）
+> **当前分支**：`main`；3.6.0 发布提交 `4c08b56`（tag `v3.6.0`）
 > **当前状态**：3.6.0 发布内容——已移除蛇球大作战、炸弹人、极速环线、飞行棋，剩余六款：坦克竞技场、俄罗斯方块对战、合作弹幕、你画我猜、五子棋、谁是卧底；管理后台新增「谁是卧底词库」。
 
 ---
@@ -63,10 +63,12 @@
 
 ## 5. 已知发布状态
 
-- v3.5.0 三平台发行版已发布：https://gitee.com/th1nker/office-arcade/releases/tag/v3.5.0
-  - tag `v3.5.0` → `b8d250e`
-  - 该发行包内仍是移除四款游戏之前的十款版本。
-- `157e72b`（谁是卧底）已合并 main；3.6.0 发布提交在其后，包含四款游戏移除和后台卧底词库。
+- **v3.6.0 三平台发行版已发布**：https://gitee.com/th1nker/office-arcade/releases/tag/v3.6.0
+  - tag `v3.6.0` → `4c08b56`（release id 1251446）
+  - 附件：win-x64.zip、linux-x64.tar.gz、darwin-arm64.tar.gz + Gitee 自动源码归档
+  - 发布说明由 `version.json` 生成；旧版发行版页面保留，未清理
+- v3.5.0 历史发行版：https://gitee.com/th1nker/office-arcade/releases/tag/v3.5.0（tag `v3.5.0` → `b8d250e`，十款版本）
+- `157e72b`（谁是卧底）已合并 main；3.6.0 发布提交其后，包含四款游戏移除和后台卧底词库。
 - 本机无 Python，Unix 包用 `tar.exe` 打包；解压后 `start.sh` 会自愈执行权限，必要时手动 `chmod +x runtime/node start.sh`。
 
 ---
