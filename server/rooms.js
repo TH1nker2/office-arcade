@@ -60,7 +60,6 @@ function roomJson(room) {
     min: AR.getInfo(room.gameId).min,
     bots: room.botCount || 0,
     level: room.level || 'normal',
-    rounds: room.rounds || 6,
     players: players
   };
 }
@@ -139,7 +138,6 @@ function createRoom(conn, gameId) {
     round: 0,
     game: null,
     level: 'normal',
-    rounds: 6,
     chat: [],
     startedAt: 0,
     acc: 0,
@@ -261,7 +259,6 @@ function startRound(room) {
   };
   if (room.gameId === 'undercover') {
     opts.pairs = UNDERCOVER_PAIRS;
-    opts.rounds = room.rounds || 6;
   }
   room.game = g.create(players, opts);
 

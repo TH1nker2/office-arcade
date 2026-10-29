@@ -5,8 +5,8 @@
 > **仓库**：https://gitee.com/th1nker/office-arcade.git
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
 > **版本**：3.6.0（2026-10-29）
-> **当前分支**：`main`；3.6.0 发布提交 `4c08b56`（tag `v3.6.0`）
-> **当前状态**：3.6.0 发布内容——已移除蛇球大作战、炸弹人、极速环线、飞行棋，剩余六款：坦克竞技场、俄罗斯方块对战、合作弹幕、你画我猜、五子棋、谁是卧底；管理后台新增「谁是卧底词库」。
+> **当前分支**：`main`（功能分支 `feature/undercover-fixed-config` 已合并）；改动已按要求提交并推送
+> **当前状态**：3.6.0 已发布；本分支调整「谁是卧底」为固定人数配置、30 秒发言，并移除房间轮数设置。
 
 ---
 
@@ -37,17 +37,14 @@
 
 ## 3. 当前工作区状态（会话记忆）
 
-- `main` HEAD `157e72b`：`feat: 新增谁是卧底并扩展为十款游戏`（该提交已把谁是卧底合并进 main）。
-- 当前工作区在 `main` 上，已删除四款游戏的全部源码、渲染器、测试引用和截图；**未提交、未推送**。
-- 移除的四款：蛇球大作战、炸弹人、极速环线、飞行棋。
-- 剩余六款：坦克竞技场、俄罗斯方块对战、合作弹幕、你画我猜、五子棋、谁是卧底。
-- 已同步 README、`docs/开发手册.md`、`docs/发版流程.md`、`memory.md` 与测试；谁是卧底截图 `shots/89`~`94` 保留。
-- 全量验证：`tools/test-all.js --with-ui` **21 个脚本全部通过（220.0s）**；`perf-test` 通过（首屏 gzip 后 106.8 KB，tank/tetris/shmup headless RAF p95 16.7ms）。
-- 管理后台新增「谁是卧底词库」页签：`GET /api/admin/undercover-words` 返回 120 对、10 个分类；支持分类筛选和搜索；截图 `shots/82b-admin-undercover.png`。
-- UI 测试会改写 `shots/*.png`；本次已删除四款游戏的旧截图，保留六款游戏对应的新截图。
-- 本地额外文件：`runtime/`（Node 运行时）、`admins.json`（测试管理员）、`vendor/_cache`（运行时下载缓存），均被 `.gitignore` 排除。
-- 本次按用户要求执行提交、推送与 3.6.0 发布。
-
+- `main` 的 3.6.0 发布提交为 `4c08b56`，tag `v3.6.0`；之后有一个文档提交 `fc4531d`。
+- 功能分支 `feature/undercover-fixed-config` 已完成固定配置与输入法修复，并合并到 `main`。
+- 谁是卧底人数上限从 10 调整为 12；轮数和卧底数固定：4 人 2 轮 1 卧底，5-7 人 3 轮 1 卧底，8-10 人 4 轮 2 卧底，11 人 4 轮 3 卧底，12 人 5 轮 3 卧底。
+- 每人描述时限从 15 秒改为 30 秒；房间内轮数选择已完全移除，服务端也不再接受 rounds 设置。
+- 输入法修复：新增 `AR.Dom.bindEnter`，组合输入期间的回车只交给 IME 上屏，不发送；覆盖卧底描述、房间/大厅聊天、加入房间、管理弹窗、登录/注册输入框。
+- README、docs、memory 已同步；新截图覆盖 `shots/89`~`94`。
+- 全量验证：`tools/test-all.js --with-ui` **21 个脚本全部通过（220.2s）**；perf 基线沿用 3.6.0（首屏 gzip 106.8 KB）。
+- 版本号仍为 3.6.0，未为新配置升版本；本次未要求发版。
 ---
 
 ## 4. 2026-10-29 发布 3.6.0（移除四款游戏）
@@ -64,7 +61,7 @@
 ## 5. 已知发布状态
 
 - **v3.6.0 三平台发行版已发布**：https://gitee.com/th1nker/office-arcade/releases/tag/v3.6.0
-  - tag `v3.6.0` → `4c08b56`（release id 1251446）
+  - tag `v3.6.0` → `4c08b56`（release id 1251446，remote main 后续 `fc4531d`）
   - 附件：win-x64.zip、linux-x64.tar.gz、darwin-arm64.tar.gz + Gitee 自动源码归档
   - 发布说明由 `version.json` 生成；旧版发行版页面保留，未清理
 - v3.5.0 历史发行版：https://gitee.com/th1nker/office-arcade/releases/tag/v3.5.0（tag `v3.5.0` → `b8d250e`，十款版本）

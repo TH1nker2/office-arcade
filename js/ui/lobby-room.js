@@ -232,16 +232,6 @@
       }
     }
 
-    /* 谁是卧底：最大轮数 */
-    var roundsBox = $('rounds-box');
-    var showRounds = room.gameId === 'undercover';
-    roundsBox.classList.toggle('hidden', !showRounds);
-    if (showRounds) {
-      var sel = $('rounds-select');
-      sel.value = String(room.rounds || 6);
-      sel.disabled = !(isHost && room.phase === 'lobby');
-    }
-
     var botBox = $('bot-box');
     botBox.classList.toggle('hidden', !(isHost && supportsBot && room.phase === 'lobby'));
     $('btn-add-bot').disabled = room.players.length >= room.max;

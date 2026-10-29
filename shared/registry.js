@@ -38,7 +38,7 @@
     },
     {
       id: 'undercover', name: '谁是卧底', sub: 'WHO IS SPY', tag: '推理', icon: '🕵️',
-      time: 0, min: 4, max: 10,
+      time: 0, min: 4, max: 12,
       desc: '平民和卧底拿到相近的词，轮流描述后投票，找出所有卧底。',
       keys: ['轮流输入描述', '点击玩家投票', '身份和词只有自己可见']
     }

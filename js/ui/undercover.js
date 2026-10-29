@@ -37,7 +37,7 @@
   }
 
   function ucStore() {
-    if (!APP.uc) APP.uc = { role: '', word: '', round: 1, maxRounds: 6 };
+    if (!APP.uc) APP.uc = { role: '', word: '', round: 1, maxRounds: 2 };
     return APP.uc;
   }
 
@@ -80,10 +80,10 @@
       $('undercover-panel').classList.add('hidden');
       return;
     }
-    APP.uc = { role: '', word: '', round: 1, maxRounds: 6 };
+    APP.uc = { role: '', word: '', round: 1, maxRounds: 2 };
     updateIdentity();
     $('uc-round').textContent = '1';
-    $('uc-max-rounds').textContent = '6';
+    $('uc-max-rounds').textContent = '2';
     $('uc-phase').textContent = PHASE_CN.brief;
     $('uc-timer').textContent = '--';
     $('uc-turn').textContent = '身份发放中…';
@@ -105,7 +105,7 @@
     uc.role = msg.role || '';
     uc.word = msg.word || '';
     uc.round = msg.round || 1;
-    uc.maxRounds = msg.maxRounds || 6;
+    uc.maxRounds = msg.maxRounds || 2;
     var key = uc.role + '|' + uc.word + '|' + uc.maxRounds;
     if (key === lastPrivateKey) return;
     lastPrivateKey = key;
@@ -241,7 +241,7 @@
     } else if (s.ph === 'describe') {
       if (same(s.cur, me)) {
         text = '轮到你描述';
-        sub = '不能直接说出自己的词 · 15 秒内提交';
+        sub = '不能直接说出自己的词 · 30 秒内提交';
       } else {
         text = '等待 ' + nameOf(s, s.cur) + ' 描述…';
         sub = '所有存活玩家发言完毕后立刻投票';
@@ -343,7 +343,7 @@
     active = true;
     $('undercover-panel').classList.remove('hidden');
     $('uc-round').textContent = String(s.rd || 1);
-    $('uc-max-rounds').textContent = String(s.mx || ucStore().maxRounds || 6);
+    $('uc-max-rounds').textContent = String(s.mx || ucStore().maxRounds || 2);
     updateTimer(s);
     updateInput(s);
 
@@ -397,12 +397,7 @@
 
   function init() {
     $('uc-send').addEventListener('click', sendDescribe);
-    $('uc-text').addEventListener('keydown', function (e) {
-      if (e.code !== 'Enter') return;
-      e.preventDefault();
-      e.stopPropagation();
-      sendDescribe();
-    });
+    AR.Dom.bindEnter($('uc-text'), sendDescribe);
     $('uc-players').addEventListener('click', function (e) {
       var card = e.target.closest ? e.target.closest('.uc-player') : null;
       if (!card || card.disabled) return;

@@ -3,11 +3,12 @@
  * 平民与卧底拿到相近但不同的词，轮流描述后投票找出卧底。
  *
  * 规则：
- *   - 4-5 人 1 个卧底，6-8 人 2 个，9-10 人 3 个
+ *   - 4-7 人 1 个卧底，8-10 人 2 个，11-12 人 3 个
+ *   - 轮数按人数固定：4 人 2 轮；5-7 人 3 轮；8-11 人 4 轮；12 人 5 轮
  *   - 每轮所有存活玩家各描述一次，描述完立刻投票
  *   - 最高票出局；平票无人出局
  *   - 卧底全出局平民胜；卧底人数 >= 平民人数卧底胜
- *   - 轮数由房主设置（4-12），到上限卧底仍存活则卧底胜
+ *   - 到固定轮数上限卧底仍存活则卧底胜
  *   - 卧底不知道队友；身份/词只发给本人
  * ============================================================ */
 (function (root) {
@@ -15,11 +16,9 @@
 
   var AR = root.AR;
   var BRIEF_TIME = 5;
-  var DESCRIBE_TIME = 15;
+  var DESCRIBE_TIME = 30;
   var VOTE_TIME = 25;
   var REVEAL_TIME = 5;
-  var MIN_ROUNDS = 4;
-  var MAX_ROUNDS = 12;
   var TEXT_MAX = 40;
 
   var FALLBACK_PAIRS = [
@@ -37,9 +36,16 @@
   }
 
   function undercoverCount(n) {
-    if (n <= 5) return 1;
-    if (n <= 8) return 2;
+    if (n <= 7) return 1;
+    if (n <= 10) return 2;
     return 3;
+  }
+
+  function maxRoundsFor(n) {
+    if (n <= 4) return 2;
+    if (n <= 7) return 3;
+    if (n <= 11) return 4;
+    return 5;
   }
 
   function playerName(state, id) {
@@ -187,7 +193,7 @@
       var civilianFirst = rnd() < 0.5;
       var civWord = civilianFirst ? pair.a : pair.b;
       var ucWord = civilianFirst ? pair.b : pair.a;
-      var maxRounds = AR.clamp(parseInt(opt && opt.rounds, 10) || 6, MIN_ROUNDS, MAX_ROUNDS);
+      var maxRounds = maxRoundsFor(players.length);
       var order = players.map(function (p) { return p.id; });
       var seats = order.slice();
       AR.shuffle(seats, rnd);

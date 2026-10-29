@@ -443,20 +443,22 @@ for (const [id, n, secs, cap] of cases) {
   }
 
   const ps6 = players(6);
-  const st = g.create(ps6, { seed: 100, rounds: 99, pairs: pairs });
+  const st = g.create(ps6, { seed: 100, pairs: pairs });
   const ucIds = st.order.filter((id) => st.roles[id] === 'undercover');
   const civIds = st.order.filter((id) => st.roles[id] === 'civilian');
-  ok('卧底人数按人数分配（6 人 2 卧底）', ucIds.length === 2 && civIds.length === 4,
+  ok('6 人局 1 卧底 5 平民', ucIds.length === 1 && civIds.length === 5,
     'uc=' + ucIds.length + ' civ=' + civIds.length);
-  [[4, 1], [5, 1], [8, 2], [9, 3], [10, 3]].forEach(([n, want]) => {
+  [[4, 2, 1], [5, 3, 1], [6, 3, 1], [7, 3, 1], [8, 4, 2],
+    [9, 4, 2], [10, 4, 2], [11, 4, 3], [12, 5, 3]].forEach(([n, rounds, want]) => {
     const bs = g.create(players(n), { seed: 900 + n, pairs: pairs });
     const got = bs.order.filter((id) => bs.roles[id] === 'undercover').length;
-    ok(n + ' 人局卧底人数', got === want, got + ' / ' + want);
+    ok(n + ' 人局固定配置', bs.maxRounds === rounds && got === want,
+      'rounds=' + bs.maxRounds + ' uc=' + got);
   });
   ok('平民拿到同一个词', civIds.every((id) => st.words[id] === st.words[civIds[0]]), st.words[civIds[0]]);
   ok('卧底拿到同一个词', ucIds.every((id) => st.words[id] === st.words[ucIds[0]]), st.words[ucIds[0]]);
   ok('平民和卧底的词不同', st.words[civIds[0]] !== st.words[ucIds[0]]);
-  ok('最大轮数限制在 4-12', st.maxRounds === 12, 'maxRounds=' + st.maxRounds);
+  ok('6 人局固定 3 轮', st.maxRounds === 3, 'maxRounds=' + st.maxRounds);
   ok('开局先进入准备阶段', st.phase === 'brief', st.phase);
 
   const snap0 = g.snapshot(st);
@@ -467,8 +469,10 @@ for (const [id, n, secs, cap] of cases) {
     pm && pm.role === 'undercover' && pm.word === st.words[ucIds[0]] &&
     !('team' in pm) && !('teammates' in pm) && !('roles' in pm) && !('words' in pm),
     JSON.stringify(pm));
-  ok('卧底之间互不知道队友', g.privateFor(st, ucIds[1]).role === 'undercover' &&
-    !('team' in g.privateFor(st, ucIds[1])));
+  const duo = g.create(players(8), { seed: 901, pairs: pairs });
+  const duoUc = duo.order.filter((id) => duo.roles[id] === 'undercover');
+  ok('卧底之间互不知道队友', duoUc.length === 2 && g.privateFor(duo, duoUc[1]).role === 'undercover' &&
+    !('team' in g.privateFor(duo, duoUc[1])));
 
   advance(st, 5.2);
   ok('准备结束进入描述', st.phase === 'describe', st.phase);
@@ -512,13 +516,13 @@ for (const [id, n, secs, cap] of cases) {
   const tos = g.create(tps, { seed: 105, pairs: pairs });
   advance(tos, 5.2);
   const timeoutFirst = tos.turnOrder[tos.turn];
-  advance(tos, 15.2);
+  advance(tos, 30.2);
   ok('描述超时自动跳过', tos.desc.length === 1 && tos.desc[0].t.indexOf('时间到') >= 0 &&
     tos.desc[0].i === timeoutFirst, JSON.stringify(tos.desc[0]));
 
   /* 平民全票投卧底 -> 平民胜 */
   const cps = players(4);
-  const cs = g.create(cps, { seed: 101, rounds: 12, pairs: pairs });
+  const cs = g.create(cps, { seed: 101, pairs: pairs });
   startVoting(cs);
   const uc1 = firstUndercover(cs);
   voteAll(cs, (id) => (id === uc1 ? cs.order.find((x) => x !== id && cs.roles[x] === 'civilian') : uc1));
@@ -537,8 +541,8 @@ for (const [id, n, secs, cap] of cases) {
 
   /* 一直平票 -> 到轮数上限卧底胜 */
   const mps = players(4);
-  const ms = g.create(mps, { seed: 102, rounds: 4, pairs: pairs });
-  for (let round = 0; round < 4; round++) {
+  const ms = g.create(mps, { seed: 102, pairs: pairs });
+  for (let round = 0; round < 2; round++) {
     if (ms.phase === 'brief') advance(ms, 5.2);
     passDescriptions(ms);
     advance(ms, 25.2);       /* 全员超时 -> 0 票平票 */
@@ -546,10 +550,6 @@ for (const [id, n, secs, cap] of cases) {
   }
   ok('到达最大轮数卧底获胜', ms.ended && ms.winner === 'undercover',
     'round=' + ms.round + ' winner=' + ms.winner);
-
-  const cps4 = players(4);
-  const rs = g.create(cps4, { seed: 103, rounds: 1, pairs: pairs });
-  ok('轮数下限为 4', rs.maxRounds === 4, 'maxRounds=' + rs.maxRounds);
 
   /* 卧底中途退出：立即按剩余人数重算胜负 */
   const lps = players(4);

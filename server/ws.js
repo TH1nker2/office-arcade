@@ -219,7 +219,7 @@ function handle(conn, msg) {
     }
 
     case 'setting': {
-      /* 房主在房间里改游戏设置（画猜难度 / 卧底轮数） */
+      /* 房主在房间里改游戏设置（画猜难度） */
       const room = conn.room;
       if (!room) return;
       if (room.phase !== 'lobby') { conn.send({ t: 'error', msg: '开局后不能改设置' }); return; }
@@ -228,12 +228,6 @@ function handle(conn, msg) {
         const lv = String(msg.value || '');
         if (['easy', 'normal', 'hard'].indexOf(lv) < 0) return;
         room.level = lv;
-        broadcastRoom(room);
-      }
-      if (msg.key === 'rounds' && room.gameId === 'undercover') {
-        const rn = parseInt(msg.value, 10);
-        if (!(rn >= 4 && rn <= 12)) return;
-        room.rounds = rn;
         broadcastRoom(room);
       }
       break;

@@ -95,6 +95,24 @@ async function main() {
   await sleep(300);
   const chatShown = await A.ev('!document.getElementById("chat-panel").classList.contains("hidden")');
   check('回车能打开对局聊天', chatShown === true);
+  const imeChat = JSON.parse(await A.ev(`(function(){
+    var el = document.getElementById('chat-text');
+    el.value = 'pinyin';
+    el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true, data: 'pinyin' }));
+    var ev = new KeyboardEvent('keydown', {
+      key: 'Enter', code: 'Enter', bubbles: true, cancelable: true, isComposing: true
+    });
+    var notCanceled = el.dispatchEvent(ev);
+    return JSON.stringify({
+      value: el.value,
+      open: !document.getElementById('chat-panel').classList.contains('hidden'),
+      canceled: !notCanceled
+    });
+  })()`));
+  check('聊天框 IME 组合中的回车不发送', imeChat.value === 'pinyin' && imeChat.open === true && imeChat.canceled === false,
+    JSON.stringify(imeChat));
+  await A.ev('document.getElementById("chat-text").dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "拼音" })); document.getElementById("chat-text").value = ""');
+
   await A.ev('document.getElementById("chat-text").value = "这局我赢了"');
   await A.ev('document.getElementById("chat-text").dispatchEvent(new KeyboardEvent("keydown",{code:"Enter",bubbles:true}))');
   await sleep(500);

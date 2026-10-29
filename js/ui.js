@@ -141,6 +141,9 @@
       e.preventDefault();
       submitAuth();
     });
+    AR.Dom.bindEnter($('auth-user'), submitAuth);
+    AR.Dom.bindEnter($('auth-nick'), submitAuth);
+    AR.Dom.bindEnter($('auth-pass'), submitAuth);
 
     /* 大厅 */
     $('btn-logout').addEventListener('click', logout);
@@ -166,9 +169,7 @@
       if (code.length !== 4) { toast('请输入 4 位房间码'); return; }
       Net.send({ t: 'joinRoom', code: code });
     });
-    $('join-code').addEventListener('keydown', function (e) {
-      if (e.code === 'Enter') $('btn-join-room').click();
-    });
+    AR.Dom.bindEnter($('join-code'), function () { $('btn-join-room').click(); });
     $('join-code').addEventListener('input', function (e) {
       e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
     });
@@ -231,10 +232,6 @@
       var btn = e.target.closest('.seg-btn');
       if (!btn || btn.disabled) return;
       Net.send({ t: 'setting', key: 'level', value: btn.getAttribute('data-level') });
-    });
-
-    $('rounds-select').addEventListener('change', function (e) {
-      Net.send({ t: 'setting', key: 'rounds', value: e.target.value });
     });
 
     $('btn-add-bot').addEventListener('click', function () {
@@ -322,12 +319,8 @@
     /* 聊天：大厅 + 对局 */
     $('chat-send').addEventListener('click', function () { sendChat('room'); closeChat(); });
     $('lobby-chat-send').addEventListener('click', function () { sendChat('lobby'); });
-    $('lobby-chat-text').addEventListener('keydown', function (e) {
-      if (e.code === 'Enter') { e.preventDefault(); sendChat('lobby'); }
-    });
-    $('chat-text').addEventListener('keydown', function (e) {
-      if (e.code === 'Enter') { e.preventDefault(); sendChat('room'); closeChat(); }
-    });
+    AR.Dom.bindEnter($('lobby-chat-text'), function () { sendChat('lobby'); });
+    AR.Dom.bindEnter($('chat-text'), function () { sendChat('room'); closeChat(); });
     $('lobby-emoji-btn').addEventListener('click', function (e) {
       e.stopPropagation();
       emojiPop('lobby-emoji-pop', 'lobby-chat-text');

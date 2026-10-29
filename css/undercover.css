@@ -367,20 +367,6 @@
 }
 .uc-tally-item b { color: #e9f2ff; }
 
-/* 房间里的轮数选择 */
-.rounds-select {
-  padding: 5px 8px;
-  border-radius: 7px;
-  border: 1px solid var(--line);
-  background: rgba(6, 11, 20, 0.9);
-  color: var(--txt);
-  font-family: inherit;
-  font-size: 12px;
-  outline: none;
-}
-.rounds-select:focus { border-color: var(--line-2); }
-.rounds-select:disabled { opacity: .55; }
-
 /* 结算里的卧底身份标记 */
 .uc-role-badge.undercover { color: #ff9fb2; background: rgba(255, 46, 99, 0.14); border-color: rgba(255, 46, 99, 0.4); }
 .uc-role-badge.civilian { color: #9ae9ff; background: rgba(34, 211, 238, 0.12); border-color: rgba(34, 211, 238, 0.34); }

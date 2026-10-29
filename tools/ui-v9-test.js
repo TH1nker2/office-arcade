@@ -76,16 +76,10 @@ async function main() {
   const room = await stateOf(A);
   check('四人进入谁是卧底房间', room.room && room.room.players.length === 4,
     room.room ? room.room.players.length + ' 人' : 'no room');
-  check('游戏最低人数为 4', (await A.ev('AR.getInfo("undercover").min')) === 4);
-  check('房间显示轮数选择', (await A.ev('!document.getElementById("rounds-box").classList.contains("hidden")')) === true);
+  check('游戏最低人数为 4、最高 12', (await A.ev('AR.getInfo("undercover").min')) === 4 &&
+    (await A.ev('AR.getInfo("undercover").max')) === 12);
+  check('房间不再提供轮数选择', (await A.ev('document.getElementById("rounds-box")')) === null);
   check('房间隐藏人机按钮', (await A.ev('document.getElementById("bot-box").classList.contains("hidden")')) === true);
-  check('轮数范围 4-12', (await A.ev('document.querySelectorAll("#rounds-select option").length')) === 9);
-
-  await A.ev('(function(){var s=document.getElementById("rounds-select");s.value="10";s.dispatchEvent(new Event("change",{bubbles:true}));return s.value;})()');
-  await sleep(450);
-  check('房主可修改最大轮数', (await A.ev('AR.App.room.rounds')) === 10, 'rounds=' + (await A.ev('AR.App.room.rounds')));
-  check('其他玩家看到轮数同步', (await pages[1].ev('document.getElementById("rounds-select").value')) === '10');
-  check('非房主轮数选择被禁用', (await pages[1].ev('document.getElementById("rounds-select").disabled')) === true);
   await A.shot('89-undercover-room');
 
   await A.ev('document.getElementById("btn-start").click()');
@@ -111,7 +105,7 @@ async function main() {
   check('同阵营拿到同一个词', civ.every((x) => x.word === civ[0].word) && uc[0].word !== civ[0].word,
     civ[0].word + ' / ' + uc[0].word);
   check('公开快照不泄露身份', (await A.ev('AR.App.snap.roles === null')) === true);
-  check('最大轮数带进对局', (await A.ev('document.getElementById("uc-max-rounds").textContent')) === '10');
+  check('4 人局固定 2 轮', (await A.ev('document.getElementById("uc-max-rounds").textContent')) === '2');
   check('身份卡显示自己的词', (await pages[0].ev('document.getElementById("uc-word").textContent')).indexOf(info[0].word) >= 0);
   const panelBox = JSON.parse(await A.ev('JSON.stringify(document.getElementById("undercover-panel").getBoundingClientRect())'));
   check('面板不超出视口', panelBox.left >= 0 && panelBox.right <= 1440 && panelBox.bottom <= 900,
@@ -128,6 +122,21 @@ async function main() {
   const firstInfo = info[pages.indexOf(firstPage)];
   check('轮到自己时显示描述输入框',
     (await firstPage.ev('!document.getElementById("uc-input-box").classList.contains("hidden")')) === true);
+  check('发言时限为 30 秒', (await firstPage.ev('document.getElementById("uc-hint").textContent')).indexOf('30 秒') >= 0);
+  const ime = JSON.parse(await firstPage.ev(`(function(){
+    var el = document.getElementById('uc-text');
+    el.value = 'pinyin';
+    el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true, data: 'pinyin' }));
+    var ev = new KeyboardEvent('keydown', {
+      key: 'Enter', code: 'Enter', bubbles: true, cancelable: true, isComposing: true
+    });
+    var notCanceled = el.dispatchEvent(ev);
+    return JSON.stringify({ value: el.value, desc: AR.App.snap.desc.length, notCanceled: notCanceled });
+  })()`));
+  check('IME 组合中的回车不发送', ime.desc === 0 && ime.value === 'pinyin' && ime.notCanceled === true,
+    JSON.stringify(ime));
+  await firstPage.ev('document.getElementById("uc-text").dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "拼音" })); document.getElementById("uc-text").value = ""');
+
   await firstPage.ev('document.getElementById("uc-text").value = ' + JSON.stringify(firstInfo.word) +
     ';document.getElementById("uc-send").click()');
   await sleep(280);
@@ -150,6 +159,7 @@ async function main() {
   }
   check('三次描述写入面板', descriptions === 3, 'sent=' + descriptions);
   check('描述流展示在左侧', (await A.ev('document.getElementById("uc-desc").textContent')).indexOf('界面发送的描述第1条') >= 0);
+  await sleep(2500);
   await A.shot('91-undercover-describe');
 
   let guard = 0;

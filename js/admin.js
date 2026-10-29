@@ -7,6 +7,7 @@
   var AR = root.AR;
   var $ = AR.Dom.$;
   var esc = AR.Dom.esc;
+  var bindEnter = AR.Dom.bindEnter;
   var api = AR.Http.request;
 
   var App = {
@@ -210,6 +211,8 @@
 
   /* ---------- 初始化 ---------- */
   function boot() {
+    bindEnter($('admin-user'), function () { $('login-btn').click(); });
+    bindEnter($('admin-pass'), function () { $('login-btn').click(); });
     $('login-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var user = $('admin-user').value.trim();
@@ -298,9 +301,7 @@
       closeDialog($('dlg-field').classList.contains('hidden') ? true : $('dlg-input').value);
     });
     $('dlg-cancel').addEventListener('click', function () { closeDialog(null); });
-    $('dlg-input').addEventListener('keydown', function (e) {
-      if (e.code === 'Enter') { e.preventDefault(); $('dlg-ok').click(); }
-    });
+    bindEnter($('dlg-input'), function () { $('dlg-ok').click(); });
 
     api('GET', '/api/admin/me').then(function (data) {
       App.admin = data.admin;
