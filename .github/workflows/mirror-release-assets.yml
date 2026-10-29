@@ -1,0 +1,70 @@
+name: mirror-release-assets
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要镜像的 tag（例如 v3.7.0）'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+
+      - name: Mirror assets from Gitee
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') { "${{ github.event.inputs.tag }}" } else { "${{ github.ref_name }}" }
+          if (-not $tag) { throw "找不到 tag" }
+
+          $base = "https://gitee.com/th1nker/office-arcade/releases/download/$tag"
+          $names = @(
+            "office-arcade-$tag-win-x64.zip",
+            "office-arcade-$tag-linux-x64.tar.gz",
+            "office-arcade-$tag-darwin-arm64.tar.gz"
+          )
+          $files = @()
+          $hashLines = @()
+          foreach ($n in $names) {
+            $out = Join-Path $env:RUNNER_TEMP $n
+            Write-Host "download $n"
+            Invoke-WebRequest -Uri "$base/$n" -OutFile $out -UseBasicParsing
+            $hash = (Get-FileHash $out -Algorithm SHA256).Hash.ToLower()
+            $hashLines += ('- `' + $n + '`：`' + $hash + '`')
+            $files += $out
+          }
+
+          gh release view $tag --repo $env:GITHUB_REPOSITORY | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            $ver = Get-Content version.json -Raw | ConvertFrom-Json
+            $lines = @("## 摸鱼游戏厅 $tag", "", "发布日期：$($ver.released)", "")
+            foreach ($n in @($ver.notes)) { $lines += "- $n" }
+            $lines += ""
+            $lines += "### SHA256"
+            $lines += $hashLines
+            $lines += ""
+            $lines += "> 安装包由 Gitee 自动镜像；源码与 tag 见本仓库。"
+            $body = $lines -join "`n"
+            gh release create $tag --title "摸鱼游戏厅 $tag" --notes $body --repo $env:GITHUB_REPOSITORY
+            if ($LASTEXITCODE -ne 0) { throw "创建 GitHub Release 失败" }
+          }
+
+          foreach ($f in $files) {
+            gh release upload $tag $f --clobber --repo $env:GITHUB_REPOSITORY
+            if ($LASTEXITCODE -ne 0) { throw "上传 GitHub Release 附件失败：$f" }
+          }

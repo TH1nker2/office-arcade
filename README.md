@@ -79,15 +79,17 @@ powershell -ExecutionPolicy Bypass -File tools\publish-release.ps1
 # 6) 把发行版自动创建的 tag 同步到本地
 git fetch --tags
 
-# 7) 同步 GitHub 私有镜像（代码 + 本次 tag）
+# 7) 同步 GitHub 代码与 tag
+#    tag 推送会自动触发 mirror-release-assets 工作流，
+#    从 Gitee 下载三个包并上传到 GitHub Release
 git push github main
 git push github --tags
 ```
 
 `publish-release.ps1` 内置保护：如果 `HEAD` 和 `origin/main` 不一致会直接报错，避免发行版的 tag 打在旧提交上。
 
-GitHub 只是**私有代码镜像**（`https://github.com/TH1nker2/office-arcade.git`），发行包仍然只发 Gitee。
-日常代码推送也要同步镜像：`git push` 之后再 `git push github main`；发版后再补 `git push github --tags`。
+GitHub 是**私有镜像**（`https://github.com/TH1nker2/office-arcade.git`）：代码和 tag 手动推，安装包由 tag 推送触发的 Actions 自动镜像。
+Gitee 仍是主下载源；附件超过约 900 MB 时，发布脚本会停止并提示，只有显式加 `-PruneOldReleases` 才会清理旧附件，发行版页面永久保留。
 
 首次发版前需要一次性准备（约 230 MB 下载）：
 

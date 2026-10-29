@@ -40,7 +40,10 @@
 ## 3. 当前工作区状态（会话记忆）
 
 - 已配置 `github` 远程指向私有镜像；本地 `main` 上游仍为 `origin/main`（Gitee）。
-- `main` 的 3.6.0 发布提交为 `4c08b56`，tag `v3.6.0`；之后有一个文档提交 `fc4531d`。
+- 2026-10-29：GitHub 17 个 Release、66 个安装包资产恢复完成（约 2.57 GB）；完整备份在 `C:\Users\Administrator\Desktop\workspace\arcade-release-backup`。
+- `tools/publish-release.ps1` 已改为：默认不删任何发行版页面；900 MB 附件预检；只有 `-PruneOldReleases` 才清理旧附件（默认保留最近 3 个版本），删除前检查 GitHub 归档并要求确认。
+- 新增 `.github/workflows/mirror-release-assets.yml`：推送 `v*` tag 时自动从 Gitee 下载三个安装包并镜像到 GitHub Release。
+- `main` 的 3.6.0 发布提交为 `4c08b56`，tag `v3.6.0`；之后有文档提交 `fc4531d`。
 - 功能分支 `feature/undercover-fixed-config` 已完成固定配置与输入法修复，并合并到 `main`。
 - 谁是卧底人数上限从 10 调整为 12；轮数和卧底数固定：4 人 2 轮 1 卧底，5-7 人 3 轮 1 卧底，8-10 人 4 轮 2 卧底，11 人 4 轮 3 卧底，12 人 5 轮 3 卧底。
 - 每人描述时限从 15 秒改为 30 秒；房间内轮数选择已完全移除，服务端也不再接受 rounds 设置。
@@ -68,7 +71,8 @@
   - 附件：win-x64.zip、linux-x64.tar.gz、darwin-arm64.tar.gz + Gitee 自动源码归档
   - 发布说明由 `version.json` 生成；旧版发行版页面保留，未清理
 - v3.5.0 历史发行版：https://gitee.com/th1nker/office-arcade/releases/tag/v3.5.0（tag `v3.5.0` → `b8d250e`，十款版本）
-- GitHub 私有镜像：https://github.com/TH1nker2/office-arcade（main + 17 tags 已同步；仅代码与 tag，无发行包）
+- GitHub 私有镜像：https://github.com/TH1nker2/office-arcade（main + 17 tags；Releases 17 个、66 个安装包资产，约 2.57 GB）
+- 本地完整备份：`C:\Users\Administrator\Desktop\workspace\arcade-release-backup`（原始包 + 重建包 + `SHA256SUMS.txt` / `manifest.json`）
 - `157e72b`（谁是卧底）已合并 main；3.6.0 发布提交其后，包含四款游戏移除和后台卧底词库。
 - 本机无 Python，Unix 包用 `tar.exe` 打包；解压后 `start.sh` 会自愈执行权限，必要时手动 `chmod +x runtime/node start.sh`。
 
@@ -78,7 +82,8 @@
 
 - **推送前硬性门禁（最高优先级）**：任何代码改动在 `git push` 前必须完成全量测试（`tools/check.js` + `tools/test-all.js --with-ui`，涉及渲染/性能再加 `tools/perf-test.js`），并同步 README / `docs/*.md` / `memory.md` 与对应记忆条目；UI 测试后还原或有意更新 `shots/`。未完成测试和文档同步不得推送。
 - 仅文档/记忆改动可以跳过全量测试，但仍需同步 `memory.md`，并说明“本次无代码改动”。
-- 推送到 GitHub 镜像同样受本门禁约束；Gitee 是发行源，GitHub 只做代码镜像。
+- 推送到 GitHub 镜像同样受本门禁约束；Gitee 是主下载源，GitHub 同时归档代码/tag 与发行包；推送 `v*` tag 会自动触发安装包镜像。
+- Gitee 配额策略：默认只保留最近 3 个版本的安装包；旧版本只删附件、不删页面；任何删除前先确认 GitHub 已有归档并征得用户同意。
 - 中文交流；非平凡改动先给分阶段方案，由用户选择范围后再执行。
 - 严格保持现有功能：允许修 bug、性能/交付/可访问性/安全加固；不改玩法、数值、时长、计分、交互、视觉风格，不破坏零依赖/零构建/离线。
 - 重视实际测试与量化结果；未获明确要求不要 commit/push，不擅自改共享配置或删用户文件。
@@ -98,6 +103,7 @@
 - `project-office-arcade.md`
 - `reference-office-arcade.md`
 - `feedback-full-test-before-push.md`
+- `release-recovery-2026-10-29.md`
 - `MEMORY.md`
 
 换机后若 Qoder 记忆目录为空：先读本文件，再按本节重建记忆条目，项目细节按第 1 节读文档。
