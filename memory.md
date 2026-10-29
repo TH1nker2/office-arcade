@@ -1,7 +1,7 @@
 # OFFICE ARCADE · MEMORY
 
 > Qoder 项目记忆快照，用于换机/丢失工作区后快速恢复上下文。
-> **最后同步**：2026-10-29
+> **最后同步**：2026-10-30
 > **仓库**：https://gitee.com/th1nker/office-arcade.git
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
 > **版本**：3.6.0（2026-10-29）
@@ -41,7 +41,7 @@
 
 - 已配置 `github` 远程指向私有镜像；本地 `main` 上游仍为 `origin/main`（Gitee）。
 - 2026-10-29：GitHub 17 个 Release、66 个安装包资产恢复完成（约 2.57 GB）；完整备份在 `C:\Users\Administrator\Desktop\workspace\arcade-release-backup`。
-- `tools/publish-release.ps1` 已改为：默认不删任何发行版页面；900 MB 附件预检；只有 `-PruneOldReleases` 才清理旧附件（默认保留最近 3 个版本），删除前检查 GitHub 归档并要求确认。
+- `tools/publish-release.ps1` 已改为：默认不删任何发行版页面；900 MB 附件预检；只有 `-PruneOldReleases` 才清理旧附件（默认保留最近 3 个版本），删除前检查 GitHub 归档并要求确认；`-CheckOnly` 可只读预检。
 - 新增 `.github/workflows/mirror-release-assets.yml`：推送 `v*` tag 时自动从 Gitee 下载三个安装包并镜像到 GitHub Release。
 - `main` 的 3.6.0 发布提交为 `4c08b56`，tag `v3.6.0`；之后有文档提交 `fc4531d`。
 - 功能分支 `feature/undercover-fixed-config` 已完成固定配置与输入法修复，并合并到 `main`。
@@ -49,7 +49,8 @@
 - 每人描述时限从 15 秒改为 30 秒；房间内轮数选择已完全移除，服务端也不再接受 rounds 设置。
 - 输入法修复：新增 `AR.Dom.bindEnter`，组合输入期间的回车只交给 IME 上屏，不发送；覆盖卧底描述、房间/大厅聊天、加入房间、管理弹窗、登录/注册输入框。
 - README、docs、memory 已同步；新截图覆盖 `shots/89`~`94`。
-- 全量验证：`tools/test-all.js --with-ui` **21 个脚本全部通过（220.2s）**；perf 基线沿用 3.6.0（首屏 gzip 106.8 KB）。
+- 全量验证：`tools/test-all.js --with-ui` **23 个脚本全部通过（221.2s：13 个非浏览器 + 10 个浏览器）**；perf 基线沿用 3.6.0（首屏 gzip 106.8 KB）。
+- 2026-10-30 审计修复：12 色调色板、俄罗斯方块输入队列上限、WebSocket 背压/本机 token 限制、SQLite 打开失败不再静默回退 JSON、异步 scrypt、卧底背景缓存、画猜笔迹边界；新增 `store-json-test`、`store-migration-test` 与相关回归断言；README/开发手册/发版流程按职责去重。
 - 版本号仍为 3.6.0，未为新配置升版本；本次未要求发版。
 ---
 
@@ -86,7 +87,7 @@
 - **推送前硬性门禁（最高优先级）**：任何代码改动在 `git push` 前必须完成全量测试（`tools/check.js` + `tools/test-all.js --with-ui`，涉及渲染/性能再加 `tools/perf-test.js`），并同步 README / `docs/*.md` / `memory.md` 与对应记忆条目；UI 测试后还原或有意更新 `shots/`。未完成测试和文档同步不得推送。
 - 仅文档/记忆改动可以跳过全量测试，但仍需同步 `memory.md`，并说明“本次无代码改动”。
 - 推送到 GitHub 镜像同样受本门禁约束；Gitee 是主下载源，GitHub 同时归档代码/tag 与发行包；推送 `v*` tag 会自动触发安装包镜像。
-- Gitee 配额策略：默认只保留最近 3 个版本的安装包；旧版本只删附件、不删页面；任何删除前先确认 GitHub 已有归档并征得用户同意。
+- Gitee 配额策略：默认只保留最近 3 个版本的安装包；旧版本只删附件、不删页面；任何删除前先确认 GitHub 已有归档并征得用户同意。完整说明见 `docs/发版流程.md`「Gitee 附件配额与旧版本清理」。
 - 中文交流；非平凡改动先给分阶段方案，由用户选择范围后再执行。
 - 严格保持现有功能：允许修 bug、性能/交付/可访问性/安全加固；不改玩法、数值、时长、计分、交互、视觉风格，不破坏零依赖/零构建/离线。
 - 重视实际测试与量化结果；未获明确要求不要 commit/push，不擅自改共享配置或删用户文件。

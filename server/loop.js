@@ -57,7 +57,7 @@ setInterval(() => {
           const m = g.privateFor(room.game, p.id);
           if (m) {
             const pr = presence.get(p.id);
-            if (pr && pr.conn) pr.conn.send(m);
+            if (pr && pr.conn && pr.conn.canSendState()) pr.conn.send(m);
           }
         });
       }

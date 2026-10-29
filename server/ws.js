@@ -1,7 +1,9 @@
 'use strict';
 /* WebSocket 连接、协议帧、升级与消息分发 */
 const crypto = require('crypto');
-const { MAX_MESSAGE, WS_GUID, COOKIE, VERSION_TAG, store } = require('./config');
+const {
+  MAX_MESSAGE, MAX_STATE_BUFFER, MAX_SEND_BUFFER, WS_GUID, COOKIE, VERSION_TAG, store
+} = require('./config');
 const { parseCookies } = require('./http-utils');
 const { publicUser, adminSessions } = require('./auth');
 const { presence, conns, rooms, lobbyChat } = require('./state');
@@ -116,6 +118,12 @@ class Conn {
 
   sendFrame(op, data) {
     if (this.closed) return;
+    /* 慢客户端不读取时，Node 会把数据堆在 socket 缓冲区里；超过硬上限直接断开，
+       避免 60Hz 快照把服务端内存拖垮。 */
+    if (this.socket.writableLength > MAX_SEND_BUFFER) {
+      this.terminate();
+      return;
+    }
     const len = data.length;
     let header;
     if (len < 126) {
@@ -139,6 +147,10 @@ class Conn {
     } catch (e) {
       this.onClose();
     }
+  }
+
+  canSendState() {
+    return !this.closed && this.socket.writableLength < MAX_STATE_BUFFER;
   }
 
   sendRaw(text) {
@@ -355,7 +367,12 @@ function attach(server) {
   server.on('upgrade', (req, socket) => {
   let token = parseCookies(req.headers.cookie)[COOKIE];
   if (!token) {
-    try { token = new URL(req.url, 'http://localhost').searchParams.get('token'); } catch (e) { /* ignore */ }
+    /* query token 仅保留给本机脚本/测试；浏览器走 Cookie，避免令牌出现在远程 URL 日志里 */
+    try {
+      const remote = String(req.socket.remoteAddress || '');
+      const loopback = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+      if (loopback) token = new URL(req.url, 'http://localhost').searchParams.get('token');
+    } catch (e) { /* ignore */ }
   }
   const sess = token ? store.sessionGet(token) : null;
   const user = sess && sess.expiresAt > Date.now() ? store.userById(sess.userId) : null;

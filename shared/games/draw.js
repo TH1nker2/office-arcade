@@ -1,6 +1,6 @@
 /* ============================================================
  * 你画我猜 · DRAW & GUESS（服务端状态机）
- * 轮流作画：选词 15s -> 作画 60s -> 揭晓 6s
+ * 轮流作画：选词 10s -> 作画 60s -> 揭晓 6s
  * ============================================================ */
 (function (root) {
   'use strict';
@@ -23,6 +23,8 @@
     '爆米花', '寿司', '火锅', '月饼', '饺子', '仙人掌', '向日葵', '蜘蛛网', '放大镜', '降落伞'
   ];
 
+  var BOARD_W = AR.GameConstants.DRAW.W;
+  var BOARD_H = AR.GameConstants.DRAW.H;
   var CHOOSE_TIME = 10;
   var DRAW_TIME = 60;
   var REVEAL_TIME = 6;
@@ -159,10 +161,22 @@
 
       var s = msg.s;
       if (!s || typeof s.x !== 'number' || typeof s.y !== 'number') return null;
+      if (!isFinite(s.x) || !isFinite(s.y) || s.x < 0 || s.y < 0 || s.x > BOARD_W || s.y > BOARD_H) {
+        return null;
+      }
       var color = String(s.c || '#111827');
       if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = '#111827';
       var width = Number(s.w);
       if (!(width >= 1 && width <= 12)) width = 4;
+      var prev = null;
+      if (s.p) {
+        if (!Array.isArray(s.p) || !isFinite(Number(s.p[0])) || !isFinite(Number(s.p[1])) ||
+          Number(s.p[0]) < 0 || Number(s.p[1]) < 0 ||
+          Number(s.p[0]) > BOARD_W || Number(s.p[1]) > BOARD_H) {
+          return null;
+        }
+        prev = [Math.round(Number(s.p[0])), Math.round(Number(s.p[1]))];
+      }
       if (state.strokes.length < 4000) {
         state.strokes.push([Math.round(s.x), Math.round(s.y), s.e || 'm', color]);
       }
@@ -171,7 +185,7 @@
         s: {
           x: Math.round(s.x),
           y: Math.round(s.y),
-          p: s.p ? [Math.round(s.p[0]), Math.round(s.p[1])] : null,
+          p: prev,
           e: s.e || 'm',
           c: color,
           w: width

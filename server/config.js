@@ -8,6 +8,8 @@ const PORT = parseInt(process.env.PORT || process.argv[2] || '8090', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const MAX_MESSAGE = 256 * 1024;
+const MAX_STATE_BUFFER = 512 * 1024;
+const MAX_SEND_BUFFER = 4 * 1024 * 1024;
 const ROUND_OVER_MS = 8000;
 const SESSION_DAYS = 7;
 const COOKIE = 'sid';
@@ -58,6 +60,8 @@ module.exports = {
   HOST,
   WS_GUID,
   MAX_MESSAGE,
+  MAX_STATE_BUFFER,
+  MAX_SEND_BUFFER,
   ROUND_OVER_MS,
   SESSION_DAYS,
   COOKIE,

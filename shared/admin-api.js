@@ -180,7 +180,7 @@ module.exports = function install(ctx) {
     if (urlPath === '/api/admin/password' && method === 'POST') {
       const pw = String(body.password || '');
       if (pw.length < 6) return json(res, 400, { error: '新密码至少 6 位' });
-      const h = hashPassword(pw);
+      const h = await hashPassword(pw);
       store.updateUser(target.id, { passHash: h.hash, salt: h.salt });
       if (store.sessionDeleteByUser) store.sessionDeleteByUser(target.id);
       kickUser(target.id, '密码已被管理员重置，请重新登录');

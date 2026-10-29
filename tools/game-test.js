@@ -201,6 +201,15 @@ for (const [id, n, secs, cap] of cases) {
   ok('非画手不能清空', denied === null && afterDenied === 2, 'strokes=' + afterDenied);
   ok('画手可以清空', allowed && allowed.t === 'paintClear' && ds4.strokes.length === 0);
 
+  const badX = dg.drawData(ds4, dr4, { s: { x: Infinity, y: 10, e: 'm' } });
+  const badY = dg.drawData(ds4, dr4, { s: { x: 10, y: 9999, e: 'm' } });
+  const badPrev = dg.drawData(ds4, dr4, { s: { x: 10, y: 10, p: [9999, 10], e: 'm' } });
+  ok('画猜拒绝非法笔迹', badX === null && badY === null && badPrev === null && ds4.strokes.length === 0,
+    'badX=' + badX + ' badY=' + badY + ' badPrev=' + badPrev);
+  ds4.strokes = new Array(4000).fill([0, 0, 'm', '#111827']);
+  dg.drawData(ds4, dr4, { s: { x: 10, y: 10, e: 'm' } });
+  ok('画猜笔迹上限 4000', ds4.strokes.length === 4000, 'strokes=' + ds4.strokes.length);
+
   console.log('');
 })();
 
@@ -218,6 +227,10 @@ for (const [id, n, secs, cap] of cases) {
   for (let i = 0; i < 20; i++) tg.tick(ts, 1 / 60);
   ok('tetris 四行消除', tp.lines >= 4, 'lines=' + tp.lines + ' score=' + tp.score);
   ok('tetris 给对手塞垃圾', ts.players.p1.pending > 0, 'pending=' + ts.players.p1.pending);
+
+  const tq = tg.create(players(2), { seed: 2 });
+  for (let i = 0; i < 200; i++) tg.input(tq, 'p0', { ev: 'L' });
+  ok('tetris 输入队列有上限', tq.players.p0.queue.length <= 32, 'queue=' + tq.players.p0.queue.length);
 
   const kg = AR.games.tank;
   const ks = kg.create(players(2), { seed: 4 });

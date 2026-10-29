@@ -21,6 +21,8 @@ const base = [
   'game-test.js',
   'bot-test.js',
   'regression-test.js',
+  'store-json-test.js',
+  'store-migration-test.js',
   'auth-test.js',
   'admin-test.js',
   'player-profile-test.js',

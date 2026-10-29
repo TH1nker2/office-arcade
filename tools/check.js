@@ -111,6 +111,20 @@ cssFiles.forEach((f) => {
 });
 ok('CSS @import 都能找到', cssMissing.length === 0, cssMissing.join(', '));
 
+console.log('\n=== 发布工具约束 ===');
+try {
+  const pub = fs.readFileSync(path.join(ROOT, 'tools', 'publish-release.ps1'), 'utf8');
+  ok('发布脚本默认不整页删除发行版',
+    !/DeleteAsync\(\s*"\$api\/releases\/\$\(\$old\.id\)/.test(pub) && !/Select-Object -Skip 2/.test(pub));
+  ok('发布脚本包含配额预检与显式清理开关',
+    /QuotaLimitMB/.test(pub) && /PruneOldReleases/.test(pub) && /attach_files/.test(pub));
+  const wf = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'mirror-release-assets.yml'), 'utf8');
+  ok('GitHub 资产镜像工作流存在且由 tag 触发',
+    /tags:/.test(wf) && /gh release upload/.test(wf) && /contents: write/.test(wf));
+} catch (e) {
+  ok('发布工具约束', false, e.message);
+}
+
 console.log('');
 console.log(fails === 0 ? '静态自检全部通过' : fails + ' 项失败');
 process.exit(fails === 0 ? 0 : 1);

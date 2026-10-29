@@ -446,5 +446,5 @@ function replyInvite(conn, inviteId, accept) {
 module.exports = {
   rooms, invites, lobbyChat, pushChat, makeCode, roomJson, addBot, removeBot,
   broadcastRoom, userInRoom, createRoom, joinRoom, leaveRoom, realPlayers,
-  startRound, finishRound, kickUser, inviteUser, replyInvite
+  startRound, finishRound, kickUser, inviteUser, replyInvite, freeColor
 };

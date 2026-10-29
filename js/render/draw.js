@@ -17,7 +17,7 @@
   /* ============================================================
    * 你画我猜
    * ============================================================ */
-  var DRAW_W = 900, DRAW_H = 560;
+  var DRAW_W = AR.GameConstants.DRAW.W, DRAW_H = AR.GameConstants.DRAW.H;
 
   function ensureBoard(w, h) {
     var d = V.data;

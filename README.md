@@ -31,73 +31,16 @@
 
 ### B. 我要改代码
 
-```bash
-git clone https://gitee.com/th1nker/office-arcade.git
-cd office-arcade
-
-# 1) 拉一份本机 Node 运行时到 runtime\（约 90 MB，只下一次，不入库）
-#    Windows 双击「获取运行环境.bat」，或：
-powershell -ExecutionPolicy Bypass -File tools/fetch-runtime.ps1
-
-# 2) 管理员账号
-cp admins.example.json admins.json
-
-# 3) 启动
-runtime/node.exe server.js            # Windows
-node server.js                        # 有系统 Node 时也行（≥ 22.5 才有 SQLite）
-```
-
-`data/`（玩家数据库）同样不入库；换机器时把旧的 `data/arcade.sqlite` 拷过来即可。
-
-> 有权限的开发者也可以从 GitHub 私有镜像克隆：`git clone https://github.com/TH1nker2/office-arcade.git`。
+开发环境准备、启动与测试见 [docs/开发手册.md](docs/开发手册.md#二十分钟跑起来)。
+有权限的开发者也可以从 GitHub 私有镜像克隆：`git clone https://github.com/TH1nker2/office-arcade.git`。
 
 ### C. 发版
 
-发版是**七步**，顺序不能乱（尤其第 4 步要在第 5 步之前，否则 tag 会指到旧提交）：
+完整步骤、命令、Gitee 配额策略和发行版验证见 **[docs/发版流程.md](docs/发版流程.md)**。
 
-> 详细版（含改哪里、验证、各种翻车抢救）见 **[docs/发版流程.md](docs/发版流程.md)**。
-
-```bash
-# 1) 跑测试
-node tools/words-test.js && node tools/game-test.js && node tools/bot-test.js
-node tools/auth-test.js && node tools/admin-test.js && node tools/admin-words-ui-test.js
-
-# 2) 打版本号：旧版本自动归档进 version.json 的 history
-runtime\node.exe tools\bump-version.js 3.2.0 "这次改了什么" "还改了什么"
-
-# 3) 提交
-git add -A
-git commit -m "feat: ..."
-
-# 4) 先推送（远程 main 必须包含这个提交）
-git push
-
-# 5) 构建 + 发布（脚本会自动建发行版、上传三个包）
-$env:GITEE_TOKEN="你的私人令牌"
-powershell -ExecutionPolicy Bypass -File tools\publish-release.ps1
-
-# 6) 把发行版自动创建的 tag 同步到本地
-git fetch --tags
-
-# 7) 同步 GitHub 代码与 tag
-#    tag 推送会自动触发 mirror-release-assets 工作流，
-#    从 Gitee 下载三个包并上传到 GitHub Release
-git push github main
-git push github --tags
-```
-
-`publish-release.ps1` 内置保护：如果 `HEAD` 和 `origin/main` 不一致会直接报错，避免发行版的 tag 打在旧提交上。
-
-GitHub 是**私有镜像**（`https://github.com/TH1nker2/office-arcade.git`）：代码和 tag 手动推，安装包由 tag 推送触发的 Actions 自动镜像。
-Gitee 仍是主下载源；附件超过约 900 MB 时，发布脚本会停止并提示，只有显式加 `-PruneOldReleases` 才会清理旧附件，发行版页面永久保留。
-
-首次发版前需要一次性准备（约 230 MB 下载）：
-
-```bash
-powershell -ExecutionPolicy Bypass -File tools\fetch-runtime.ps1 -Target win-x64,linux-x64,darwin-arm64
-```
-
-Unix 包用 python 的 `tarfile` 打包以保留可执行位；没有 python 时退回 `tar.exe`（解压后需 `chmod +x`，`start.sh` 也会自愈）。
+要点：全量测试 → `bump-version` → 提交并推 Gitee → 运行 `publish-release.ps1` → 推 GitHub 代码与 tag。
+`publish-release.ps1` 默认不删除任何发行版页面；只有显式 `-PruneOldReleases` 才会清理旧安装包附件。
+推送 `v*` tag 会触发 `.github/workflows/mirror-release-assets.yml`，自动把本次 Gitee 安装包镜像到 GitHub Release。
 
 ## 零之一、给开发者的入口
 
@@ -210,10 +153,12 @@ office-arcade\
 ```json
 {
   "admins": [
-    { "username": "admin", "password": "admin888", "name": "超级管理员" }
+    { "username": "admin", "password": "请改成你自己的密码", "name": "超级管理员" }
   ]
 }
 ```
+
+> 本地测试脚本 `tools/admin-test.js` 使用 `admin888` 作为临时测试夹具，仅用于测试，不要把正式环境设置成这个密码。
 
 能做的事：
 
@@ -361,6 +306,8 @@ office-arcade\
 
 **推荐 Node 22.5+（最好直接装 24 LTS）**；只有 JSON 存储时也够几十人的办公室用。
 
+如果 `data/arcade.sqlite` 已存在但打开失败（权限、损坏、迁移错误），程序会直接退出，不会回退 JSON；只有 Node 没有 `node:sqlite` 时才使用 `data/arcade.json`，避免同一套数据分裂成两份。
+
 ```
 data/arcade.sqlite     (或 data/arcade.json)
 ```
@@ -369,7 +316,7 @@ data/arcade.sqlite     (或 data/arcade.json)
 
 ```sql
 users(id, username UNIQUE, pass_hash, salt, nickname, color, avatar, bio,
-      points, wins, rounds, streak, best_streak, created_at, last_login)
+      points, wins, rounds, streak, best_streak, banned, created_at, last_login)
 sessions(token, user_id, created_at, expires_at)
 matches(id, game, room_code, started_at, ended_at)
 match_players(match_id, user_id, place, score, delta, detail)
@@ -526,86 +473,27 @@ WebSocket（`/ws`，用同一 Cookie 鉴权）承载：大厅广播、房间、�
    └────WebSocket(大厅/房间/邀请/对局)────┘
 ```
 
-- **服务端权威**：`shared/games/*.js` 由 Node 加载执行；浏览器只加载 `shared/registry.js` 和共享常量，客户端只发输入、画快照
-- **静态资源**：先归一化再按白名单（`css/ js/ shared/` + 3 个页面）判断，`..`、`%2e%2e`、空字节一律拒绝；gzip + ETag（`no-cache` 重验证），并下发 CSP / 安全响应头
-- **大厅广播**：任何在线/进入房间/改名都会触发一次合并广播（80ms 合并，避免刷屏）
-- **房间**：4 位码、人数上限按游戏配置、房主离开自动移交；**最后一个真人离开时房间立即销毁**（人机不算）
-- **邀请**：60 秒有效，被邀请方在线且不在房间才可被邀请
-- **对局**：60Hz 固定步长模拟；快照频率按游戏区分 —— 动作类（坦克/弹幕）**60Hz**，俄罗斯方块 30Hz，你画我猜 / 谁是卧底 10Hz，五子棋 8Hz
-- **带宽**：60Hz 下 4 人坦克房服务器上行约 400-800 KB/s，单人下行 20-100 KB/s，局域网无压力
+- **零依赖**：Node 内置模块 + 原生浏览器 API + `node:sqlite`，没有 npm 包和构建步骤
+- **服务端权威**：游戏模拟在 `shared/games/*.js`，浏览器只发输入、画快照
+- **固定步长**：模拟 60Hz；快照频率按游戏区分（动作类 60Hz，俄罗斯方块 30Hz，画猜/卧底 10Hz，五子棋 8Hz）
 
-### 目录结构
-
-```
-office-arcade/
-├── index.html              登录 / 大厅 / 分区 / 房间 / 资料 / HUD
-├── css/
-│   ├── style.css           样式入口（按原顺序 @import）
-│   └── base/hud/chat/...   按职责拆分的样式文件
-├── shared/
-│   ├── core.js  registry.js
-│   ├── store.js  store-sqlite.js  store-json.js
-│   └── games/              六款游戏的服务端权威模拟 + constants.js
-├── js/
-│   ├── main.js             浏览器启动与主循环
-│   ├── core/               DOM / HTTP 基础工具
-│   ├── state/app-store.js  客户端全局状态
-│   ├── ui/                 聊天、资料、玩家菜单、对局 UI、版本、大厅/房间
-│   ├── render/             公共画布工具 + 每款游戏独立 renderer
-│   ├── net.js  audio.js  input.js  ui.js
-│   └── admin/              管理后台弹窗与词库模块
-├── server/
-│   ├── config.js words.js auth.js state.js presence.js
-│   ├── rooms.js            房间、回合、邀请、人机
-│   ├── ws.js               WebSocket 帧/升级/消息分发
-│   ├── http.js             HTTP 静态资源与 REST API
-│   └── loop.js             60Hz 游戏循环
-├── server.js               组合根：装配模块、挂载 HTTP/WS、启动与关闭
-├── docs/开发手册.md         架构、数据流、游戏契约、踩坑记录（接手先看这个）
-├── docs/发版流程.md         从拉代码到发版的完整流程
-├── tools/                  测试脚本 + lib 公共夹具 + 构建/发版脚本
-├── start.sh / start.command  Linux / macOS 启动器
-├── runtime/node.exe        本机 Node 运行时（不入库，获取运行环境.bat 下载）
-├── version.json            版本号 + 更新说明
-├── admins.json             管理员账号（明文，不入库）
-├── admin.html              管理后台页面
-├── data/                   数据库（不入库，自动生成）
-├── 启动游戏厅.bat           Windows 启动器
-└─ 获取运行环境.bat         开发者用：联网下载本机 runtime\node.exe
-```
+目录结构与职责、一次对局的数据流、游戏模块契约、存储迁移和 WebSocket 协议见
+[docs/开发手册.md](docs/开发手册.md#三目录结构与职责)。
 
 ---
 
 ## 八、测试
 
+完整测试矩阵见 [docs/开发手册.md](docs/开发手册.md#十测试)。常用入口：
+
 ```bash
-node tools/check.js        # 静态自检：JS 语法、JSON、词库结构、页面/CSS 本地资源
-node tools/test-all.js     # 一键跑全部非浏览器测试（含 check）
-node tools/test-all.js --with-ui # 再加快捷浏览器测试（会写 shots/）
-node tools/words-test.js   # 你画我猜词库：500/档、无重复、提示格式与关键词避让
-node tools/game-test.js    # 六款游戏逻辑 + 关键机制（含坦克射击、消行、五子棋操作、弹幕 v2 增益/三 BOSS、谁是卧底）
-node tools/bot-test.js     # 人机：剩余游戏的无头模拟，确认人机会玩
-node tools/regression-test.js # 开局阶段守卫、畸形 Cookie 边界
-node tools/auth-test.js    # 账号、会话、大厅状态、房间、邀请、静态资源白名单
-node tools/admin-test.js   # 管理后台：登录、封禁踢人、重置密码、删除账号、词库接口
-node tools/admin-words-ui-test.js # 管理后台词库页：画猜难度/搜索、卧底分类/搜索
-node tools/player-profile-test.js # 玩家资料接口：公开字段、状态、最近战绩、鉴权与 404
-node tools/proxy-test.js   # 反向代理 + WebSocket 升级
-node tools/audit-test.js   # 全盘审计：存储 CRUD、接口边界、房间生命周期、六款游戏不变量、静态交付
-node tools/offline-test.js # 离线审计：真浏览器打开全部页面，断言零外网请求
-node tools/hardening-test.js # 安全审计：路径穿越、畸形消息、满房、对局加入、注入、畸形 Cookie
-node tools/perf-test.js    # 性能基线：首屏 transferSize + 三款高帧率游戏的 RAF 帧时间
-node tools/ui-v2-test.js   # 三个真实浏览器：注册→大厅→建房→邀请→开局→资料→排行榜
-node tools/ui-v3-test.js   # 人机局：坦克/俄罗斯方块→开局→HUD；五子棋操作
-node tools/ui-v4-test.js   # 一键加入、大厅/对局聊天、退出二次确认
-node tools/ui-v5-test.js   # 你画我猜：选词、工具栏/颜色、笔迹同步、C 清空、计分、提示词
-node tools/ui-v6-test.js   # 大厅右键玩家资料：资料卡、在线/房间状态、关闭、编辑
-node tools/ui-v7-test.js   # 可访问性：覆盖层 ARIA、焦点陷阱、键盘打开玩家菜单
-node tools/ui-v8-test.js   # 五子棋双人：悔棋/和棋同意、拒绝、平局、认输
-node tools/ui-v9-test.js   # 谁是卧底四人：固定 2 轮、30 秒描述、身份私密、禁聊、投票、个人名次
+node tools/check.js              # 静态自检
+node tools/test-all.js           # 全部非浏览器测试
+node tools/test-all.js --with-ui # 加上浏览器端到端（会写 shots/）
+node tools/perf-test.js          # 性能基线
 ```
 
-`ui-v2-test.js` 会自动截图到 `shots/`，并检查每个页面的 console 是否报错。
+`ui-v2-test.js` 会自动截图到 `shots/`，并检查每个页面的 console 是否报错；提交前还原或有意更新截图。
 
 ---
 
@@ -613,6 +501,7 @@ node tools/ui-v9-test.js   # 谁是卧底四人：固定 2 轮、30 秒描述、
 
 - 对局进行中或结算中不能加入房间（等下一局），避免中途进场破坏平衡
 - 同一账号同时只保留最新一个连接（在别处打开会把旧的顶掉）
+- 大厅玩家列表和广播是全量推送，适合几十到几百人的内网规模；更大规模需要分页或增量广播
 - 仅面向桌面浏览器（鼠标瞄准、键盘操作），未做手机触屏布局
 - 排行榜按账号合并，改名不影响战绩
 - 管理员会话保存在内存里（重启后需要重新登录管理后台），8 小时过期

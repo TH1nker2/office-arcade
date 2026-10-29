@@ -19,19 +19,30 @@
     V.time = (V.time || 0) + (dt || 0);
     var t = reduced() ? 0 : V.time;
 
-    var g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#080b13');
-    g.addColorStop(0.55, '#0b1020');
-    g.addColorStop(1, '#05070c');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
+    var d = V.data;
+    if (!d.ucBg || d.ucBgW !== w || d.ucBgH !== h) {
+      var bgCanvas = document.createElement('canvas');
+      bgCanvas.width = w;
+      bgCanvas.height = h;
+      var bc = bgCanvas.getContext('2d');
+      var g = bc.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, '#080b13');
+      g.addColorStop(0.55, '#0b1020');
+      g.addColorStop(1, '#05070c');
+      bc.fillStyle = g;
+      bc.fillRect(0, 0, w, h);
 
-    var glow = ctx.createRadialGradient(w * 0.5, h * 0.48, 0, w * 0.5, h * 0.48, Math.max(w, h) * 0.62);
-    glow.addColorStop(0, 'rgba(34, 211, 238, 0.10)');
-    glow.addColorStop(0.52, 'rgba(34, 211, 238, 0.03)');
-    glow.addColorStop(1, 'rgba(3, 6, 12, 0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, w, h);
+      var glow = bc.createRadialGradient(w * 0.5, h * 0.48, 0, w * 0.5, h * 0.48, Math.max(w, h) * 0.62);
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.10)');
+      glow.addColorStop(0.52, 'rgba(34, 211, 238, 0.03)');
+      glow.addColorStop(1, 'rgba(3, 6, 12, 0)');
+      bc.fillStyle = glow;
+      bc.fillRect(0, 0, w, h);
+      d.ucBg = bgCanvas;
+      d.ucBgW = w;
+      d.ucBgH = h;
+    }
+    ctx.drawImage(d.ucBg, 0, 0, w, h);
 
     /* 两道缓慢扫动的探照光 */
     ctx.save();

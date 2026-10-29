@@ -9,6 +9,7 @@
   var AR = root.AR;
   var BW = 10, BH = 20;
   var DURATION = 180;
+  var MAX_QUEUE = 32;
 
   /* 人机水平：决定手速与选点质量 */
   var BOT_SKILL = { easy: 0.3, normal: 0.62, hard: 0.86, insane: 1.0 };
@@ -263,6 +264,7 @@
       else if (Object.prototype.toString.call(ev) === '[object Array]') {
         for (var i = 0; i < ev.length && i < 4; i++) p.queue.push(String(ev[i]));
       }
+      if (p.queue.length > MAX_QUEUE) p.queue.splice(0, p.queue.length - MAX_QUEUE);
     },
 
     /* 推进一帧，dt 固定为 1/60 秒。这里只能改 state，不要读时间/文件/网络。 */

@@ -88,19 +88,30 @@ function adminFrom(req) {
 
 function hashPassword(password, salt) {
   const s = salt || crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(String(password), s, 64).toString('hex');
-  return { hash: hash, salt: s };
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(String(password), s, 64, (err, key) => {
+      if (err) reject(err);
+      else resolve({ hash: key.toString('hex'), salt: s });
+    });
+  });
 }
 
 function verifyPassword(password, salt, hash) {
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(hash, 'hex'),
-      Buffer.from(crypto.scryptSync(String(password), salt, 64).toString('hex'), 'hex')
-    );
-  } catch (e) {
-    return false;
-  }
+  return new Promise((resolve) => {
+    try {
+      crypto.scrypt(String(password), String(salt), 64, (err, key) => {
+        if (err) return resolve(false);
+        try {
+          const expected = Buffer.from(String(hash), 'hex');
+          resolve(expected.length === key.length && crypto.timingSafeEqual(expected, key));
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    } catch (e) {
+      resolve(false);
+    }
+  });
 }
 
 function newToken() {

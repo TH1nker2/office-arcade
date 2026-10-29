@@ -184,7 +184,7 @@ async function handleApi(req, res, urlPath, query) {
       return json(res, 409, { error: '这个昵称已经有人用了，换一个吧' });
     }
 
-    const p = hashPassword(password);
+    const p = await hashPassword(password);
     const user = store.createUser({
       username: username,
       passHash: p.hash,
@@ -208,7 +208,7 @@ async function handleApi(req, res, urlPath, query) {
       return json(res, 429, { error: '尝试次数过多，请稍后再试' });
     }
     const u = store.userByName(username);
-    if (!u || !verifyPassword(password, u.salt, u.passHash)) {
+    if (!u || !(await verifyPassword(password, u.salt, u.passHash))) {
       loginFailed(req, username);
       return json(res, 401, { error: '用户名或密码不对' });
     }
@@ -326,11 +326,11 @@ async function handleApi(req, res, urlPath, query) {
 
   if (urlPath === '/api/password' && method === 'POST') {
     const body = await readJson(req);
-    if (!verifyPassword(String(body.oldPassword || ''), me.salt, me.passHash)) {
+    if (!(await verifyPassword(String(body.oldPassword || ''), me.salt, me.passHash))) {
       return json(res, 400, { error: '原密码不对' });
     }
     if (String(body.newPassword || '').length < 6) return json(res, 400, { error: '新密码至少 6 位' });
-    const p = hashPassword(String(body.newPassword));
+    const p = await hashPassword(String(body.newPassword));
     store.updateUser(me.id, { passHash: p.hash, salt: p.salt });
     /* 保留当前会话，其余旧会话全部失效；否则改密后旧设备仍能继续用 */
     const token = parseCookies(req.headers.cookie)[COOKIE];

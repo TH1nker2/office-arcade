@@ -160,9 +160,13 @@ async function main() {
   const score = await guesser.ev('AR.App.snap.sc[' + JSON.stringify(meId) + ']');
   check('猜中得分', typeof score === 'number' && score > 0, 'score=' + score);
   const chatText = await guesser.ev('document.getElementById("chat-log").textContent');
+  const playerChat = await guesser.ev(
+    'Array.from(document.querySelectorAll("#chat-log .chat-line"))' +
+    '.filter(function (el) { return !el.classList.contains("system"); })' +
+    '.map(function (el) { return el.textContent; }).join("\\n")');
   check('聊天区显示 *** 和回答正确', chatText.indexOf('***') >= 0 && chatText.indexOf('回答正确') >= 0,
     chatText.slice(-40));
-  check('聊天区没有泄露答案', chatText.indexOf(word) < 0, 'word=' + word);
+  check('聊天区没有泄露答案', playerChat.indexOf(word) < 0, 'word=' + word + ' chat=' + playerChat.slice(-40));
   await guesser.shot('64-draw-masked');
 
   await sleep(3500);

@@ -63,9 +63,12 @@ function broadcastLobby() {
 
 function broadcast(room, obj, except) {
   const text = JSON.stringify(obj);
+  const isState = obj && obj.t === 'state';
   room.players.forEach((p) => {
     const pr = presence.get(p.id);
     if (!pr || !pr.conn || pr.conn === except) return;
+    /* 状态快照可以丢，聊天/邀请/结算不能丢；慢连接只跳过快照。 */
+    if (isState && !pr.conn.canSendState()) return;
     pr.conn.sendRaw(text);
   });
 }

@@ -20,7 +20,8 @@ process.env.ARCADE_DATA = DATA;
 });
 
 const { parseCookies } = require(path.join(ROOT, 'server', 'http-utils'));
-const { startRound } = require(path.join(ROOT, 'server', 'rooms'));
+const { startRound, freeColor, rooms: roomMap } = require(path.join(ROOT, 'server', 'rooms'));
+const { Conn, handle } = require(path.join(ROOT, 'server', 'ws'));
 
 let fails = 0;
 function ok(name, cond, extra) {
@@ -57,6 +58,50 @@ console.log('=== 开局阶段守卫 ===');
     r.phase === phase && r.round === 1 && r.game === null,
     'phase=' + r.phase + ' round=' + r.round);
 });
+
+const overRoom = {
+  code: 'OVR',
+  gameId: 'tank',
+  phase: 'over',
+  players: new Map([['u1', { id: 'u1', name: '甲', color: '#22d3ee' }]])
+};
+roomMap.set(overRoom.code, overRoom);
+const joined = [];
+const joiner = { user: { id: 'u2', nickname: '乙' }, send: (m) => joined.push(m) };
+handle(joiner, { t: 'joinRoom', code: 'OVR' });
+ok('over 阶段拒绝加入房间',
+  joined.some((m) => m.t === 'error' && /开始/.test(m.msg || '')),
+  JSON.stringify(joined));
+roomMap.delete(overRoom.code);
+
+console.log('\n=== 房间配色 ===');
+const colorRoom = { players: new Map() };
+const colors = [];
+for (let i = 0; i < 12; i++) {
+  const c = freeColor(colorRoom);
+  colors.push(c);
+  colorRoom.players.set('p' + i, { color: c });
+}
+ok('玩家调色板为 12 色且不重复',
+  AR.PLAYER_COLORS.length === 12 &&
+  new Set(AR.PLAYER_COLORS.map((c) => c.toLowerCase())).size === 12,
+  'colors=' + AR.PLAYER_COLORS.length);
+ok('12 人房间颜色不重复', new Set(colors.map((c) => c.toLowerCase())).size === 12,
+  colors.join(','));
+
+console.log('\n=== WebSocket 背压 ===');
+const fakeSocket = {
+  writableLength: 0,
+  setNoDelay() {},
+  on() {},
+  write() { return true; },
+  destroy() {},
+  end() {}
+};
+const fakeConn = new Conn(fakeSocket, { id: 1, nickname: '测试' });
+ok('空缓冲允许发送状态', fakeConn.canSendState() === true);
+fakeSocket.writableLength = 1024 * 1024;
+ok('缓冲拥塞时跳过快照', fakeConn.canSendState() === false);
 
 console.log('\n=== 畸形 Cookie ===');
 const parsed = parseCookies('a=%E0%A4%A; b=ok');
