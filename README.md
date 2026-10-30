@@ -27,6 +27,7 @@
 | macOS (Apple Silicon) | `office-arcade-v<版本>-darwin-arm64.tar.gz` | 双击 `start.command`，或 `./start.sh` |
 
 每个包自带该平台的 Node 运行时和一份**随机密码**的 `admins.json`，解压即用。
+包里只保留运行所需文件；开发文档、测试脚本、CI 配置不随包分发，需要源码请走 B 方式。
 `dist/SHA256SUMS.txt` 里有各包的校验值。
 
 ### B. 我要改代码

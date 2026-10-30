@@ -2,18 +2,21 @@
 # 构建多平台便携版发行包（数据在包内 data/）
 #
 #   powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
-#   powershell -ExecutionPolicy Bypass -File tools\build-release.ps1 -Target win-x64 -WithShots
+#   powershell -ExecutionPolicy Bypass -File tools\build-release.ps1 -Target win-x64
 #
 # 产物：dist\office-arcade-v<版本>-<平台>.zip|.tar.gz
 #       dist\SHA256SUMS.txt
+#
+# 包内容：运行所需源码 + 该平台 runtime/node + 启动器 + LICENSE
+#         + 随机密码的 admins.json + 首次使用.txt
+# 不包含：tools/docs/memory/README/package.json/CI 配置等开发文件
 #
 # 前置：先跑 tools\fetch-runtime.ps1 把 vendor/ 里三个平台的运行时准备好
 # 说明：文档已统一为便携版；standard（数据放用户目录）尚未实现，传入会报错。
 # ============================================================
 param(
     [string[]]$Target = @('win-x64', 'linux-x64', 'darwin-arm64'),
-    [string[]]$Edition = @('portable'),
-    [switch]$WithShots
+    [string[]]$Edition = @('portable')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -61,8 +64,8 @@ New-Item -ItemType Directory -Force -Path $dist | Out-Null
 Remove-Item $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $stageRoot | Out-Null
 
-$exclude = @('.git', 'data', 'dist', 'vendor', 'runtime', 'node_modules', 'admins.json', '.gitcheck', '.clone-check', '.zipcheck')
-if (-not $WithShots) { $exclude += 'shots' }
+# 显式白名单：只带运行必需文件；新增运行文件时必须同步这里
+$runtimeFiles = @('LICENSE', 'server.js', 'index.html', 'admin.html', 'icon.svg', 'version.json', 'css', 'js', 'shared', 'server')
 
 $sums = @()
 
@@ -76,6 +79,13 @@ foreach ($t in $Target) {
         continue
     }
     $isWin = $t -like 'win-*'
+    $launchers = if ($isWin) {
+        @('启动游戏厅.bat')
+    } elseif ($t -like 'darwin-*') {
+        @('start.sh', 'start.command')
+    } else {
+        @('start.sh')
+    }
 
     foreach ($ed in $Edition) {
         if ($ed -ne 'portable') {
@@ -86,21 +96,12 @@ foreach ($t in $Target) {
         $stage = Join-Path $stageRoot $name
         New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
-        # ---- 源码 ----
-        Get-ChildItem -Force | Where-Object { $exclude -notcontains $_.Name } | ForEach-Object {
-            Copy-Item $_.FullName -Destination $stage -Recurse -Force
-        }
-
-        # ---- 启动器：每个包只留自己那一套 ----
-        $keep = if ($isWin) {
-            @('启动游戏厅.bat')
-        } else {
-            @('start.sh', 'start.command')
-        }
-        Get-ChildItem $stage -File | Where-Object {
-            $_.Extension -in @('.bat', '.sh', '.command')
-        } | ForEach-Object {
-            if ($keep -notcontains $_.Name) { Remove-Item $_.FullName -Force }
+        # ---- 运行所需文件（白名单） ----
+        $include = @($runtimeFiles) + @($launchers)
+        foreach ($item in $include) {
+            $src = Join-Path $root $item
+            if (-not (Test-Path $src)) { throw ("发行包缺少必需文件：" + $item) }
+            Copy-Item $src -Destination $stage -Recurse -Force
         }
 
         # ---- 批处理必须是 CRLF，否则 cmd 会把整行拆错（开发机上的文件可能是 LF） ----

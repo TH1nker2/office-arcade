@@ -118,6 +118,9 @@ try {
     !/DeleteAsync\(\s*"\$api\/releases\/\$\(\$old\.id\)/.test(pub) && !/Select-Object -Skip 2/.test(pub));
   ok('发布脚本包含配额预检与显式清理开关',
     /QuotaLimitMB/.test(pub) && /PruneOldReleases/.test(pub) && /attach_files/.test(pub));
+  const build = fs.readFileSync(path.join(ROOT, 'tools', 'build-release.ps1'), 'utf8');
+  ok('发行包使用显式白名单',
+    /\$runtimeFiles\s*=/.test(build) && /\$include\s*=\s*@\(\$runtimeFiles\)/.test(build) && !/\$exclude\s*=/.test(build));
   const wf = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'mirror-release-assets.yml'), 'utf8');
   ok('GitHub 资产镜像工作流存在且由 tag 触发',
     /tags:/.test(wf) && /gh release upload/.test(wf) && /contents: write/.test(wf));
