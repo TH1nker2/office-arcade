@@ -40,7 +40,8 @@ const ui = [
   'ui-v6-test.js',
   'ui-v7-test.js',
   'ui-v8-test.js',
-  'ui-v9-test.js'
+  'ui-v9-test.js',
+  'ui-v10-test.js'
 ];
 
 const list = base.slice();

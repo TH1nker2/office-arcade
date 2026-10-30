@@ -126,19 +126,35 @@
     return false;
   }
 
-  /* 悔棋：撤销最近一手，由落子方重新下 */
-  function undoLast(state) {
+  /* 悔棋：人人对局撤销最近一手；人机对局同时撤销人机的应手和自己的上一手 */
+  function undoLast(state, requesterId) {
     var m = state.history.pop();
     if (!m) return false;
-    state.board[idx(m.x, m.y)] = 0;
-    state.moves = Math.max(0, state.moves - 1);
+    var removed = [m];
+    var lastPlayer = state.players[m.id];
+    var requester = requesterId ? state.players[requesterId] : null;
+
+    if (lastPlayer && lastPlayer.bot && requester && !requester.bot) {
+      var prev = state.history[state.history.length - 1];
+      if (prev && prev.id === requesterId) {
+        state.history.pop();
+        removed.push(prev);
+      }
+    }
+
+    removed.forEach(function (mv) {
+      state.board[idx(mv.x, mv.y)] = 0;
+    });
+    state.moves = Math.max(0, state.moves - removed.length);
     var prev = state.history[state.history.length - 1];
     state.last = prev ? { x: prev.x, y: prev.y, v: prev.v } : null;
     state.winnerId = null;
     state.winLine = null;
     state.winPending = 0;
     state.draw = false;
-    var turn = state.order.indexOf(m.id);
+
+    var turnId = removed[removed.length - 1].id;
+    var turn = state.order.indexOf(turnId);
     if (turn >= 0) state.turn = turn;
     var p = state.players[m.id];
     state.events.push({
@@ -178,7 +194,10 @@
         last: null
       };
       order.forEach(function (id, i) {
-        state.players[id] = { id: id, name: players[i].name, color: players[i].color, index: i };
+        state.players[id] = {
+          id: id, name: players[i].name, color: players[i].color, index: i,
+          bot: !!players[i].bot
+        };
         state.side[id] = i === 0 ? 1 : 2;      /* 1 = 黑先手 */
       });
       return state;
@@ -224,7 +243,7 @@
         var requester = state.players[pend.from];
         if (inp.accept) {
           if (pend.type === 'undo') {
-            undoLast(state);
+            undoLast(state, pend.from);
           } else if (pend.type === 'draw') {
             state.draw = true;
             state.ended = true;

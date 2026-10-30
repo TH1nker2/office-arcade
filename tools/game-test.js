@@ -416,6 +416,22 @@ for (const [id, n, secs, cap] of cases) {
   ok('gomoku 认输立即结束', st3.ended === true && st3.winnerId === 'p0');
   ok('gomoku 认输后胜者是对方', resignRes[0] && resignRes[0].id === 'p0');
 
+  const ub = g.create([
+    { id: 'h', name: '人', color: '#22d3ee' },
+    { id: 'b', name: '电脑', color: '#ff2e63', bot: true }
+  ], { seed: 36 });
+  g.input(ub, 'h', { x: 7, y: 7 });
+  g.input(ub, 'b', { x: 8, y: 8 });
+  g.input(ub, 'h', { act: 'undo' });
+  const botReply = g.bot(ub, 'b', 1 / 60, 'normal');
+  ok('人机收到悔棋请求并同意', !!botReply && botReply.act === 'reply' && botReply.accept === true,
+    JSON.stringify(botReply));
+  g.input(ub, 'b', botReply);
+  ok('人机悔棋回退自己上一手和电脑应手',
+    ub.moves === 0 && ub.history.length === 0 && ub.turn === 0 &&
+    ub.board[7 * 15 + 7] === 0 && ub.board[8 * 15 + 8] === 0,
+    'moves=' + ub.moves + ' history=' + ub.history.length + ' turn=' + ub.turn);
+
   console.log('');
 })();
 

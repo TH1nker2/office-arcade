@@ -242,7 +242,7 @@ function startRound(room) {
 
   const players = [];
   room.players.forEach((p) => {
-    players.push({ id: p.id, name: p.name, color: p.color });
+    players.push({ id: p.id, name: p.name, color: p.color, bot: !!p.bot });
   });
 
   room.round++;
