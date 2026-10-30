@@ -208,7 +208,8 @@
     var pending = !!s.pending;
     $('gomoku-undo-count').textContent = Math.max(0, 3 - (rq.undo || 0));
     $('gomoku-draw-count').textContent = Math.max(0, 3 - (rq.draw || 0));
-    $('gomoku-undo').disabled = pending || (rq.undo || 0) >= 3 || s.mv <= 0;
+    $('gomoku-undo').disabled = pending || (rq.undo || 0) >= 3 || s.mv <= 0 ||
+      s.cur !== APP.me.id;
     $('gomoku-draw').disabled = pending || (rq.draw || 0) >= 3;
     $('gomoku-resign').disabled = pending;
 

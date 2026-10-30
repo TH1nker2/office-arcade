@@ -77,7 +77,8 @@ async function main() {
   await B.ev('document.getElementById("request-accept").click()');
   await sleep(500);
   sa = await snapshot(A);
-  check('同意后撤销最近一手', sa.snap.mv === 1, 'moves=' + sa.snap.mv);
+  check('同意后撤回自己上一手和对方应手', sa.snap.mv === 0, 'moves=' + sa.snap.mv);
+  check('悔棋后回合回到发起者', sa.snap.cur === (await A.ev('AR.App.me.id')), 'cur=' + sa.snap.cur);
   check('悔棋计数为 1', sa.snap.rq && sa.snap.rq.undo === 1, JSON.stringify(sa.snap.rq));
 
   console.log('\n[2] 和棋需要对方同意 + 拒绝');

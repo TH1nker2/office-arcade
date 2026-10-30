@@ -373,6 +373,9 @@ for (const [id, n, secs, cap] of cases) {
   const g = AR.games.gomoku;
   const st = g.create(players(2), { seed: 33 });
   g.input(st, 'p0', { x: 7, y: 7 });
+  g.input(st, 'p0', { act: 'undo' });
+  ok('gomoku 非自己回合不能发起悔棋', !st.pending && st.req.undo === 0,
+    JSON.stringify(st.pending));
   g.input(st, 'p1', { x: 8, y: 8 });
   ok('gomoku 落子写入历史', st.history.length === 2 && st.moves === 2,
     'history=' + st.history.length);
@@ -384,10 +387,11 @@ for (const [id, n, secs, cap] of cases) {
   ok('gomoku 等待同意时不能落子', st.board[9 * 15 + 9] === 0 && st.moves === 2,
     'moves=' + st.moves);
   g.input(st, 'p1', { act: 'reply', accept: true });
-  ok('gomoku 同意悔棋撤销最近一手',
-    st.history.length === 1 && st.moves === 1 && st.board[8 * 15 + 8] === 0,
+  ok('gomoku 同意悔棋撤回自己上一手和对方应手',
+    st.history.length === 0 && st.moves === 0 &&
+    st.board[7 * 15 + 7] === 0 && st.board[8 * 15 + 8] === 0,
     'history=' + st.history.length + ' moves=' + st.moves);
-  ok('gomoku 悔棋后轮到被撤销方', st.order[st.turn % st.order.length] === 'p1',
+  ok('gomoku 悔棋后回合回到发起者', st.order[st.turn % st.order.length] === 'p0',
     'current=' + st.order[st.turn % st.order.length]);
 
   g.input(st, 'p1', { act: 'draw' });

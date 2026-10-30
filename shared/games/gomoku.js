@@ -126,22 +126,15 @@
     return false;
   }
 
-  /* 悔棋：人人对局撤销最近一手；人机对局同时撤销人机的应手和自己的上一手 */
+  /* 悔棋：撤回请求者自己的上一手，以及之后对手的应手；回合交还请求者。 */
   function undoLast(state, requesterId) {
-    var m = state.history.pop();
-    if (!m) return false;
-    var removed = [m];
-    var lastPlayer = state.players[m.id];
-    var requester = requesterId ? state.players[requesterId] : null;
-
-    if (lastPlayer && lastPlayer.bot && requester && !requester.bot) {
-      var prev = state.history[state.history.length - 1];
-      if (prev && prev.id === requesterId) {
-        state.history.pop();
-        removed.push(prev);
-      }
+    var from = -1;
+    for (var i = state.history.length - 1; i >= 0; i--) {
+      if (state.history[i].id === requesterId) { from = i; break; }
     }
+    if (from < 0) return false;
 
+    var removed = state.history.splice(from);
     removed.forEach(function (mv) {
       state.board[idx(mv.x, mv.y)] = 0;
     });
@@ -153,14 +146,14 @@
     state.winPending = 0;
     state.draw = false;
 
-    var turnId = removed[removed.length - 1].id;
-    var turn = state.order.indexOf(turnId);
+    var turn = state.order.indexOf(requesterId);
     if (turn >= 0) state.turn = turn;
-    var p = state.players[m.id];
+    var lastRemoved = removed[removed.length - 1];
+    var p = state.players[requesterId];
     state.events.push({
-      t: 'undo', id: m.id,
+      t: 'undo', id: requesterId,
       name: p ? p.name : '',
-      x: m.x, y: m.y
+      x: lastRemoved.x, y: lastRemoved.y
     });
     return true;
   }
@@ -194,10 +187,7 @@
         last: null
       };
       order.forEach(function (id, i) {
-        state.players[id] = {
-          id: id, name: players[i].name, color: players[i].color, index: i,
-          bot: !!players[i].bot
-        };
+        state.players[id] = { id: id, name: players[i].name, color: players[i].color, index: i };
         state.side[id] = i === 0 ? 1 : 2;      /* 1 = 黑先手 */
       });
       return state;
@@ -270,7 +260,15 @@
         if (state.pending) return;
         var rq = state.req;
         if (!rq || rq[inp.act] >= 3) return;
-        if (inp.act === 'undo' && !state.history.length) return;
+        if (inp.act === 'undo') {
+          /* 只能在自己的回合、且自己确实落过子时悔棋 */
+          if (state.order[state.turn % state.order.length] !== id) return;
+          var hasMine = false;
+          for (var hi = state.history.length - 1; hi >= 0; hi--) {
+            if (state.history[hi].id === id) { hasMine = true; break; }
+          }
+          if (!hasMine) return;
+        }
         rq[inp.act]++;
         state.pending = { type: inp.act, from: id };
         state.events.push({
