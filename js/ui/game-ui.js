@@ -166,6 +166,23 @@
       Sfx.click();
     });
 
+    /* 五子棋：悬停预标记可落子的交叉点（只在轮到自己且格子为空时显示） */
+    canvas.addEventListener('mousemove', function (e) {
+      if (!APP.game || APP.game.id !== 'gomoku' || !APP.snap) {
+        AR.Render.gomokuHover = null;
+        return;
+      }
+      var s = APP.snap;
+      var r = canvas.getBoundingClientRect();
+      var cell = AR.Render.gomokuHit(e.clientX - r.left, e.clientY - r.top, s);
+      if (!cell || s.win || s.draw || s.pending || s.cur !== APP.me.id ||
+        s.b.charAt(cell.y * s.n + cell.x) !== '0') {
+        AR.Render.gomokuHover = null;
+        return;
+      }
+      AR.Render.gomokuHover = cell;
+    });
+
     /* 坦克：记录鼠标位置，供自绘准心用；离开画布就恢复系统箭头 */
     canvas.addEventListener('mousemove', function (e) {
       var rect = canvas.getBoundingClientRect();
@@ -175,6 +192,7 @@
     });
     canvas.addEventListener('mouseleave', function () {
       AR.Render.cursor.on = false;
+      AR.Render.gomokuHover = null;
     });
   }
 
