@@ -141,6 +141,41 @@
       ctx.globalAlpha = 1;
     }
 
+    /* 悬停预标记：轮到自己时，在空交叉点画半透明预落子和青色准星 */
+    var hov = R.gomokuHover;
+    if (hov && s.cur === G.me && !s.win && !s.draw && !s.pending &&
+      s.b.charAt(hov.y * s.n + hov.x) === '0') {
+      var hx = g.PAD + hov.x * g.CELL;
+      var hy = g.PAD + hov.y * g.CELL;
+      var mySide = s.sd && s.sd[G.me];
+      var ghost = mySide === 2 ? '#f6f8fc' : '#1b1f27';
+      ctx.save();
+      ctx.strokeStyle = 'rgba(34,211,238,0.72)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(hx - g.CELL * 0.28, hy);
+      ctx.lineTo(hx + g.CELL * 0.28, hy);
+      ctx.moveTo(hx, hy - g.CELL * 0.28);
+      ctx.lineTo(hx, hy + g.CELL * 0.28);
+      ctx.stroke();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(34,211,238,0.9)';
+      ctx.beginPath();
+      ctx.arc(hx, hy, g.CELL * 0.5, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = mySide === 2 ? 0.55 : 0.4;
+      ctx.beginPath();
+      ctx.arc(hx, hy, g.CELL * 0.42, 0, TAU);
+      ctx.fillStyle = ghost;
+      ctx.fill();
+      ctx.globalAlpha = mySide === 2 ? 0.75 : 0.55;
+      ctx.strokeStyle = mySide === 2 ? 'rgba(60,40,20,0.5)' : 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.restore();
 
     /* 轮到谁 */

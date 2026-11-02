@@ -18,6 +18,7 @@
     V.game = gameId;
     V.data = {};
     V.tf = { s: 1, ox: 0, oy: 0 };
+    if (R) R.gomokuHover = null;
   };
 
   var R = AR.Render = {};
@@ -230,6 +231,7 @@
 
   /* 自绘鼠标十字准心（坦克用），坐标是屏幕坐标 */
   R.cursor = { x: -999, y: -999, on: false };
+  R.gomokuHover = null;
 
   function drawCrosshair(ctx, x, y, color) {
     var gap = 7;      /* 中心留空 */
