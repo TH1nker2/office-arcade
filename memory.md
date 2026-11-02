@@ -1,12 +1,12 @@
 # OFFICE ARCADE · MEMORY
 
 > Qoder 项目记忆快照，用于换机/丢失工作区后快速恢复上下文。
-> **最后同步**：2026-10-30
+> **最后同步**：2026-11-02
 > **仓库**：https://gitee.com/th1nker/office-arcade.git
 > **本地路径**：`C:\Users\Administrator\Desktop\workspace\office-arcade`
-> **版本**：3.6.1（2026-10-30）
-> **当前分支**：`main`；改动已按要求提交并推送
-> **当前状态**：3.6.1 修复五子棋人机悔棋并包含审计修复；3.6.0 已发布。
+> **版本**：3.6.2（2026-11-02）
+> **当前分支**：`main`；`feature/gomoku-hover-preview` 已合并
+> **当前状态**：3.6.2 新增五子棋落子位置预标记并包含白名单打包，已打版本号待发布；3.6.1 已发布。
 
 ---
 
@@ -56,6 +56,8 @@
 - 2026-10-30 发行包改为显式白名单：只带运行源码、runtime/node、对应平台启动器、LICENSE，再生成 admins.json/首次使用.txt；tools/docs/memory/README/package.json/CI 配置不再进包，Linux 包不再带 macOS 的 start.command。静态门禁新增白名单断言。
   - 全量测试 24/24 通过（229.4s）；三个新包 Windows 37.0 MB / Linux 42.6 MB / macOS 37.6 MB；Windows 包解压冒烟 `/api/version` 返回 3.6.1、首页 200。
   - 本地已重建 v3.6.1 三个包，但**未重新发布**，线上 v3.6.1 附件仍是旧包；下次发版生效。
+- 2026-11-02 五子棋新增落子位置预标记：轮到自己时悬停空交叉点显示半透明预落子和青色准星；对方回合、已有棋子、等待回复或鼠标离开时自动隐藏。新增 `ui-v11-test.js`（双浏览器回归），同步 README 与开发手册；截图 `shots/95-gomoku-hover-preview.png`。
+- 2026-11-02 全量测试 **25/25 通过（239.4s）** 后升至 3.6.2；`feature/gomoku-hover-preview`（`c8c111b`）已合并到 main（`0f9a34d`）。**未打 tag、未发布发行版。**
 ---
 
 ## 4. 2026-10-29 发布 3.6.0（移除四款游戏）
@@ -71,6 +73,7 @@
 
 ## 5. 已知发布状态
 
+- **v3.6.2 已打版本号，尚未发布**（2026-11-02）：五子棋落子位置预标记 + 发行包白名单；无 tag、无 Release、无安装包上传。
 - **v3.6.1 三平台发行版已发布**：https://gitee.com/th1nker/office-arcade/releases/tag/v3.6.1
   - tag `v3.6.1` → `69d4549`，Gitee release id 1255556
   - 附件：win-x64.zip、linux-x64.tar.gz、darwin-arm64.tar.gz + Gitee 自动源码归档
