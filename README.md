@@ -307,7 +307,7 @@ office-arcade\
 | 22.5 – 22.12 | SQLite（需 `--experimental-sqlite`） | 不加 flag 就回退 JSON，不会报错 |
 | 18 – 22.4（实测 18.20） | JSON | 自动回退，功能一致 |
 
-**推荐 Node 22.5+（最好直接装 24 LTS）**；只有 JSON 存储时也够几十人的办公室用。
+**推荐 Node 22.13+（最好直接装 24 LTS）**；只有 JSON 存储时也够几十人的办公室用。
 
 如果 `data/arcade.sqlite` 已存在但打开失败（权限、损坏、迁移错误），程序会直接退出，不会回退 JSON；只有 Node 没有 `node:sqlite` 时才使用 `data/arcade.json`，避免同一套数据分裂成两份。
 

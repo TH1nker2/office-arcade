@@ -3,7 +3,7 @@
  * 摸鱼游戏厅 · OFFICE ARCADE — 局域网服务器
  *
  * 整个后端只有这一个入口：一个 HTTP 服务 + 一个手写的 WebSocket 服务。
- * 没有第三方依赖，只用 Node 内置模块；Node 22+ 自带的 node:sqlite 负责落盘。
+ * 没有第三方依赖，只用 Node 内置模块；Node 22.13+ 可直接使用 node:sqlite，更早版本回退 JSON。
  *
  * 运行： node server.js [端口]           默认 8090
  *      ARCADE_DATA=<目录> 可以临时换数据目录（测试用）
